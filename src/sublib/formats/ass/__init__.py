@@ -8,6 +8,7 @@ from sublib.formats.ass.elements import (
     AssPlainText,
     AssNewLine,
     AssHardSpace,
+    AssTextSegment,
 )
 from sublib.formats.ass.text_parser import AssTextParser
 from sublib.formats.ass.text_renderer import AssTextRenderer
@@ -49,6 +50,7 @@ __all__ = [
     "AssPlainText",
     "AssNewLine",
     "AssHardSpace",
+    "AssTextSegment",
     # Parser/Renderer
     "AssTextParser",
     "AssTextRenderer",

@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pathlib import Path
 
 from sublib.core.models import Cue
-from sublib.formats.ass.elements import AssTextElement, AssPlainText, AssNewLine, AssHardSpace
+from sublib.formats.ass.elements import AssTextElement, AssPlainText, AssNewLine, AssHardSpace, AssTextSegment
 
 
 @dataclass
@@ -158,12 +158,12 @@ class AssEvent(Cue):
         
         return result
     
-    def extract_segments(self, strict: bool = False) -> list[tuple[list, str]]:
+    def extract_segments(self, strict: bool = False) -> list[AssTextSegment]:
         """Extract text segments with their preceding inline tags.
         
-        Each segment is a tuple of (inline_tags, text) where:
-        - inline_tags: list of AssOverrideTag (is_event=False), with
-                       first-wins/last-wins and mutual exclusion rules applied
+        Each segment contains:
+        - tags: list of AssOverrideTag (is_event=False), with
+                first-wins/last-wins and mutual exclusion rules applied
         - text: the text content (may include \\N newlines)
         
         Args:
@@ -172,7 +172,7 @@ class AssEvent(Cue):
                     silently (default).
         
         Returns:
-            List of (tags, text) tuples.
+            List of AssTextSegment.
             
         Raises:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
@@ -181,7 +181,7 @@ class AssEvent(Cue):
         from sublib.formats.ass.tag_registry import MUTUAL_EXCLUSIVES
         from sublib.core.exceptions import SubtitleParseError
         
-        segments: list[tuple[list, str]] = []
+        segments: list[AssTextSegment] = []
         current_tags: list[AssOverrideTag] = []
         current_text = ""
         
@@ -241,14 +241,14 @@ class AssEvent(Cue):
                 if not elem.is_event:
                     if current_text:
                         # Flush previous segment
-                        segments.append((apply_tag_rules(current_tags), current_text))
+                        segments.append(AssTextSegment(tags=apply_tag_rules(current_tags), text=current_text))
                         current_tags = []
                         current_text = ""
                     current_tags.append(elem)
         
         # Final segment
         if current_text or current_tags:
-            segments.append((apply_tag_rules(current_tags), current_text))
+            segments.append(AssTextSegment(tags=apply_tag_rules(current_tags), text=current_text))
         
         return segments
 

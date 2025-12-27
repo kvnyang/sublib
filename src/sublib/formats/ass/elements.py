@@ -54,6 +54,21 @@ class AssHardSpace:
     pass
 
 
+@dataclass
+class AssTextSegment:
+    """A text segment with its preceding inline formatting tags.
+    
+    Returned by AssEvent.extract_segments() to represent a contiguous
+    piece of text with consistent formatting.
+    
+    Attributes:
+        tags: List of inline AssOverrideTag that apply to this segment
+        text: The text content (may include \\N, \\n, \\h markers)
+    """
+    tags: list["AssOverrideTag"]
+    text: str
+
+
 # Union of all text element types
 AssTextElement = Union[AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace]
 
