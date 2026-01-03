@@ -15,6 +15,7 @@ from sublib.ass.tag_registry import (
     TAG_REGISTRY,
     MUTUAL_EXCLUSIVES,
     get_tag_spec,
+    parse_tag,
 )
 from sublib.exceptions import SubtitleParseError
 
@@ -24,7 +25,7 @@ class AssTextParser:
     
     Handles:
     - Override blocks: {...}
-    - Newlines: \\N, \\n
+    - Newlines: \\\\N, \\\\n
     - Plain text
     - Mutual exclusion rules
     - First-win / last-win semantics
@@ -143,8 +144,8 @@ class AssTextParser:
                     raw_text=block
                 )
             
-            # Parse the value
-            parsed_value = spec.parser(raw_value)
+            # Parse the value using dispatch table
+            parsed_value = parse_tag(tag_name, raw_value)
             if parsed_value is None and raw_value:
                 raise SubtitleParseError(
                     f"Invalid value for \\{tag_name}: {raw_value}",
