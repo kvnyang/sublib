@@ -4,11 +4,12 @@ from __future__ import annotations
 from typing import Any
 
 from sublib.ass.elements import (
-    AssTextElement,
     AssOverrideTag,
     AssPlainText,
     AssNewLine,
     AssHardSpace,
+    AssBlock,
+    AssComment,
 )
 from sublib.ass.tags import get_tag, format_tag
 
@@ -29,36 +30,29 @@ class AssTextRenderer:
         pending_tags: list[str] = []
         
         for elem in elements:
-            if isinstance(elem, AssOverrideTag):
-                # Use raw if available, otherwise render from value
-                if elem.raw:
-                    pending_tags.append(elem.raw)
-                else:
-                    tag_cls = get_tag(elem.name)
-                    if tag_cls:
-                        pending_tags.append(tag_cls.format(elem.value))
+            if isinstance(elem, AssBlock):
+                result.append("{")
+                for item in elem.elements:
+                    if isinstance(item, AssOverrideTag):
+                        # Use raw if available, otherwise render from value
+                        if item.raw:
+                            result.append(item.raw)
+                        else:
+                            tag_cls = get_tag(item.name)
+                            if tag_cls:
+                                result.append(tag_cls.format(item.value))
+                    elif isinstance(item, AssComment):
+                        result.append(item.content)
+                result.append("}")
+            
             elif isinstance(elem, AssNewLine):
-                # Flush pending tags first
-                if pending_tags:
-                    result.append("{" + "".join(pending_tags) + "}")
-                    pending_tags = []
                 result.append("\\N" if elem.hard else "\\n")
             elif isinstance(elem, AssHardSpace):
-                # Flush pending tags first
-                if pending_tags:
-                    result.append("{" + "".join(pending_tags) + "}")
-                    pending_tags = []
                 result.append("\\h")
             elif isinstance(elem, AssPlainText):
-                # Flush pending tags first
-                if pending_tags:
-                    result.append("{" + "".join(pending_tags) + "}")
-                    pending_tags = []
                 result.append(elem.content)
         
-        # Flush any remaining tags
-        if pending_tags:
-            result.append("{" + "".join(pending_tags) + "}")
+
         
         return "".join(result)
     

@@ -84,7 +84,7 @@ class AssEvent:
         Raises:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
-        from sublib.ass.elements import AssOverrideTag
+        from sublib.ass.elements import AssOverrideTag, AssBlock
         from sublib.ass.tags import MUTUAL_EXCLUSIVES
         from sublib.exceptions import SubtitleParseError
         
@@ -92,9 +92,13 @@ class AssEvent:
         seen_first_win: set[str] = set()
         seen_tags: set[str] = set()  # For strict mode
         
+        # Flatten elements to check tags inside blocks
+        flat_elements = []
         for elem in self.text_elements:
-            if not isinstance(elem, AssOverrideTag):
-                continue
+            if isinstance(elem, AssBlock):
+                flat_elements.extend(item for item in elem.elements if isinstance(item, AssOverrideTag))
+        
+        for elem in flat_elements:
             if not elem.is_event:
                 continue
             
@@ -153,7 +157,7 @@ class AssEvent:
         Raises:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
-        from sublib.ass.elements import AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace
+        from sublib.ass.elements import AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace, AssBlock
         from sublib.ass.tags import MUTUAL_EXCLUSIVES
         from sublib.exceptions import SubtitleParseError
         
@@ -213,14 +217,17 @@ class AssEvent:
                 current_text += "\\N" if elem.hard else "\\n"
             elif isinstance(elem, AssHardSpace):
                 current_text += "\\h"
-            elif isinstance(elem, AssOverrideTag):
-                if not elem.is_event:
-                    if current_text:
-                        # Flush previous segment
-                        segments.append(AssTextSegment(tags=apply_tag_rules(current_tags), text=current_text))
-                        current_tags = []
-                        current_text = ""
-                    current_tags.append(elem)
+            elif isinstance(elem, AssBlock):
+                # Process tags inside block
+                for item in elem.elements:
+                    if isinstance(item, AssOverrideTag):
+                        if not item.is_event:
+                            if current_text:
+                                # Flush previous segment
+                                segments.append(AssTextSegment(tags=apply_tag_rules(current_tags), text=current_text))
+                                current_tags = []
+                                current_text = ""
+                            current_tags.append(item)
         
         # Final segment
         if current_text or current_tags:

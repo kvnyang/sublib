@@ -9,6 +9,8 @@ from sublib.ass.elements import (
     AssNewLine,
     AssHardSpace,
     AssTextSegment,
+    AssBlock,
+    AssComment,
 )
 from sublib.ass.parser import AssTextParser
 from sublib.ass.renderer import AssTextRenderer

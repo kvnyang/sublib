@@ -10,6 +10,8 @@ from sublib.ass.elements import (
     AssPlainText,
     AssNewLine,
     AssHardSpace,
+    AssBlock,
+    AssComment,
 )
 from sublib.ass.tags import (
     TAGS,
@@ -88,12 +90,12 @@ class AssTextParser:
             if match.group(1) is not None:
                 # Override block {...}
                 block_content = match.group(1)
-                block_elements = self._parse_override_block(
+                block = self._parse_override_block(
                     block_content, 
                     line_number=line_number,
                     position=match.start()
                 )
-                elements.extend(block_elements)
+                elements.append(block)
             else:
                 # Newline \N, \n or hard space \h
                 char = match.group(2)
@@ -115,16 +117,23 @@ class AssTextParser:
     
     def _parse_override_block(
         self, 
-        block: str, 
+        block_text: str, 
         line_number: int | None = None,
         position: int | None = None
-    ) -> list[AssOverrideTag]:
+    ) -> AssBlock:
         """Parse a single override block {...} content."""
-        tags: list[AssOverrideTag] = []
+        block_elements: list[Union[AssOverrideTag, AssComment]] = []
+        last_end = 0
         
         # Use registry-based pattern for correct tag matching
         pattern = self._get_known_tags_pattern()
-        for match in pattern.finditer(block):
+        for match in pattern.finditer(block_text):
+            # content before this tag is comment
+            if match.start() > last_end:
+                comment_text = block_text[last_end:match.start()]
+                if comment_text:
+                    block_elements.append(AssComment(content=comment_text))
+            
             tag_name = match.group(1)
             # Function args or simple value
             raw_value = match.group(2) if match.group(2) is not None else (match.group(3) or "")
@@ -141,7 +150,7 @@ class AssTextParser:
                     f"Unknown override tag: \\{tag_name}",
                     line_number=line_number,
                     position=position,
-                    raw_text=block
+                    raw_text=block_text
                 )
             
             # Parse the value using dispatch table
@@ -151,7 +160,7 @@ class AssTextParser:
                     f"Invalid value for \\{tag_name}: {raw_value}",
                     line_number=line_number,
                     position=position,
-                    raw_text=block
+                    raw_text=block_text
                 )
             
             # Build raw representation for roundtrip
@@ -160,7 +169,7 @@ class AssTextParser:
             else:
                 raw = f"\\{tag_name}{raw_value}"
             
-            tags.append(AssOverrideTag(
+            block_elements.append(AssOverrideTag(
                 name=tag_name,
                 value=parsed_value,
                 raw=raw,
@@ -168,8 +177,16 @@ class AssTextParser:
                 first_wins=spec.first_wins,
                 is_function=is_function,
             ))
+            
+            last_end = match.end()
         
-        return tags
+        # Remaining text is comment
+        if last_end < len(block_text):
+            comment_text = block_text[last_end:]
+            if comment_text:
+                block_elements.append(AssComment(content=comment_text))
+        
+        return AssBlock(elements=block_elements)
     
 
 

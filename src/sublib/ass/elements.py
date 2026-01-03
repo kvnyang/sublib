@@ -69,6 +69,22 @@ class AssTextSegment:
     text: str
 
 
+@dataclass
+class AssComment:
+    """Comment/garbage text inside an override block."""
+    content: str
+
+
+@dataclass
+class AssBlock:
+    """Override block: {...}
+    
+    Contains a sequence of tags and comments.
+    """
+    elements: list[Union[AssOverrideTag, AssComment]]
+
+
 # Union of all text element types
-AssTextElement = Union[AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace]
+# Note: AssOverrideTag is not directly in this union anymore, as it must be inside AssBlock
+AssTextElement = Union[AssPlainText, AssBlock, AssNewLine, AssHardSpace]
 
