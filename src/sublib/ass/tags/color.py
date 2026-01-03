@@ -55,64 +55,189 @@ def _parse_alpha(raw: str) -> Alpha | None:
         return None
 
 
-def _make_color_tag(tag_name: str):
-    """Factory for color tag classes."""
-    _name = tag_name  # Capture for closure
+# ============================================================
+# Color Tags
+# ============================================================
+
+class CTag:
+    """\\c (alias for \\1c) tag definition."""
+    name: ClassVar[str] = "c"
+    category: ClassVar[TagCategory] = TagCategory.COLOR
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
     
-    class ColorTagDef:
-        name: ClassVar[str] = _name
-        category: ClassVar[TagCategory] = TagCategory.COLOR
-        is_event: ClassVar[bool] = False
-        is_function: ClassVar[bool] = False
-        first_wins: ClassVar[bool] = False
-        exclusives: ClassVar[frozenset[str]] = frozenset()
-        
-        @staticmethod
-        def parse(raw: str) -> Color | None:
-            return _parse_color(raw)
-        
-        @staticmethod
-        def format(val: Color) -> str:
-            return f"\\{_name}&H{val.value:06X}&"
+    @staticmethod
+    def parse(raw: str) -> Color | None:
+        return _parse_color(raw)
     
-    ColorTagDef.__name__ = f"{tag_name.replace('c', 'C')}Tag"
-    return ColorTagDef
+    @staticmethod
+    def format(val: Color) -> str:
+        return f"\\c&H{val.value:06X}&"
 
 
-def _make_alpha_tag(tag_name: str):
-    """Factory for alpha tag classes."""
-    _name = tag_name  # Capture for closure
+class C1Tag:
+    """\\1c primary color tag definition."""
+    name: ClassVar[str] = "1c"
+    category: ClassVar[TagCategory] = TagCategory.COLOR
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
     
-    class AlphaTagDef:
-        name: ClassVar[str] = _name
-        category: ClassVar[TagCategory] = TagCategory.ALPHA
-        is_event: ClassVar[bool] = False
-        is_function: ClassVar[bool] = False
-        first_wins: ClassVar[bool] = False
-        exclusives: ClassVar[frozenset[str]] = frozenset()
-        
-        @staticmethod
-        def parse(raw: str) -> Alpha | None:
-            return _parse_alpha(raw)
-        
-        @staticmethod
-        def format(val: Alpha) -> str:
-            return f"\\{_name}&H{val.value:02X}&"
+    @staticmethod
+    def parse(raw: str) -> Color | None:
+        return _parse_color(raw)
     
-    AlphaTagDef.__name__ = f"{tag_name.capitalize()}Tag"
-    return AlphaTagDef
+    @staticmethod
+    def format(val: Color) -> str:
+        return f"\\1c&H{val.value:06X}&"
 
 
-# Color tags
-CTag = _make_color_tag("c")
-C1Tag = _make_color_tag("1c")
-C2Tag = _make_color_tag("2c")
-C3Tag = _make_color_tag("3c")
-C4Tag = _make_color_tag("4c")
+class C2Tag:
+    """\\2c secondary color tag definition."""
+    name: ClassVar[str] = "2c"
+    category: ClassVar[TagCategory] = TagCategory.COLOR
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> Color | None:
+        return _parse_color(raw)
+    
+    @staticmethod
+    def format(val: Color) -> str:
+        return f"\\2c&H{val.value:06X}&"
 
-# Alpha tags
-AlphaTag = _make_alpha_tag("alpha")
-A1Tag = _make_alpha_tag("1a")
-A2Tag = _make_alpha_tag("2a")
-A3Tag = _make_alpha_tag("3a")
-A4Tag = _make_alpha_tag("4a")
+
+class C3Tag:
+    """\\3c outline color tag definition."""
+    name: ClassVar[str] = "3c"
+    category: ClassVar[TagCategory] = TagCategory.COLOR
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> Color | None:
+        return _parse_color(raw)
+    
+    @staticmethod
+    def format(val: Color) -> str:
+        return f"\\3c&H{val.value:06X}&"
+
+
+class C4Tag:
+    """\\4c shadow color tag definition."""
+    name: ClassVar[str] = "4c"
+    category: ClassVar[TagCategory] = TagCategory.COLOR
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> Color | None:
+        return _parse_color(raw)
+    
+    @staticmethod
+    def format(val: Color) -> str:
+        return f"\\4c&H{val.value:06X}&"
+
+
+# ============================================================
+# Alpha Tags
+# ============================================================
+
+class AlphaTag:
+    """\\alpha (all colors) tag definition."""
+    name: ClassVar[str] = "alpha"
+    category: ClassVar[TagCategory] = TagCategory.ALPHA
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> Alpha | None:
+        return _parse_alpha(raw)
+    
+    @staticmethod
+    def format(val: Alpha) -> str:
+        return f"\\alpha&H{val.value:02X}&"
+
+
+class A1Tag:
+    """\\1a primary alpha tag definition."""
+    name: ClassVar[str] = "1a"
+    category: ClassVar[TagCategory] = TagCategory.ALPHA
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> Alpha | None:
+        return _parse_alpha(raw)
+    
+    @staticmethod
+    def format(val: Alpha) -> str:
+        return f"\\1a&H{val.value:02X}&"
+
+
+class A2Tag:
+    """\\2a secondary alpha tag definition."""
+    name: ClassVar[str] = "2a"
+    category: ClassVar[TagCategory] = TagCategory.ALPHA
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> Alpha | None:
+        return _parse_alpha(raw)
+    
+    @staticmethod
+    def format(val: Alpha) -> str:
+        return f"\\2a&H{val.value:02X}&"
+
+
+class A3Tag:
+    """\\3a outline alpha tag definition."""
+    name: ClassVar[str] = "3a"
+    category: ClassVar[TagCategory] = TagCategory.ALPHA
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> Alpha | None:
+        return _parse_alpha(raw)
+    
+    @staticmethod
+    def format(val: Alpha) -> str:
+        return f"\\3a&H{val.value:02X}&"
+
+
+class A4Tag:
+    """\\4a shadow alpha tag definition."""
+    name: ClassVar[str] = "4a"
+    category: ClassVar[TagCategory] = TagCategory.ALPHA
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> Alpha | None:
+        return _parse_alpha(raw)
+    
+    @staticmethod
+    def format(val: Alpha) -> str:
+        return f"\\4a&H{val.value:02X}&"

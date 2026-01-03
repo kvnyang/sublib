@@ -51,66 +51,125 @@ def _parse_int(raw: str, *, ge: int | None = None) -> int | None:
         return None
 
 
-def _make_border_tag(tag_name: str):
-    """Factory for border tags."""
-    _name = tag_name  # Capture for closure
+# ============================================================
+# Border Tags
+# ============================================================
+
+class BordTag:
+    """\\bord tag definition."""
+    name: ClassVar[str] = "bord"
+    category: ClassVar[TagCategory] = TagCategory.BORDER
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
     
-    class BorderTag:
-        name: ClassVar[str] = _name
-        category: ClassVar[TagCategory] = TagCategory.BORDER
-        is_event: ClassVar[bool] = False
-        is_function: ClassVar[bool] = False
-        first_wins: ClassVar[bool] = False
-        exclusives: ClassVar[frozenset[str]] = frozenset()
-        
-        @staticmethod
-        def parse(raw: str) -> float | None:
-            return _parse_float(raw, ge=0)
-        
-        @staticmethod
-        def format(val: float) -> str:
-            return f"\\{_name}{val}"
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw, ge=0)
     
-    BorderTag.__name__ = f"{tag_name.capitalize()}Tag"
-    return BorderTag
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\bord{val}"
 
 
-def _make_shadow_tag(tag_name: str, allow_negative: bool = False):
-    """Factory for shadow tags."""
-    _name = tag_name  # Capture for closure
+class XbordTag:
+    """\\xbord tag definition."""
+    name: ClassVar[str] = "xbord"
+    category: ClassVar[TagCategory] = TagCategory.BORDER
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
     
-    class ShadowTag:
-        name: ClassVar[str] = _name
-        category: ClassVar[TagCategory] = TagCategory.SHADOW
-        is_event: ClassVar[bool] = False
-        is_function: ClassVar[bool] = False
-        first_wins: ClassVar[bool] = False
-        exclusives: ClassVar[frozenset[str]] = frozenset()
-        
-        @staticmethod
-        def parse(raw: str) -> float | None:
-            if allow_negative:
-                return _parse_float(raw)
-            return _parse_float(raw, ge=0)
-        
-        @staticmethod
-        def format(val: float) -> str:
-            return f"\\{_name}{val}"
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw, ge=0)
     
-    ShadowTag.__name__ = f"{tag_name.capitalize()}Tag"
-    return ShadowTag
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\xbord{val}"
 
 
-# Border tags
-BordTag = _make_border_tag("bord")
-XbordTag = _make_border_tag("xbord")
-YbordTag = _make_border_tag("ybord")
+class YbordTag:
+    """\\ybord tag definition."""
+    name: ClassVar[str] = "ybord"
+    category: ClassVar[TagCategory] = TagCategory.BORDER
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw, ge=0)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\ybord{val}"
 
-# Shadow tags
-ShadTag = _make_shadow_tag("shad")
-XshadTag = _make_shadow_tag("xshad", allow_negative=True)
-YshadTag = _make_shadow_tag("yshad", allow_negative=True)
 
+# ============================================================
+# Shadow Tags
+# ============================================================
+
+class ShadTag:
+    """\\shad tag definition."""
+    name: ClassVar[str] = "shad"
+    category: ClassVar[TagCategory] = TagCategory.SHADOW
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw, ge=0)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\shad{val}"
+
+
+class XshadTag:
+    """\\xshad tag definition (can be negative)."""
+    name: ClassVar[str] = "xshad"
+    category: ClassVar[TagCategory] = TagCategory.SHADOW
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\xshad{val}"
+
+
+class YshadTag:
+    """\\yshad tag definition (can be negative)."""
+    name: ClassVar[str] = "yshad"
+    category: ClassVar[TagCategory] = TagCategory.SHADOW
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\yshad{val}"
+
+
+# ============================================================
+# Blur Tags
+# ============================================================
 
 class BeTag:
     """\\be edge blur tag definition."""

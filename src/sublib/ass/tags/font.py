@@ -69,53 +69,307 @@ def _parse_bold(raw: str) -> int | bool | None:
     return None
 
 
-def _make_simple_tag(tag_name: str, parser, tag_category: TagCategory = TagCategory.FONT):
-    """Factory for simple inline tags."""
-    _name = tag_name  # Capture for closure
-    _category = tag_category
+# ============================================================
+# Font Tags
+# ============================================================
+
+class FnTag:
+    """\\fn font name tag definition."""
+    name: ClassVar[str] = "fn"
+    category: ClassVar[TagCategory] = TagCategory.FONT
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
     
-    class SimpleTag:
-        name: ClassVar[str] = _name
-        category: ClassVar[TagCategory] = _category
-        is_event: ClassVar[bool] = False
-        is_function: ClassVar[bool] = False
-        first_wins: ClassVar[bool] = False
-        exclusives: ClassVar[frozenset[str]] = frozenset()
-        
-        @staticmethod
-        def parse(raw: str):
-            return parser(raw)
-        
-        @staticmethod
-        def format(val) -> str:
-            if isinstance(val, bool):
-                return f"\\{_name}{1 if val else 0}"
-            return f"\\{_name}{val}"
+    @staticmethod
+    def parse(raw: str) -> str:
+        return raw
     
-    SimpleTag.__name__ = f"{tag_name.capitalize()}Tag"
-    return SimpleTag
+    @staticmethod
+    def format(val: str) -> str:
+        return f"\\fn{val}"
 
 
-# Font tags
-FnTag = _make_simple_tag("fn", lambda raw: raw)
-FsTag = _make_simple_tag("fs", lambda raw: _parse_float(raw, gt=0))
-FscxTag = _make_simple_tag("fscx", lambda raw: _parse_float(raw, gt=0))
-FscyTag = _make_simple_tag("fscy", lambda raw: _parse_float(raw, gt=0))
-FspTag = _make_simple_tag("fsp", _parse_float)
-FeTag = _make_simple_tag("fe", lambda raw: _parse_int(raw, ge=0))
+class FsTag:
+    """\\fs font size tag definition."""
+    name: ClassVar[str] = "fs"
+    category: ClassVar[TagCategory] = TagCategory.FONT
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw, gt=0)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\fs{val}"
 
-# Text style tags
-BTag = _make_simple_tag("b", _parse_bold, TagCategory.TEXT_STYLE)
-ITag = _make_simple_tag("i", _parse_bool, TagCategory.TEXT_STYLE)
-UTag = _make_simple_tag("u", _parse_bool, TagCategory.TEXT_STYLE)
-STag = _make_simple_tag("s", _parse_bool, TagCategory.TEXT_STYLE)
 
-# Rotation tags
-FrxTag = _make_simple_tag("frx", _parse_float, TagCategory.ROTATION)
-FryTag = _make_simple_tag("fry", _parse_float, TagCategory.ROTATION)
-FrzTag = _make_simple_tag("frz", _parse_float, TagCategory.ROTATION)
-FrTag = _make_simple_tag("fr", _parse_float, TagCategory.ROTATION)
+class FscxTag:
+    """\\fscx font scale X tag definition."""
+    name: ClassVar[str] = "fscx"
+    category: ClassVar[TagCategory] = TagCategory.FONT
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw, gt=0)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\fscx{val}"
 
-# Shear tags
-FaxTag = _make_simple_tag("fax", _parse_float, TagCategory.SHEAR)
-FayTag = _make_simple_tag("fay", _parse_float, TagCategory.SHEAR)
+
+class FscyTag:
+    """\\fscy font scale Y tag definition."""
+    name: ClassVar[str] = "fscy"
+    category: ClassVar[TagCategory] = TagCategory.FONT
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw, gt=0)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\fscy{val}"
+
+
+class FspTag:
+    """\\fsp letter spacing tag definition."""
+    name: ClassVar[str] = "fsp"
+    category: ClassVar[TagCategory] = TagCategory.FONT
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\fsp{val}"
+
+
+class FeTag:
+    """\\fe font encoding tag definition."""
+    name: ClassVar[str] = "fe"
+    category: ClassVar[TagCategory] = TagCategory.FONT
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> int | None:
+        return _parse_int(raw, ge=0)
+    
+    @staticmethod
+    def format(val: int) -> str:
+        return f"\\fe{val}"
+
+
+# ============================================================
+# Text Style Tags
+# ============================================================
+
+class BTag:
+    """\\b bold tag definition."""
+    name: ClassVar[str] = "b"
+    category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> int | bool | None:
+        return _parse_bold(raw)
+    
+    @staticmethod
+    def format(val: int | bool) -> str:
+        if isinstance(val, bool):
+            return f"\\b{1 if val else 0}"
+        return f"\\b{val}"
+
+
+class ITag:
+    """\\i italic tag definition."""
+    name: ClassVar[str] = "i"
+    category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> bool | None:
+        return _parse_bool(raw)
+    
+    @staticmethod
+    def format(val: bool) -> str:
+        return f"\\i{1 if val else 0}"
+
+
+class UTag:
+    """\\u underline tag definition."""
+    name: ClassVar[str] = "u"
+    category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> bool | None:
+        return _parse_bool(raw)
+    
+    @staticmethod
+    def format(val: bool) -> str:
+        return f"\\u{1 if val else 0}"
+
+
+class STag:
+    """\\s strikeout tag definition."""
+    name: ClassVar[str] = "s"
+    category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> bool | None:
+        return _parse_bool(raw)
+    
+    @staticmethod
+    def format(val: bool) -> str:
+        return f"\\s{1 if val else 0}"
+
+
+# ============================================================
+# Rotation Tags
+# ============================================================
+
+class FrxTag:
+    """\\frx X-axis rotation tag definition."""
+    name: ClassVar[str] = "frx"
+    category: ClassVar[TagCategory] = TagCategory.ROTATION
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\frx{val}"
+
+
+class FryTag:
+    """\\fry Y-axis rotation tag definition."""
+    name: ClassVar[str] = "fry"
+    category: ClassVar[TagCategory] = TagCategory.ROTATION
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\fry{val}"
+
+
+class FrzTag:
+    """\\frz Z-axis rotation tag definition."""
+    name: ClassVar[str] = "frz"
+    category: ClassVar[TagCategory] = TagCategory.ROTATION
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\frz{val}"
+
+
+class FrTag:
+    """\\fr Z-axis rotation alias tag definition."""
+    name: ClassVar[str] = "fr"
+    category: ClassVar[TagCategory] = TagCategory.ROTATION
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\fr{val}"
+
+
+# ============================================================
+# Shear Tags
+# ============================================================
+
+class FaxTag:
+    """\\fax X shear tag definition."""
+    name: ClassVar[str] = "fax"
+    category: ClassVar[TagCategory] = TagCategory.SHEAR
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\fax{val}"
+
+
+class FayTag:
+    """\\fay Y shear tag definition."""
+    name: ClassVar[str] = "fay"
+    category: ClassVar[TagCategory] = TagCategory.SHEAR
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> float | None:
+        return _parse_float(raw)
+    
+    @staticmethod
+    def format(val: float) -> str:
+        return f"\\fay{val}"

@@ -83,36 +83,103 @@ class TTag:
         return f"\\t({val.t1},{val.t2},{val.accel},{val.tags})"
 
 
-def _make_karaoke_tag(tag_name: str):
-    """Factory for karaoke tag classes."""
-    _name = tag_name  # Capture for closure
-    
-    class KaraokeTag:
-        name: ClassVar[str] = _name
-        category: ClassVar[TagCategory] = TagCategory.KARAOKE
-        is_event: ClassVar[bool] = False
-        is_function: ClassVar[bool] = False
-        first_wins: ClassVar[bool] = False
-        exclusives: ClassVar[frozenset[str]] = frozenset()
-        
-        @staticmethod
-        def parse(raw: str) -> int | None:
-            try:
-                val = int(raw)
-                return val if val >= 0 else None
-            except ValueError:
-                return None
-        
-        @staticmethod
-        def format(val: int) -> str:
-            return f"\\{_name}{val}"
-    
-    KaraokeTag.__name__ = f"{tag_name.upper()}Tag"
-    return KaraokeTag
+def _parse_karaoke(raw: str) -> int | None:
+    try:
+        val = int(raw)
+        return val if val >= 0 else None
+    except ValueError:
+        return None
 
 
-KTag = _make_karaoke_tag("k")
-KUpperTag = _make_karaoke_tag("K")
-KfTag = _make_karaoke_tag("kf")
-KoTag = _make_karaoke_tag("ko")
-KtTag = _make_karaoke_tag("kt")
+# ============================================================
+# Karaoke Tags
+# ============================================================
+
+class KTag:
+    """\\k karaoke tag definition."""
+    name: ClassVar[str] = "k"
+    category: ClassVar[TagCategory] = TagCategory.KARAOKE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> int | None:
+        return _parse_karaoke(raw)
+    
+    @staticmethod
+    def format(val: int) -> str:
+        return f"\\k{val}"
+
+
+class KUpperTag:
+    """\\K karaoke tag definition."""
+    name: ClassVar[str] = "K"
+    category: ClassVar[TagCategory] = TagCategory.KARAOKE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> int | None:
+        return _parse_karaoke(raw)
+    
+    @staticmethod
+    def format(val: int) -> str:
+        return f"\\K{val}"
+
+
+class KfTag:
+    """\\kf karaoke tag definition."""
+    name: ClassVar[str] = "kf"
+    category: ClassVar[TagCategory] = TagCategory.KARAOKE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> int | None:
+        return _parse_karaoke(raw)
+    
+    @staticmethod
+    def format(val: int) -> str:
+        return f"\\kf{val}"
+
+
+class KoTag:
+    """\\ko karaoke tag definition."""
+    name: ClassVar[str] = "ko"
+    category: ClassVar[TagCategory] = TagCategory.KARAOKE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> int | None:
+        return _parse_karaoke(raw)
+    
+    @staticmethod
+    def format(val: int) -> str:
+        return f"\\ko{val}"
+
+
+class KtTag:
+    """\\kt karaoke tag definition."""
+    name: ClassVar[str] = "kt"
+    category: ClassVar[TagCategory] = TagCategory.KARAOKE
+    is_event: ClassVar[bool] = False
+    is_function: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = False
+    exclusives: ClassVar[frozenset[str]] = frozenset()
+    
+    @staticmethod
+    def parse(raw: str) -> int | None:
+        return _parse_karaoke(raw)
+    
+    @staticmethod
+    def format(val: int) -> str:
+        return f"\\kt{val}"
