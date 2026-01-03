@@ -47,12 +47,12 @@ class AssEvent(Cue):
     Represents a Dialogue line from the [Events] section.
     Inherits from Cue for cross-format compatibility.
     
-    The text is stored both as raw string and parsed elements.
+    The text_elements field is the single source of truth.
+    plain_text and render_text() are computed from it.
     """
-    # Override parent fields with ASS naming convention
-    start_ms: int = 0  # Start time in milliseconds (inherited as start_ms)
-    end_ms: int = 0    # End time in milliseconds (inherited as end_ms)
-    plain_text: str = ""  # Will be computed from text_elements
+    # Timing fields (inherited from Cue)
+    start_ms: int = 0
+    end_ms: int = 0
     
     # ASS-specific fields
     text_elements: list[AssTextElement] = field(default_factory=list)
@@ -64,15 +64,8 @@ class AssEvent(Cue):
     margin_v: int = 0
     effect: str = ""
     
-    # Keep raw text for roundtrip
-    _raw_text: str = ""
-    
-    def __post_init__(self):
-        """Compute plain_text from text_elements if not provided."""
-        if not self.plain_text and self.text_elements:
-            self.plain_text = self._extract_plain_text()
-    
-    def _extract_plain_text(self) -> str:
+    @property
+    def plain_text(self) -> str:
         """Extract plain text from text_elements (no formatting tags)."""
         parts = []
         for elem in self.text_elements:
@@ -91,8 +84,6 @@ class AssEvent(Cue):
             The reconstructed ASS text string with override tags.
         """
         from sublib.formats.ass.text_renderer import AssTextRenderer
-        if self._raw_text:
-            return self._raw_text
         return AssTextRenderer().render(self.text_elements)
     
     def extract_event_tags(self, strict: bool = False) -> dict[str, Any]:

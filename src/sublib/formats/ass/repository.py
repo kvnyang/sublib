@@ -151,7 +151,6 @@ def _parse_dialogue_line(
         margin_r=int(parts[6]),
         margin_v=int(parts[7]),
         effect=parts[8].strip(),
-        _raw_text=text,
     )
 
 
