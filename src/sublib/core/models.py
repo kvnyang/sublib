@@ -1,7 +1,6 @@
 # sublib/core/models.py
 """Format-agnostic subtitle models."""
 from __future__ import annotations
-from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -26,16 +25,6 @@ class Cue:
     def duration_ms(self) -> int:
         """Duration in milliseconds."""
         return self.end_ms - self.start_ms
-    
-    @property
-    @abstractmethod
-    def plain_text(self) -> str:
-        """Text content without formatting tags.
-        
-        Subclasses must implement this to extract plain text
-        from their format-specific text representation.
-        """
-        ...
 
 
 @dataclass

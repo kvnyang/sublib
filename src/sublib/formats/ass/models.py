@@ -48,7 +48,7 @@ class AssEvent(Cue):
     Inherits from Cue for cross-format compatibility.
     
     The text_elements field is the single source of truth.
-    plain_text and render_text() are computed from it.
+    render_text() renders ASS text from it.
     """
     # Timing fields (inherited from Cue)
     start_ms: int = 0
@@ -63,19 +63,6 @@ class AssEvent(Cue):
     margin_r: int = 0
     margin_v: int = 0
     effect: str = ""
-    
-    @property
-    def plain_text(self) -> str:
-        """Extract plain text from text_elements (no formatting tags)."""
-        parts = []
-        for elem in self.text_elements:
-            if isinstance(elem, AssPlainText):
-                parts.append(elem.content)
-            elif isinstance(elem, AssNewLine):
-                parts.append("\n")
-            elif isinstance(elem, AssHardSpace):
-                parts.append(" ")
-        return "".join(parts)
     
     def render_text(self) -> str:
         """Render elements back to ASS text format.
