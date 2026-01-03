@@ -8,7 +8,7 @@ This package provides:
 """
 
 # Base
-from sublib.ass.tags.base import TagCategory, TagDefinition
+from sublib.ass.tags._base import TagCategory, TagDefinition
 
 # Value types
 from sublib.ass.tags.position import Position, Move
@@ -22,7 +22,7 @@ from sublib.ass.tags.border import BorderSize, ShadowDistance, BlurEdge, BlurGau
 from sublib.ass.tags.drawing import DrawingMode, BaselineOffset
 
 # Registry functions
-from sublib.ass.tags.registry import (
+from sublib.ass.tags._registry import (
     TAGS,
     MUTUAL_EXCLUSIVES,
     get_tag,

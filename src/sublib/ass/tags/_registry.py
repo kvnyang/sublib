@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Type
 
 # Import base to get the registry
-from sublib.ass.tags.base import (
+from sublib.ass.tags._base import (
     TagCategory,
     TagDefinition,
     get_registered_tags,

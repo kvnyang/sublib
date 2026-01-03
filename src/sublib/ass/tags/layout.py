@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, Literal
 
-from sublib.ass.tags.base import TagCategory, tag
+from sublib.ass.tags._base import TagCategory, tag
 
 
 @dataclass
