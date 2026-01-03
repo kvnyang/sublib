@@ -62,45 +62,4 @@ class AssTextRenderer:
         
         return "".join(result)
     
-    def render_from_segments(
-        self,
-        segments: list[tuple[list[AssOverrideTag], str]],
-        event_tags: dict[str, Any] | None = None,
-    ) -> str:
-        """Render text from segments (tags + text pairs).
-        
-        Args:
-            segments: List of (tags, text) tuples from get_text_segments()
-            event_tags: Optional event-level tags dict to prepend
-            
-        Returns:
-            ASS text string
-        """
-        result = []
-        
-        # Event-level tags at the start
-        if event_tags:
-            tag_strs = []
-            for name, value in event_tags.items():
-                tag_cls = get_tag(name)
-                if tag_cls:
-                    tag_strs.append(tag_cls.format(value))
-            if tag_strs:
-                result.append("{" + "".join(tag_strs) + "}")
-        
-        # Segments with inline tags
-        for tags, text in segments:
-            if tags:
-                tag_strs = []
-                for tag in tags:
-                    if tag.raw:
-                        tag_strs.append(tag.raw)
-                    else:
-                        tag_cls = get_tag(tag.name)
-                        if tag_cls:
-                            tag_strs.append(tag_cls.format(tag.value))
-                if tag_strs:
-                    result.append("{" + "".join(tag_strs) + "}")
-            result.append(text)
-        
-        return "".join(result)
+
