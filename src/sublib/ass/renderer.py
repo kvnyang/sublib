@@ -1,4 +1,4 @@
-# asslib/text_renderer.py
+# sublib/ass/renderer.py
 """Render ASS text from structured elements."""
 from __future__ import annotations
 from typing import Any
@@ -10,7 +10,7 @@ from sublib.ass.elements import (
     AssNewLine,
     AssHardSpace,
 )
-from sublib.ass.tag_registry import get_tag_spec
+from sublib.ass.tags import get_tag, format_tag
 
 
 class AssTextRenderer:
@@ -34,9 +34,9 @@ class AssTextRenderer:
                 if elem.raw:
                     pending_tags.append(elem.raw)
                 else:
-                    spec = get_tag_spec(elem.name)
-                    if spec:
-                        pending_tags.append(spec.formatter(elem.value))
+                    tag_cls = get_tag(elem.name)
+                    if tag_cls:
+                        pending_tags.append(tag_cls.format(elem.value))
             elif isinstance(elem, AssNewLine):
                 # Flush pending tags first
                 if pending_tags:
@@ -82,9 +82,9 @@ class AssTextRenderer:
         if event_tags:
             tag_strs = []
             for name, value in event_tags.items():
-                spec = get_tag_spec(name)
-                if spec:
-                    tag_strs.append(spec.formatter(value))
+                tag_cls = get_tag(name)
+                if tag_cls:
+                    tag_strs.append(tag_cls.format(value))
             if tag_strs:
                 result.append("{" + "".join(tag_strs) + "}")
         
@@ -96,12 +96,11 @@ class AssTextRenderer:
                     if tag.raw:
                         tag_strs.append(tag.raw)
                     else:
-                        spec = get_tag_spec(tag.name)
-                        if spec:
-                            tag_strs.append(spec.formatter(tag.value))
+                        tag_cls = get_tag(tag.name)
+                        if tag_cls:
+                            tag_strs.append(tag_cls.format(tag.value))
                 if tag_strs:
                     result.append("{" + "".join(tag_strs) + "}")
             result.append(text)
         
         return "".join(result)
-

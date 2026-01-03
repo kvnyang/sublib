@@ -85,7 +85,7 @@ class AssEvent:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
         from sublib.ass.elements import AssOverrideTag
-        from sublib.ass.tag_registry import MUTUAL_EXCLUSIVES
+        from sublib.ass.tags import MUTUAL_EXCLUSIVES
         from sublib.exceptions import SubtitleParseError
         
         result: dict[str, Any] = {}
@@ -154,7 +154,7 @@ class AssEvent:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
         from sublib.ass.elements import AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace
-        from sublib.ass.tag_registry import MUTUAL_EXCLUSIVES
+        from sublib.ass.tags import MUTUAL_EXCLUSIVES
         from sublib.exceptions import SubtitleParseError
         
         segments: list[AssTextSegment] = []

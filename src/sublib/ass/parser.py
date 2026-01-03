@@ -11,10 +11,10 @@ from sublib.ass.elements import (
     AssNewLine,
     AssHardSpace,
 )
-from sublib.ass.tag_registry import (
-    TAG_REGISTRY,
+from sublib.ass.tags import (
+    TAGS,
     MUTUAL_EXCLUSIVES,
-    get_tag_spec,
+    get_tag,
     parse_tag,
 )
 from sublib.exceptions import SubtitleParseError
@@ -52,7 +52,7 @@ class AssTextParser:
         """Build regex pattern that matches known tags (longest first)."""
         if cls._KNOWN_TAGS_PATTERN is None:
             # Sort by length descending so longer matches are tried first
-            tag_names = sorted(TAG_REGISTRY.keys(), key=len, reverse=True)
+            tag_names = sorted(TAGS.keys(), key=len, reverse=True)
             escaped = [re.escape(t) for t in tag_names]
             # Pattern: \tagname followed by either (args) or value until next \ or end
             pattern = r'\\(' + '|'.join(escaped) + r')(?:\(([^)]*)\)|([^\\]*))'
@@ -135,7 +135,7 @@ class AssTextParser:
             if tag_name == 'c':
                 tag_name = '1c'
             
-            spec = get_tag_spec(tag_name)
+            spec = get_tag(tag_name)
             if spec is None:
                 raise SubtitleParseError(
                     f"Unknown override tag: \\{tag_name}",
