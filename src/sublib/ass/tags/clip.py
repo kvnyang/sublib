@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, tag
 
 
 @dataclass
@@ -58,6 +58,7 @@ def _parse_clip(raw: str) -> ClipValue | None:
     return VectorClip(drawing=raw, scale=1)
 
 
+@tag
 class ClipTag:
     """\\clip(...) tag definition."""
     name: ClassVar[str] = "clip"
@@ -82,6 +83,7 @@ class ClipTag:
         return ""
 
 
+@tag
 class IClipTag:
     """\\iclip(...) tag definition."""
     name: ClassVar[str] = "iclip"

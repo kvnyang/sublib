@@ -1,7 +1,7 @@
 # sublib/ass/tags/base.py
 """Base protocol and utilities for tag definitions."""
 from __future__ import annotations
-from typing import Any, ClassVar, Protocol, runtime_checkable
+from typing import Any, ClassVar, Protocol, Type, runtime_checkable
 from enum import Enum, auto
 
 
@@ -50,8 +50,34 @@ class TagDefinition(Protocol):
         ...
 
 
-# Default values for optional class attributes
-DEFAULT_IS_EVENT = False
-DEFAULT_IS_FUNCTION = False
-DEFAULT_FIRST_WINS = False
-DEFAULT_EXCLUSIVES: frozenset[str] = frozenset()
+# ============================================================
+# Auto-Registration
+# ============================================================
+
+# Global registry populated by @tag decorator
+_TAGS: dict[str, Type] = {}
+
+
+def tag(cls: Type) -> Type:
+    """Decorator to register a tag class.
+    
+    Usage:
+        @tag
+        class PosTag:
+            name = "pos"
+            ...
+    """
+    if not hasattr(cls, "name"):
+        raise ValueError(f"Tag class {cls.__name__} must have 'name' attribute")
+    
+    tag_name = cls.name
+    if tag_name in _TAGS:
+        raise ValueError(f"Tag '{tag_name}' already registered by {_TAGS[tag_name].__name__}")
+    
+    _TAGS[tag_name] = cls
+    return cls
+
+
+def get_registered_tags() -> dict[str, Type]:
+    """Get all registered tag classes."""
+    return _TAGS.copy()

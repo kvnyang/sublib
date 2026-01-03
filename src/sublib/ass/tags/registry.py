@@ -1,88 +1,41 @@
 # sublib/ass/tags/registry.py
-"""Tag registry built from class-based definitions.
+"""Tag registry - unified access interface for all tags.
 
-This module collects all tag classes and builds the lookup tables.
+The registry is built automatically via the @tag decorator.
+Each tag module must be imported to trigger registration.
 """
 from __future__ import annotations
 from typing import Any, Type
 
-from sublib.ass.tags.base import TagCategory
-
-# Import all tag classes
-from sublib.ass.tags.position import PosTag, MoveTag, OrgTag, Position, Move
-from sublib.ass.tags.clip import ClipTag, IClipTag, RectClip, VectorClip, ClipValue
-from sublib.ass.tags.fade import FadTag, FadeTag, Fade, FadeComplex
-from sublib.ass.tags.color import (
-    CTag, C1Tag, C2Tag, C3Tag, C4Tag,
-    AlphaTag, A1Tag, A2Tag, A3Tag, A4Tag,
-    Color, Alpha,
+# Import base to get the registry
+from sublib.ass.tags.base import (
+    TagCategory,
+    TagDefinition,
+    get_registered_tags,
 )
-from sublib.ass.tags.layout import AnTag, ATag, QTag, RTag, Alignment, WrapStyle, StyleReset
-from sublib.ass.tags.transform import TTag, KTag, KUpperTag, KfTag, KoTag, KtTag, Transform, Karaoke
-from sublib.ass.tags.font import (
-    FnTag, FsTag, FscxTag, FscyTag, FspTag, FeTag,
-    BTag, ITag, UTag, STag,
-    FrxTag, FryTag, FrzTag, FrTag,
-    FaxTag, FayTag,
-    FontScale, Rotation, Shear,
-)
-from sublib.ass.tags.border import (
-    BordTag, XbordTag, YbordTag,
-    ShadTag, XshadTag, YshadTag,
-    BeTag, BlurTag,
-    BorderSize, ShadowDistance, BlurEdge, BlurGaussian,
-)
-from sublib.ass.tags.drawing import PTag, PboTag, DrawingMode, BaselineOffset
+
+# Import all tag modules to trigger @tag decorator registration
+# Order doesn't matter - each module registers its own tags
+from sublib.ass.tags import position  # noqa: F401
+from sublib.ass.tags import clip  # noqa: F401
+from sublib.ass.tags import fade  # noqa: F401
+from sublib.ass.tags import layout  # noqa: F401
+from sublib.ass.tags import drawing  # noqa: F401
+from sublib.ass.tags import color  # noqa: F401
+from sublib.ass.tags import border  # noqa: F401
+from sublib.ass.tags import transform  # noqa: F401
+from sublib.ass.tags import font  # noqa: F401
 
 
-# All tag classes in registration order
-_TAG_CLASSES = [
-    # Position
-    PosTag, MoveTag, OrgTag,
-    # Clip
-    ClipTag, IClipTag,
-    # Fade
-    FadTag, FadeTag,
-    # Alignment
-    AnTag, ATag, QTag,
-    # Color
-    CTag, C1Tag, C2Tag, C3Tag, C4Tag,
-    # Alpha
-    AlphaTag, A1Tag, A2Tag, A3Tag, A4Tag,
-    # Animation
-    TTag,
-    # Karaoke
-    KTag, KUpperTag, KfTag, KoTag, KtTag,
-    # Reset
-    RTag,
-    # Font
-    FnTag, FsTag, FscxTag, FscyTag, FspTag, FeTag,
-    # Text style
-    BTag, ITag, UTag, STag,
-    # Border
-    BordTag, XbordTag, YbordTag,
-    # Shadow
-    ShadTag, XshadTag, YshadTag,
-    # Blur
-    BeTag, BlurTag,
-    # Rotation
-    FrxTag, FryTag, FrzTag, FrTag,
-    # Shear
-    FaxTag, FayTag,
-    # Drawing
-    PTag, PboTag,
-]
-
-
-# Build registries
-TAGS: dict[str, Type] = {cls.name: cls for cls in _TAG_CLASSES}
+# Get the populated registry
+TAGS: dict[str, Type] = get_registered_tags()
 """Tag name -> Tag class mapping."""
 
 
 # Build mutual exclusives from tag classes
 MUTUAL_EXCLUSIVES: dict[str, set[str]] = {
-    cls.name: set(cls.exclusives) 
-    for cls in _TAG_CLASSES 
+    name: set(cls.exclusives) 
+    for name, cls in TAGS.items() 
     if cls.exclusives
 }
 """Tag name -> set of mutually exclusive tag names."""

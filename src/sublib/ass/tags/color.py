@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, tag
 
 
 @dataclass
@@ -59,6 +59,7 @@ def _parse_alpha(raw: str) -> Alpha | None:
 # Color Tags
 # ============================================================
 
+@tag
 class CTag:
     """\\c (alias for \\1c) tag definition."""
     name: ClassVar[str] = "c"
@@ -77,6 +78,7 @@ class CTag:
         return f"\\c&H{val.value:06X}&"
 
 
+@tag
 class C1Tag:
     """\\1c primary color tag definition."""
     name: ClassVar[str] = "1c"
@@ -95,6 +97,7 @@ class C1Tag:
         return f"\\1c&H{val.value:06X}&"
 
 
+@tag
 class C2Tag:
     """\\2c secondary color tag definition."""
     name: ClassVar[str] = "2c"
@@ -113,6 +116,7 @@ class C2Tag:
         return f"\\2c&H{val.value:06X}&"
 
 
+@tag
 class C3Tag:
     """\\3c outline color tag definition."""
     name: ClassVar[str] = "3c"
@@ -131,6 +135,7 @@ class C3Tag:
         return f"\\3c&H{val.value:06X}&"
 
 
+@tag
 class C4Tag:
     """\\4c shadow color tag definition."""
     name: ClassVar[str] = "4c"
@@ -153,6 +158,7 @@ class C4Tag:
 # Alpha Tags
 # ============================================================
 
+@tag
 class AlphaTag:
     """\\alpha (all colors) tag definition."""
     name: ClassVar[str] = "alpha"
@@ -171,6 +177,7 @@ class AlphaTag:
         return f"\\alpha&H{val.value:02X}&"
 
 
+@tag
 class A1Tag:
     """\\1a primary alpha tag definition."""
     name: ClassVar[str] = "1a"
@@ -189,6 +196,7 @@ class A1Tag:
         return f"\\1a&H{val.value:02X}&"
 
 
+@tag
 class A2Tag:
     """\\2a secondary alpha tag definition."""
     name: ClassVar[str] = "2a"
@@ -207,6 +215,7 @@ class A2Tag:
         return f"\\2a&H{val.value:02X}&"
 
 
+@tag
 class A3Tag:
     """\\3a outline alpha tag definition."""
     name: ClassVar[str] = "3a"
@@ -225,6 +234,7 @@ class A3Tag:
         return f"\\3a&H{val.value:02X}&"
 
 
+@tag
 class A4Tag:
     """\\4a shadow alpha tag definition."""
     name: ClassVar[str] = "4a"

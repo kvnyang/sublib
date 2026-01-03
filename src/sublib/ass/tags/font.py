@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, tag
 
 
 @dataclass
@@ -73,6 +73,7 @@ def _parse_bold(raw: str) -> int | bool | None:
 # Font Tags
 # ============================================================
 
+@tag
 class FnTag:
     """\\fn font name tag definition."""
     name: ClassVar[str] = "fn"
@@ -91,6 +92,7 @@ class FnTag:
         return f"\\fn{val}"
 
 
+@tag
 class FsTag:
     """\\fs font size tag definition."""
     name: ClassVar[str] = "fs"
@@ -109,6 +111,7 @@ class FsTag:
         return f"\\fs{val}"
 
 
+@tag
 class FscxTag:
     """\\fscx font scale X tag definition."""
     name: ClassVar[str] = "fscx"
@@ -127,6 +130,7 @@ class FscxTag:
         return f"\\fscx{val}"
 
 
+@tag
 class FscyTag:
     """\\fscy font scale Y tag definition."""
     name: ClassVar[str] = "fscy"
@@ -145,6 +149,7 @@ class FscyTag:
         return f"\\fscy{val}"
 
 
+@tag
 class FspTag:
     """\\fsp letter spacing tag definition."""
     name: ClassVar[str] = "fsp"
@@ -163,6 +168,7 @@ class FspTag:
         return f"\\fsp{val}"
 
 
+@tag
 class FeTag:
     """\\fe font encoding tag definition."""
     name: ClassVar[str] = "fe"
@@ -185,6 +191,7 @@ class FeTag:
 # Text Style Tags
 # ============================================================
 
+@tag
 class BTag:
     """\\b bold tag definition."""
     name: ClassVar[str] = "b"
@@ -205,6 +212,7 @@ class BTag:
         return f"\\b{val}"
 
 
+@tag
 class ITag:
     """\\i italic tag definition."""
     name: ClassVar[str] = "i"
@@ -223,6 +231,7 @@ class ITag:
         return f"\\i{1 if val else 0}"
 
 
+@tag
 class UTag:
     """\\u underline tag definition."""
     name: ClassVar[str] = "u"
@@ -241,6 +250,7 @@ class UTag:
         return f"\\u{1 if val else 0}"
 
 
+@tag
 class STag:
     """\\s strikeout tag definition."""
     name: ClassVar[str] = "s"
@@ -263,6 +273,7 @@ class STag:
 # Rotation Tags
 # ============================================================
 
+@tag
 class FrxTag:
     """\\frx X-axis rotation tag definition."""
     name: ClassVar[str] = "frx"
@@ -281,6 +292,7 @@ class FrxTag:
         return f"\\frx{val}"
 
 
+@tag
 class FryTag:
     """\\fry Y-axis rotation tag definition."""
     name: ClassVar[str] = "fry"
@@ -299,6 +311,7 @@ class FryTag:
         return f"\\fry{val}"
 
 
+@tag
 class FrzTag:
     """\\frz Z-axis rotation tag definition."""
     name: ClassVar[str] = "frz"
@@ -317,6 +330,7 @@ class FrzTag:
         return f"\\frz{val}"
 
 
+@tag
 class FrTag:
     """\\fr Z-axis rotation alias tag definition."""
     name: ClassVar[str] = "fr"
@@ -339,6 +353,7 @@ class FrTag:
 # Shear Tags
 # ============================================================
 
+@tag
 class FaxTag:
     """\\fax X shear tag definition."""
     name: ClassVar[str] = "fax"
@@ -357,6 +372,7 @@ class FaxTag:
         return f"\\fax{val}"
 
 
+@tag
 class FayTag:
     """\\fay Y shear tag definition."""
     name: ClassVar[str] = "fay"

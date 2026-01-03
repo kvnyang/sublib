@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, tag
 
 
 @dataclass
@@ -26,6 +26,7 @@ class FadeComplex:
     t4: int
 
 
+@tag
 class FadTag:
     """\\fad(fadein,fadeout) tag definition."""
     name: ClassVar[str] = "fad"
@@ -50,6 +51,7 @@ class FadTag:
         return f"\\fad({val.fadein},{val.fadeout})"
 
 
+@tag
 class FadeTag:
     """\\fade(a1,a2,a3,t1,t2,t3,t4) tag definition."""
     name: ClassVar[str] = "fade"

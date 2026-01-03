@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, Literal
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, tag
 
 
 @dataclass
@@ -26,6 +26,7 @@ class StyleReset:
     style_name: str | None = None
 
 
+@tag
 class AnTag:
     """\\an<1-9> tag definition."""
     name: ClassVar[str] = "an"
@@ -50,6 +51,7 @@ class AnTag:
         return f"\\an{val.value}"
 
 
+@tag
 class ATag:
     """\\a<pos> legacy alignment tag definition."""
     name: ClassVar[str] = "a"
@@ -74,6 +76,7 @@ class ATag:
         return f"\\a{val.value}"
 
 
+@tag
 class QTag:
     """\\q<0-3> wrap style tag definition."""
     name: ClassVar[str] = "q"
@@ -98,6 +101,7 @@ class QTag:
         return f"\\q{val.style}"
 
 
+@tag
 class RTag:
     """\\r or \\r<style> style reset tag definition."""
     name: ClassVar[str] = "r"

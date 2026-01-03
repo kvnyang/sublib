@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, tag
 
 
 @dataclass
@@ -55,6 +55,7 @@ def _parse_int(raw: str, *, ge: int | None = None) -> int | None:
 # Border Tags
 # ============================================================
 
+@tag
 class BordTag:
     """\\bord tag definition."""
     name: ClassVar[str] = "bord"
@@ -73,6 +74,7 @@ class BordTag:
         return f"\\bord{val}"
 
 
+@tag
 class XbordTag:
     """\\xbord tag definition."""
     name: ClassVar[str] = "xbord"
@@ -91,6 +93,7 @@ class XbordTag:
         return f"\\xbord{val}"
 
 
+@tag
 class YbordTag:
     """\\ybord tag definition."""
     name: ClassVar[str] = "ybord"
@@ -113,6 +116,7 @@ class YbordTag:
 # Shadow Tags
 # ============================================================
 
+@tag
 class ShadTag:
     """\\shad tag definition."""
     name: ClassVar[str] = "shad"
@@ -131,6 +135,7 @@ class ShadTag:
         return f"\\shad{val}"
 
 
+@tag
 class XshadTag:
     """\\xshad tag definition (can be negative)."""
     name: ClassVar[str] = "xshad"
@@ -149,6 +154,7 @@ class XshadTag:
         return f"\\xshad{val}"
 
 
+@tag
 class YshadTag:
     """\\yshad tag definition (can be negative)."""
     name: ClassVar[str] = "yshad"
@@ -171,6 +177,7 @@ class YshadTag:
 # Blur Tags
 # ============================================================
 
+@tag
 class BeTag:
     """\\be edge blur tag definition."""
     name: ClassVar[str] = "be"
@@ -189,6 +196,7 @@ class BeTag:
         return f"\\be{val}"
 
 
+@tag
 class BlurTag:
     """\\blur gaussian blur tag definition."""
     name: ClassVar[str] = "blur"
