@@ -16,7 +16,7 @@ from sublib.ass.tag_registry import (
     MUTUAL_EXCLUSIVES,
     get_tag_spec,
 )
-from sublib.ass.exceptions import SubtitleParseError
+from sublib.exceptions import SubtitleParseError
 
 
 class AssTextParser:

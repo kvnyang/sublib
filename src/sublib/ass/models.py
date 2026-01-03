@@ -68,7 +68,7 @@ class AssEvent:
         Returns:
             The reconstructed ASS text string with override tags.
         """
-        from sublib.ass.text_renderer import AssTextRenderer
+        from sublib.ass.renderer import AssTextRenderer
         return AssTextRenderer().render(self.text_elements)
     
     def extract_event_tags(self, strict: bool = False) -> dict[str, Any]:
@@ -86,7 +86,7 @@ class AssEvent:
         """
         from sublib.ass.elements import AssOverrideTag
         from sublib.ass.tag_registry import MUTUAL_EXCLUSIVES
-        from sublib.ass.exceptions import SubtitleParseError
+        from sublib.exceptions import SubtitleParseError
         
         result: dict[str, Any] = {}
         seen_first_win: set[str] = set()
@@ -155,7 +155,7 @@ class AssEvent:
         """
         from sublib.ass.elements import AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace
         from sublib.ass.tag_registry import MUTUAL_EXCLUSIVES
-        from sublib.ass.exceptions import SubtitleParseError
+        from sublib.exceptions import SubtitleParseError
         
         segments: list[AssTextSegment] = []
         current_tags: list[AssOverrideTag] = []
@@ -243,12 +243,12 @@ class AssFile:
     @classmethod
     def load(cls, path: str | Path) -> "AssFile":
         """Load an ASS file from disk."""
-        from sublib.ass.repository import load_ass_file
+        from sublib.ass.io import load_ass_file
         return load_ass_file(path)
     
     def save(self, path: str | Path) -> None:
         """Save the ASS file to disk."""
-        from sublib.ass.repository import save_ass_file
+        from sublib.ass.io import save_ass_file
         save_ass_file(self, path)
     
     def sort_events(

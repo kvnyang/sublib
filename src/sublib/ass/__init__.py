@@ -10,12 +10,12 @@ from sublib.ass.elements import (
     AssHardSpace,
     AssTextSegment,
 )
-from sublib.ass.text_parser import AssTextParser
-from sublib.ass.text_renderer import AssTextRenderer
-from sublib.ass.repository import load_ass_file, save_ass_file
+from sublib.ass.parser import AssTextParser
+from sublib.ass.renderer import AssTextRenderer
+from sublib.ass.io import load_ass_file, save_ass_file
 
-# Tag value types
-from sublib.ass.tag_values import (
+# Tag value types from tags/
+from sublib.ass.tags import (
     Position,
     Move,
     RectClip,
@@ -24,6 +24,7 @@ from sublib.ass.tag_values import (
     Fade,
     FadeComplex,
     Transform,
+    Karaoke,
     Color,
     Alpha,
     Alignment,
@@ -67,6 +68,7 @@ __all__ = [
     "Fade",
     "FadeComplex",
     "Transform",
+    "Karaoke",
     "Color",
     "Alpha",
     "Alignment",
