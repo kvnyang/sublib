@@ -1,8 +1,8 @@
-# sublib/formats/ass/__init__.py
+# sublib/ass/__init__.py
 """ASS/SSA subtitle format support."""
 
-from sublib.formats.ass.models import AssFile, AssEvent, AssStyle
-from sublib.formats.ass.elements import (
+from sublib.ass.models import AssFile, AssEvent, AssStyle
+from sublib.ass.elements import (
     AssTextElement,
     AssOverrideTag,
     AssPlainText,
@@ -10,11 +10,12 @@ from sublib.formats.ass.elements import (
     AssHardSpace,
     AssTextSegment,
 )
-from sublib.formats.ass.text_parser import AssTextParser
-from sublib.formats.ass.text_renderer import AssTextRenderer
+from sublib.ass.text_parser import AssTextParser
+from sublib.ass.text_renderer import AssTextRenderer
+from sublib.ass.repository import load_ass_file, save_ass_file
 
 # Tag value types
-from sublib.formats.ass.tag_values import (
+from sublib.ass.tag_values import (
     Position,
     Move,
     RectClip,
@@ -44,6 +45,9 @@ __all__ = [
     "AssFile",
     "AssEvent",
     "AssStyle",
+    # I/O
+    "load_ass_file",
+    "save_ass_file",
     # Elements
     "AssTextElement",
     "AssOverrideTag",

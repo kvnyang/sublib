@@ -4,19 +4,19 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from sublib.formats.ass.elements import (
+from sublib.ass.elements import (
     AssTextElement,
     AssOverrideTag,
     AssPlainText,
     AssNewLine,
     AssHardSpace,
 )
-from sublib.formats.ass.tag_registry import (
+from sublib.ass.tag_registry import (
     TAG_REGISTRY,
     MUTUAL_EXCLUSIVES,
     get_tag_spec,
 )
-from sublib.core.exceptions import SubtitleParseError
+from sublib.ass.exceptions import SubtitleParseError
 
 
 class AssTextParser:

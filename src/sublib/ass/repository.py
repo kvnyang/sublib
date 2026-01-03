@@ -3,9 +3,9 @@
 from __future__ import annotations
 from pathlib import Path
 
-from sublib.formats.ass.models import AssFile, AssEvent, AssStyle
-from sublib.formats.ass.text_parser import AssTextParser
-from sublib.core.exceptions import SubtitleParseError
+from sublib.ass.models import AssFile, AssEvent, AssStyle
+from sublib.ass.text_parser import AssTextParser
+from sublib.ass.exceptions import SubtitleParseError
 
 
 def load_ass_file(path: str | Path) -> AssFile:

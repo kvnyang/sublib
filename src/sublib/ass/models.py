@@ -1,12 +1,11 @@
-# sublib/formats/ass/models.py
+# sublib/ass/models.py
 """ASS file, event, and style models."""
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 from pathlib import Path
 
-from sublib.core.models import Cue
-from sublib.formats.ass.elements import AssTextElement, AssPlainText, AssNewLine, AssHardSpace, AssTextSegment
+from sublib.ass.elements import AssTextElement, AssPlainText, AssNewLine, AssHardSpace, AssTextSegment
 
 
 @dataclass
@@ -41,11 +40,10 @@ class AssStyle:
 
 
 @dataclass
-class AssEvent(Cue):
+class AssEvent:
     """ASS dialogue event.
     
     Represents a Dialogue line from the [Events] section.
-    Inherits from Cue for cross-format compatibility.
     
     The text_elements field is the single source of truth.
     render_text() renders ASS text from it.
@@ -70,7 +68,7 @@ class AssEvent(Cue):
         Returns:
             The reconstructed ASS text string with override tags.
         """
-        from sublib.formats.ass.text_renderer import AssTextRenderer
+        from sublib.ass.text_renderer import AssTextRenderer
         return AssTextRenderer().render(self.text_elements)
     
     def extract_event_tags(self, strict: bool = False) -> dict[str, Any]:
@@ -86,9 +84,9 @@ class AssEvent(Cue):
         Raises:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
-        from sublib.formats.ass.elements import AssOverrideTag
-        from sublib.formats.ass.tag_registry import MUTUAL_EXCLUSIVES
-        from sublib.core.exceptions import SubtitleParseError
+        from sublib.ass.elements import AssOverrideTag
+        from sublib.ass.tag_registry import MUTUAL_EXCLUSIVES
+        from sublib.ass.exceptions import SubtitleParseError
         
         result: dict[str, Any] = {}
         seen_first_win: set[str] = set()
@@ -155,9 +153,9 @@ class AssEvent(Cue):
         Raises:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
-        from sublib.formats.ass.elements import AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace
-        from sublib.formats.ass.tag_registry import MUTUAL_EXCLUSIVES
-        from sublib.core.exceptions import SubtitleParseError
+        from sublib.ass.elements import AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace
+        from sublib.ass.tag_registry import MUTUAL_EXCLUSIVES
+        from sublib.ass.exceptions import SubtitleParseError
         
         segments: list[AssTextSegment] = []
         current_tags: list[AssOverrideTag] = []
@@ -245,12 +243,12 @@ class AssFile:
     @classmethod
     def load(cls, path: str | Path) -> "AssFile":
         """Load an ASS file from disk."""
-        from sublib.formats.ass.repository import load_ass_file
+        from sublib.ass.repository import load_ass_file
         return load_ass_file(path)
     
     def save(self, path: str | Path) -> None:
         """Save the ASS file to disk."""
-        from sublib.formats.ass.repository import save_ass_file
+        from sublib.ass.repository import save_ass_file
         save_ass_file(self, path)
     
     def sort_events(

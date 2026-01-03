@@ -13,7 +13,7 @@ from typing import Any, Callable
 from functools import partial
 import re
 
-from sublib.formats.ass.tag_values import (
+from sublib.ass.tag_values import (
     Position, Move, RectClip, VectorClip, ClipValue,
     Fade, FadeComplex, Transform,
     Color, Alpha, Alignment, WrapStyle, StyleReset,
