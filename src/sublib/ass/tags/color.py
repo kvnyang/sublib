@@ -64,7 +64,8 @@ class CTag:
     """\\c (alias for \\1c) tag definition."""
     name: ClassVar[str] = "c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -83,7 +84,8 @@ class C1Tag:
     """\\1c primary color tag definition."""
     name: ClassVar[str] = "1c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -102,7 +104,8 @@ class C2Tag:
     """\\2c secondary color tag definition."""
     name: ClassVar[str] = "2c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -121,7 +124,8 @@ class C3Tag:
     """\\3c outline color tag definition."""
     name: ClassVar[str] = "3c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -140,7 +144,8 @@ class C4Tag:
     """\\4c shadow color tag definition."""
     name: ClassVar[str] = "4c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -163,7 +168,8 @@ class AlphaTag:
     """\\alpha (all colors) tag definition."""
     name: ClassVar[str] = "alpha"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -182,7 +188,8 @@ class A1Tag:
     """\\1a primary alpha tag definition."""
     name: ClassVar[str] = "1a"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -201,7 +208,8 @@ class A2Tag:
     """\\2a secondary alpha tag definition."""
     name: ClassVar[str] = "2a"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -217,10 +225,11 @@ class A2Tag:
 
 @tag
 class A3Tag:
-    """\\3a outline alpha tag definition."""
+    """\\3a border alpha tag definition."""
     name: ClassVar[str] = "3a"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -239,7 +248,8 @@ class A4Tag:
     """\\4a shadow alpha tag definition."""
     name: ClassVar[str] = "4a"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

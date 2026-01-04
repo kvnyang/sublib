@@ -30,7 +30,8 @@ class PosTag:
     """\\pos(x,y) tag definition."""
     name: ClassVar[str] = "pos"
     category: ClassVar[TagCategory] = TagCategory.POSITION
-    is_event: ClassVar[bool] = True
+    param_pattern: ClassVar[str | None] = None
+    is_line_scoped: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset({"move"})
@@ -55,7 +56,8 @@ class MoveTag:
     """\\move(x1,y1,x2,y2[,t1,t2]) tag definition."""
     name: ClassVar[str] = "move"
     category: ClassVar[TagCategory] = TagCategory.POSITION
-    is_event: ClassVar[bool] = True
+    param_pattern: ClassVar[str | None] = None
+    is_line_scoped: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset({"pos"})
@@ -94,7 +96,8 @@ class OrgTag:
     """\\org(x,y) tag definition."""
     name: ClassVar[str] = "org"
     category: ClassVar[TagCategory] = TagCategory.POSITION
-    is_event: ClassVar[bool] = True
+    param_pattern: ClassVar[str | None] = None
+    is_line_scoped: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset()

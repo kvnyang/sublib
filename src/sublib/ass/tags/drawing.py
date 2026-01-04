@@ -34,7 +34,8 @@ class PTag:
     """\\p drawing mode tag definition."""
     name: ClassVar[str] = "p"
     category: ClassVar[TagCategory] = TagCategory.DRAWING
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -53,7 +54,9 @@ class PboTag:
     """\\pbo baseline offset tag definition."""
     name: ClassVar[str] = "pbo"
     category: ClassVar[TagCategory] = TagCategory.DRAWING
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'-?\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

@@ -46,10 +46,10 @@ def get_tag(name: str) -> Type | None:
     return TAGS.get(name)
 
 
-def is_event_tag(name: str) -> bool:
+def is_line_scoped_tag(name: str) -> bool:
     """Check if tag is event-level."""
     tag = TAGS.get(name)
-    return tag.is_event if tag else False
+    return tag.is_line_scoped if tag else False
 
 
 def is_first_wins(name: str) -> bool:

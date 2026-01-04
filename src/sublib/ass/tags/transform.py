@@ -28,7 +28,8 @@ class TTag:
     """\\t(...) animation tag definition."""
     name: ClassVar[str] = "t"
     category: ClassVar[TagCategory] = TagCategory.ANIMATION
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = None
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -101,7 +102,9 @@ class KTag:
     """\\k karaoke tag definition."""
     name: ClassVar[str] = "k"
     category: ClassVar[TagCategory] = TagCategory.KARAOKE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -120,7 +123,9 @@ class KUpperTag:
     """\\K karaoke tag definition."""
     name: ClassVar[str] = "K"
     category: ClassVar[TagCategory] = TagCategory.KARAOKE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -139,7 +144,10 @@ class KfTag:
     """\\kf karaoke tag definition."""
     name: ClassVar[str] = "kf"
     category: ClassVar[TagCategory] = TagCategory.KARAOKE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -158,7 +166,10 @@ class KoTag:
     """\\ko karaoke tag definition."""
     name: ClassVar[str] = "ko"
     category: ClassVar[TagCategory] = TagCategory.KARAOKE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -177,7 +188,10 @@ class KtTag:
     """\\kt karaoke tag definition."""
     name: ClassVar[str] = "kt"
     category: ClassVar[TagCategory] = TagCategory.KARAOKE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

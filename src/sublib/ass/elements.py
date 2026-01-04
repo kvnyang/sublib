@@ -16,14 +16,14 @@ class AssOverrideTag:
         name: Tag name without backslash (e.g., "fn", "pos", "1c")
         value: Parsed value (type depends on tag)
         raw: Original string for roundtrip
-        is_event: Whether this is an event-level tag
+        is_line_scoped: Whether this is an event-level tag
         first_wins: Whether first occurrence wins (vs last)
         is_function: Whether tag uses function syntax with parentheses
     """
     name: str
     value: Any
     raw: str
-    is_event: bool = False
+    is_line_scoped: bool = False
     first_wins: bool = False
     is_function: bool = False
 

@@ -78,7 +78,8 @@ class FnTag:
     """\\fn font name tag definition."""
     name: ClassVar[str] = "fn"
     category: ClassVar[TagCategory] = TagCategory.FONT
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'[^\\]+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -97,7 +98,8 @@ class FsTag:
     """\\fs font size tag definition."""
     name: ClassVar[str] = "fs"
     category: ClassVar[TagCategory] = TagCategory.FONT
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -116,7 +118,9 @@ class FscxTag:
     """\\fscx font scale X tag definition."""
     name: ClassVar[str] = "fscx"
     category: ClassVar[TagCategory] = TagCategory.FONT
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -135,7 +139,9 @@ class FscyTag:
     """\\fscy font scale Y tag definition."""
     name: ClassVar[str] = "fscy"
     category: ClassVar[TagCategory] = TagCategory.FONT
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -154,7 +160,9 @@ class FspTag:
     """\\fsp letter spacing tag definition."""
     name: ClassVar[str] = "fsp"
     category: ClassVar[TagCategory] = TagCategory.FONT
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -173,7 +181,8 @@ class FeTag:
     """\\fe font encoding tag definition."""
     name: ClassVar[str] = "fe"
     category: ClassVar[TagCategory] = TagCategory.FONT
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'\d+'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -196,7 +205,8 @@ class BTag:
     """\\b bold tag definition."""
     name: ClassVar[str] = "b"
     category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'(?:[01]|[1-9]00)'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -217,7 +227,8 @@ class ITag:
     """\\i italic tag definition."""
     name: ClassVar[str] = "i"
     category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'[01]'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -236,7 +247,8 @@ class UTag:
     """\\u underline tag definition."""
     name: ClassVar[str] = "u"
     category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'[01]'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -255,7 +267,8 @@ class STag:
     """\\s strikeout tag definition."""
     name: ClassVar[str] = "s"
     category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'[01]'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -278,7 +291,9 @@ class FrxTag:
     """\\frx X-axis rotation tag definition."""
     name: ClassVar[str] = "frx"
     category: ClassVar[TagCategory] = TagCategory.ROTATION
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -297,7 +312,9 @@ class FryTag:
     """\\fry Y-axis rotation tag definition."""
     name: ClassVar[str] = "fry"
     category: ClassVar[TagCategory] = TagCategory.ROTATION
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -316,7 +333,9 @@ class FrzTag:
     """\\frz Z-axis rotation tag definition."""
     name: ClassVar[str] = "frz"
     category: ClassVar[TagCategory] = TagCategory.ROTATION
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -335,7 +354,8 @@ class FrTag:
     """\\fr Z-axis rotation alias tag definition."""
     name: ClassVar[str] = "fr"
     category: ClassVar[TagCategory] = TagCategory.ROTATION
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -358,7 +378,8 @@ class FaxTag:
     """\\fax X shear tag definition."""
     name: ClassVar[str] = "fax"
     category: ClassVar[TagCategory] = TagCategory.SHEAR
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -377,7 +398,8 @@ class FayTag:
     """\\fay Y shear tag definition."""
     name: ClassVar[str] = "fay"
     category: ClassVar[TagCategory] = TagCategory.SHEAR
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

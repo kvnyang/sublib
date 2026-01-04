@@ -99,7 +99,7 @@ class AssEvent:
                 flat_elements.extend(item for item in elem.elements if isinstance(item, AssOverrideTag))
         
         for elem in flat_elements:
-            if not elem.is_event:
+            if not elem.is_line_scoped:
                 continue
             
             name = elem.name
@@ -142,7 +142,7 @@ class AssEvent:
         """Extract text segments with their preceding inline tags.
         
         Each segment contains:
-        - tags: list of AssOverrideTag (is_event=False), with
+        - tags: list of AssOverrideTag (is_line_scoped=False), with
                 first-wins/last-wins and mutual exclusion rules applied
         - text: the text content (may include \\N newlines)
         
@@ -221,7 +221,7 @@ class AssEvent:
                 # Process tags inside block
                 for item in elem.elements:
                     if isinstance(item, AssOverrideTag):
-                        if not item.is_event:
+                        if not item.is_line_scoped:
                             if current_text:
                                 # Flush previous segment
                                 segments.append(AssTextSegment(tags=apply_tag_rules(current_tags), text=current_text))

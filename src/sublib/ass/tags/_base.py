@@ -34,7 +34,8 @@ class TagDefinition(Protocol):
     """
     name: ClassVar[str]
     category: ClassVar[TagCategory]
-    is_event: ClassVar[bool]
+    param_pattern: ClassVar[str | None]  # NEW: Regex pattern for parameter matching
+    is_line_scoped: ClassVar[bool]
     is_function: ClassVar[bool]
     first_wins: ClassVar[bool]
     exclusives: ClassVar[frozenset[str]]

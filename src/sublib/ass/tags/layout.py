@@ -31,7 +31,9 @@ class AnTag:
     """\\an<1-9> tag definition."""
     name: ClassVar[str] = "an"
     category: ClassVar[TagCategory] = TagCategory.ALIGNMENT
-    is_event: ClassVar[bool] = True
+    param_pattern: ClassVar[str | None] = r'(?:[1-3]|[5-7]|9|1[01])'
+    param_pattern: ClassVar[str | None] = r'[1-9]'
+    is_line_scoped: ClassVar[bool] = True
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -56,7 +58,8 @@ class ATag:
     """\\a<pos> legacy alignment tag definition."""
     name: ClassVar[str] = "a"
     category: ClassVar[TagCategory] = TagCategory.ALIGNMENT
-    is_event: ClassVar[bool] = True
+    param_pattern: ClassVar[str | None] = r'(?:[1-3]|[5-7]|9|1[01])'
+    is_line_scoped: ClassVar[bool] = True
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -81,7 +84,8 @@ class QTag:
     """\\q<0-3> wrap style tag definition."""
     name: ClassVar[str] = "q"
     category: ClassVar[TagCategory] = TagCategory.ALIGNMENT
-    is_event: ClassVar[bool] = True
+    param_pattern: ClassVar[str | None] = r'[0-3]'
+    is_line_scoped: ClassVar[bool] = True
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -106,7 +110,8 @@ class RTag:
     """\\r or \\r<style> style reset tag definition."""
     name: ClassVar[str] = "r"
     category: ClassVar[TagCategory] = TagCategory.RESET
-    is_event: ClassVar[bool] = False
+    param_pattern: ClassVar[str | None] = r'[^\\]*'
+    is_line_scoped: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

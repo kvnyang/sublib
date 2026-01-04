@@ -28,12 +28,17 @@ class FadeComplex:
 
 @tag
 class FadTag:
-    """\\fad(fadein,fadeout) tag definition."""
+    """\\fad(fadein,fadeout) tag definition.
+    
+    Note: Based on Aegisub behavior, fade effects are first-wins.
+    If multiple \\fad tags appear (violating the spec), the first one takes precedence.
+    """
     name: ClassVar[str] = "fad"
     category: ClassVar[TagCategory] = TagCategory.FADE
-    is_event: ClassVar[bool] = True
+    param_pattern: ClassVar[str | None] = None
+    is_line_scoped: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
-    first_wins: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset({"fade"})
     
     @staticmethod
@@ -53,12 +58,17 @@ class FadTag:
 
 @tag
 class FadeTag:
-    """\\fade(a1,a2,a3,t1,t2,t3,t4) tag definition."""
+    """\\fade(a1,a2,a3,t1,t2,t3,t4) tag definition.
+    
+    Note: Based on Aegisub behavior, fade effects are first-wins.
+    If multiple \\fade tags appear (violating the spec), the first one takes precedence.
+    """
     name: ClassVar[str] = "fade"
     category: ClassVar[TagCategory] = TagCategory.FADE
-    is_event: ClassVar[bool] = True
+    param_pattern: ClassVar[str | None] = None
+    is_line_scoped: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
-    first_wins: ClassVar[bool] = False
+    first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset({"fad"})
     
     @staticmethod
