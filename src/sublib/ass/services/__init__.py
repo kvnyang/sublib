@@ -1,18 +1,47 @@
 # sublib/ass/services/__init__.py
 """ASS processing services.
 
-This module contains stateless functions for processing AST elements.
+Organized by ASS line type hierarchy:
+- text: Override tags and special chars within Dialogue text field
+- style: Style: lines
+- event: Dialogue: lines  
+- file: Complete ASS file with sections
 """
+from .parsers import (
+    AssTextParser,
+    parse_style_line,
+    parse_event_line,
+    parse_timestamp,
+    parse_ass_string,
+)
+from .renderers import (
+    AssTextRenderer,
+    render_style_line,
+    render_event_line,
+    format_timestamp,
+    render_ass_string,
+)
 from .extractor import (
     extract_line_scoped_tags,
     extract_text_scoped_segments,
 )
-from .renderer import AssTextRenderer
-from .parser import AssTextParser
 
 __all__ = [
+    # Text level
+    "AssTextParser",
+    "AssTextRenderer",
+    # Style level
+    "parse_style_line",
+    "render_style_line",
+    # Event level
+    "parse_event_line",
+    "render_event_line",
+    "parse_timestamp",
+    "format_timestamp",
+    # File level
+    "parse_ass_string",
+    "render_ass_string",
+    # Extractors
     "extract_line_scoped_tags",
     "extract_text_scoped_segments",
-    "AssTextRenderer",
-    "AssTextParser",
 ]
