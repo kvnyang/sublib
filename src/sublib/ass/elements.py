@@ -124,7 +124,7 @@ class AssTextSegment:
         content: List of content elements, preserving type info.
                  Allows distinct handling of plain text vs special chars.
     """
-    tags: dict[str, Any]
+    block_tags: dict[str, Any]
     content: list["AssPlainText | AssSpecialChar"]
     
     def get_text(self) -> str:

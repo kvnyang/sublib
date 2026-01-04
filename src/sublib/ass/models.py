@@ -154,7 +154,7 @@ class AssEvent:
                 # New block after content = new segment
                 if current_content:
                     segments.append(AssTextSegment(
-                        tags=pending_tags.copy(),
+                        block_tags=pending_tags.copy(),
                         content=current_content.copy()
                     ))
                     pending_tags = {}
@@ -174,7 +174,7 @@ class AssEvent:
         # Final segment
         if current_content:
             segments.append(AssTextSegment(
-                tags=pending_tags,
+                block_tags=pending_tags,
                 content=current_content
             ))
         
