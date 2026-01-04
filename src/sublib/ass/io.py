@@ -15,10 +15,18 @@ def load_ass_file(path: str | Path) -> AssFile:
     having their text parsed into elements.
     """
     path = Path(path)
-    parser = AssTextParser()
-    
     with open(path, 'r', encoding='utf-8-sig') as f:
         content = f.read()
+    return load_ass_string(content)
+
+
+def load_ass_string(content: str) -> AssFile:
+    """Parse ASS content from string.
+    
+    Returns an AssFile with all events
+    having their text parsed into elements.
+    """
+    parser = AssTextParser()
     
     ass_file = AssFile()
     lines = content.splitlines()

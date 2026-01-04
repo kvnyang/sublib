@@ -134,15 +134,21 @@ class AssFile:
     events: list[AssEvent] = field(default_factory=list)
     
     @classmethod
-    def load(cls, path: Path | str) -> "AssFile":
-        """Load ASS file from path."""
-        from sublib.ass.io import load_ass_file
-        return load_ass_file(Path(path))
+    def from_string(cls, content: str) -> "AssFile":
+        """Parse ASS content from string."""
+        from sublib.ass.io import load_ass_string
+        return load_ass_string(content)
     
     def to_string(self) -> str:
         """Render to ASS format string."""
         from sublib.ass.io import save_ass_string
         return save_ass_string(self)
+    
+    @classmethod
+    def load(cls, path: Path | str) -> "AssFile":
+        """Load ASS file from path."""
+        from sublib.ass.io import load_ass_file
+        return load_ass_file(Path(path))
     
     def save(self, path: Path | str) -> None:
         """Save to file."""
