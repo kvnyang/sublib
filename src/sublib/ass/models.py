@@ -44,12 +44,18 @@ class AssEvent:
     """ASS dialogue event.
     
     Represents a Dialogue line from the [Events] section.
+    Pure data class - use services for parsing and rendering:
     
-    The text_elements field is the single source of truth.
-    Use from_text() to create from ASS text string.
-    Use render_text() to render back to ASS text.
-    
-    For extracting tags or segments, use services directly:
+        from sublib.ass.services import AssTextParser, AssTextRenderer
+        
+        # Parse text to elements
+        elements = AssTextParser().parse(text)
+        event = AssEvent(text_elements=elements, start_ms=0, end_ms=1000)
+        
+        # Render elements to text
+        text = AssTextRenderer().render(event.text_elements)
+        
+        # Extract tags or segments
         from sublib.ass.services import extract_line_scoped_tags
         tags = extract_line_scoped_tags(event.text_elements)
     """
@@ -66,56 +72,6 @@ class AssEvent:
     margin_r: int = 0
     margin_v: int = 0
     effect: str = ""
-    
-    @classmethod
-    def from_text(
-        cls,
-        text: str,
-        *,
-        start_ms: int = 0,
-        end_ms: int = 0,
-        style: str = "Default",
-        layer: int = 0,
-        name: str = "",
-        margin_l: int = 0,
-        margin_r: int = 0,
-        margin_v: int = 0,
-        effect: str = "",
-        strict: bool = True,
-    ) -> "AssEvent":
-        """Create event from ASS text string.
-        
-        Args:
-            text: ASS text with override tags
-            strict: If True, raise error on unrecognized content
-            **kwargs: Other AssEvent fields
-            
-        Returns:
-            New AssEvent with parsed text_elements
-        """
-        from sublib.ass.services import AssTextParser
-        elements = AssTextParser(strict=strict).parse(text)
-        return cls(
-            start_ms=start_ms,
-            end_ms=end_ms,
-            text_elements=elements,
-            style=style,
-            layer=layer,
-            name=name,
-            margin_l=margin_l,
-            margin_r=margin_r,
-            margin_v=margin_v,
-            effect=effect,
-        )
-    
-    def render_text(self) -> str:
-        """Render elements back to ASS text format.
-        
-        Returns:
-            The reconstructed ASS text string with override tags.
-        """
-        from sublib.ass.services import AssTextRenderer
-        return AssTextRenderer().render(self.text_elements)
 
 
 @dataclass

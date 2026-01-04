@@ -227,8 +227,10 @@ def _format_style_line(style: AssStyle) -> str:
 
 def _format_dialogue_line(event: AssEvent) -> str:
     """Format a Dialogue: line."""
+    from sublib.ass.services import AssTextRenderer
+    text = AssTextRenderer().render(event.text_elements)
     return (
         f"Dialogue: {event.layer},{_format_timestamp(event.start_ms)},"
         f"{_format_timestamp(event.end_ms)},{event.style},{event.name},"
-        f"{event.margin_l},{event.margin_r},{event.margin_v},{event.effect},{event.render_text()}"
+        f"{event.margin_l},{event.margin_r},{event.margin_v},{event.effect},{text}"
     )
