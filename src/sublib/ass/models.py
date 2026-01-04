@@ -157,7 +157,7 @@ class AssEvent:
         Raises:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
-        from sublib.ass.elements import AssTextElement, AssPlainText, AssSpecialChar, SpecialCharType, AssTextSegment
+        from sublib.ass.elements import AssOverrideBlock, AssOverrideTag, AssPlainText, AssSpecialChar, SpecialCharType, AssTextSegment
         from sublib.ass.tags import MUTUAL_EXCLUSIVES
         from sublib.exceptions import SubtitleParseError
         
