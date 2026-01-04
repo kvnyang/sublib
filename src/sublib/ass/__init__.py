@@ -2,7 +2,7 @@
 """ASS/SSA subtitle format support."""
 
 from sublib.ass.models import AssFile, AssEvent, AssStyle
-from sublib.ass.elements import (
+from sublib.ass.ast import (
     AssTextElement,
     AssOverrideTag,
     AssPlainText,
@@ -12,8 +12,12 @@ from sublib.ass.elements import (
     AssOverrideBlock,
     AssComment,
 )
-from sublib.ass.parser import AssTextParser
-from sublib.ass.renderer import AssTextRenderer
+from sublib.ass.services import (
+    AssTextParser,
+    AssTextRenderer,
+    extract_line_scoped_tags,
+    extract_text_scoped_segments,
+)
 from sublib.ass.io import load_ass_file, save_ass_file
 
 # Tag value types from tags/
@@ -51,16 +55,20 @@ __all__ = [
     # I/O
     "load_ass_file",
     "save_ass_file",
-    # Elements
+    # AST Elements
     "AssTextElement",
     "AssOverrideTag",
     "AssPlainText",
     "AssSpecialChar",
     "SpecialCharType",
     "AssTextSegment",
-    # Parser/Renderer
+    "AssOverrideBlock",
+    "AssComment",
+    # Services
     "AssTextParser",
     "AssTextRenderer",
+    "extract_line_scoped_tags",
+    "extract_text_scoped_segments",
     # Tag Values
     "Position",
     "Move",

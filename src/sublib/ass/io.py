@@ -1,10 +1,10 @@
-# asslib/repository.py
+# sublib/ass/io.py
 """ASS file I/O operations."""
 from __future__ import annotations
 from pathlib import Path
 
 from sublib.ass.models import AssFile, AssEvent, AssStyle
-from sublib.ass.parser import AssTextParser
+from sublib.ass.services import AssTextParser
 from sublib.exceptions import SubtitleParseError
 
 
