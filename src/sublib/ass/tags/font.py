@@ -1,28 +1,9 @@
 # sublib/ass/tags/font.py
 """Font style tag definitions."""
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import ClassVar
 
 from sublib.ass.tags._base import TagCategory, tag
-
-
-@dataclass
-class FontScale:
-    """Font scale value."""
-    value: float
-
-
-@dataclass
-class Rotation:
-    """Rotation angle value."""
-    angle: float
-
-
-@dataclass
-class Shear:
-    """Shearing factor value."""
-    factor: float
 
 
 def _parse_float(raw: str, *, gt: float | None = None, ge: float | None = None) -> float | None:

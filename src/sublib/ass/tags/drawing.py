@@ -1,22 +1,9 @@
 # sublib/ass/tags/drawing.py
 """Drawing mode tag definitions."""
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import ClassVar
 
 from sublib.ass.tags._base import TagCategory, tag
-
-
-@dataclass
-class DrawingMode:
-    """Value for \\p tag."""
-    scale: int
-
-
-@dataclass
-class BaselineOffset:
-    """Value for \\pbo tag."""
-    offset: int
 
 
 def _parse_int(raw: str, *, ge: int | None = None) -> int | None:

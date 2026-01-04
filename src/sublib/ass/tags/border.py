@@ -1,34 +1,9 @@
 # sublib/ass/tags/border.py
 """Border, shadow, and blur tag definitions."""
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import ClassVar
 
 from sublib.ass.tags._base import TagCategory, tag
-
-
-@dataclass
-class BorderSize:
-    """Border size value."""
-    value: float
-
-
-@dataclass
-class ShadowDistance:
-    """Shadow distance value."""
-    value: float
-
-
-@dataclass
-class BlurEdge:
-    """Edge blur strength."""
-    strength: int
-
-
-@dataclass
-class BlurGaussian:
-    """Gaussian blur strength."""
-    strength: float
 
 
 def _parse_float(raw: str, *, ge: float | None = None) -> float | None:

@@ -20,7 +20,7 @@ from sublib.ass.services import (
 )
 from sublib.ass.io import load_ass_file, save_ass_file
 
-# Tag value types from tags/
+# Tag value types (multi-field dataclasses only)
 from sublib.ass.tags import (
     Position,
     Move,
@@ -36,15 +36,6 @@ from sublib.ass.tags import (
     Alignment,
     WrapStyle,
     StyleReset,
-    BorderSize,
-    ShadowDistance,
-    BlurEdge,
-    BlurGaussian,
-    FontScale,
-    Rotation,
-    Shear,
-    DrawingMode,
-    BaselineOffset,
 )
 
 __all__ = [
@@ -84,13 +75,4 @@ __all__ = [
     "Alignment",
     "WrapStyle",
     "StyleReset",
-    "BorderSize",
-    "ShadowDistance",
-    "BlurEdge",
-    "BlurGaussian",
-    "FontScale",
-    "Rotation",
-    "Shear",
-    "DrawingMode",
-    "BaselineOffset",
 ]

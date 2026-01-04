@@ -10,16 +10,13 @@ This package provides:
 # Base
 from sublib.ass.tags._base import TagCategory, TagDefinition
 
-# Value types
+# Value types (multi-field dataclasses only - single values use primitives)
 from sublib.ass.tags.position import Position, Move
 from sublib.ass.tags.clip import RectClip, VectorClip, ClipValue
 from sublib.ass.tags.fade import Fade, FadeComplex
 from sublib.ass.tags.color import Color, Alpha
 from sublib.ass.tags.layout import Alignment, WrapStyle, StyleReset
 from sublib.ass.tags.transform import Transform, Karaoke
-from sublib.ass.tags.font import FontScale, Rotation, Shear
-from sublib.ass.tags.border import BorderSize, ShadowDistance, BlurEdge, BlurGaussian
-from sublib.ass.tags.drawing import DrawingMode, BaselineOffset
 
 # Registry functions
 from sublib.ass.tags._registry import (
@@ -43,9 +40,6 @@ __all__ = [
     "Color", "Alpha",
     "Alignment", "WrapStyle", "StyleReset",
     "Transform", "Karaoke",
-    "FontScale", "Rotation", "Shear",
-    "BorderSize", "ShadowDistance", "BlurEdge", "BlurGaussian",
-    "DrawingMode", "BaselineOffset",
     # Registry
     "TAGS",
     "MUTUAL_EXCLUSIVES",
