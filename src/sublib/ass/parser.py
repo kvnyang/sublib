@@ -1,10 +1,10 @@
-# asslib/text_parser.py
+# sublib/ass/parser.py
 """Parse ASS event text into structured elements."""
 from __future__ import annotations
 import re
 from typing import Any, Union
 
-from sublib.ass.elements import (
+from sublib.ass.ast import (
     AssTextElement,
     AssOverrideTag,
     AssPlainText,

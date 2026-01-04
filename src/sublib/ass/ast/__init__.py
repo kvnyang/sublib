@@ -1,29 +1,32 @@
-# sublib/ass/elements.py
-"""ASS text element types.
+# sublib/ass/ast/__init__.py
+"""ASS Abstract Syntax Tree types.
 
-DEPRECATED: Import from sublib.ass.ast instead.
-This module re-exports types for backward compatibility.
+This module contains all AST node types for parsed ASS text.
 """
-from sublib.ass.ast import (
+from .elements import (
     AssOverrideTag,
     AssComment,
     AssOverrideBlock,
     SpecialCharType,
     AssSpecialChar,
     AssPlainText,
-    AssTextSegment,
     AssTextElement,
     AssBlockElement,
 )
+from .segment import AssTextSegment
 
 __all__ = [
+    # Override system
     "AssOverrideTag",
     "AssComment",
     "AssOverrideBlock",
+    # Text system
     "SpecialCharType",
     "AssSpecialChar",
     "AssPlainText",
+    # Segment
     "AssTextSegment",
+    # Type aliases
     "AssTextElement",
     "AssBlockElement",
 ]
