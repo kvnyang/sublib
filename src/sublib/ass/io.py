@@ -39,16 +39,3 @@ def save_ass_file(ass_file: AssFile, path: str | Path) -> None:
     content = render_ass_string(ass_file)
     with open(path, 'w', encoding='utf-8-sig') as f:
         f.write(content)
-
-
-# Convenience aliases for string operations (delegate to services)
-def load_ass_string(content: str) -> AssFile:
-    """Parse ASS content from string."""
-    from sublib.ass.services import parse_ass_string
-    return parse_ass_string(content)
-
-
-def save_ass_string(ass_file: AssFile) -> str:
-    """Render ASS file to string."""
-    from sublib.ass.services import render_ass_string
-    return render_ass_string(ass_file)

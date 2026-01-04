@@ -92,13 +92,13 @@ class AssFile:
     @classmethod
     def from_string(cls, content: str) -> "AssFile":
         """Parse ASS content from string."""
-        from sublib.ass.io import load_ass_string
-        return load_ass_string(content)
+        from sublib.ass.services import parse_ass_string
+        return parse_ass_string(content)
     
     def to_string(self) -> str:
         """Render to ASS format string."""
-        from sublib.ass.io import save_ass_string
-        return save_ass_string(self)
+        from sublib.ass.services import render_ass_string
+        return render_ass_string(self)
     
     @classmethod
     def load(cls, path: Path | str) -> "AssFile":
