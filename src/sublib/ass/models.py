@@ -2,13 +2,10 @@
 """ASS file, event, and style models."""
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any
 from pathlib import Path
 
-from sublib.ass.ast import (
-    AssTextElement, AssPlainText, AssSpecialChar, 
-    SpecialCharType, AssTextSegment
-)
+from sublib.ass.ast import AssTextElement
 
 
 @dataclass
@@ -49,9 +46,14 @@ class AssEvent:
     Represents a Dialogue line from the [Events] section.
     
     The text_elements field is the single source of truth.
-    render_text() renders ASS text from it.
+    Use from_text() to create from ASS text string.
+    Use render_text() to render back to ASS text.
+    
+    For extracting tags or segments, use services directly:
+        from sublib.ass.services import extract_line_scoped_tags
+        tags = extract_line_scoped_tags(event.text_elements)
     """
-    # Timing fields (inherited from Cue)
+    # Timing fields
     start_ms: int = 0
     end_ms: int = 0
     
@@ -65,6 +67,47 @@ class AssEvent:
     margin_v: int = 0
     effect: str = ""
     
+    @classmethod
+    def from_text(
+        cls,
+        text: str,
+        *,
+        start_ms: int = 0,
+        end_ms: int = 0,
+        style: str = "Default",
+        layer: int = 0,
+        name: str = "",
+        margin_l: int = 0,
+        margin_r: int = 0,
+        margin_v: int = 0,
+        effect: str = "",
+        strict: bool = True,
+    ) -> "AssEvent":
+        """Create event from ASS text string.
+        
+        Args:
+            text: ASS text with override tags
+            strict: If True, raise error on unrecognized content
+            **kwargs: Other AssEvent fields
+            
+        Returns:
+            New AssEvent with parsed text_elements
+        """
+        from sublib.ass.services import AssTextParser
+        elements = AssTextParser(strict=strict).parse(text)
+        return cls(
+            start_ms=start_ms,
+            end_ms=end_ms,
+            text_elements=elements,
+            style=style,
+            layer=layer,
+            name=name,
+            margin_l=margin_l,
+            margin_r=margin_r,
+            margin_v=margin_v,
+            effect=effect,
+        )
+    
     def render_text(self) -> str:
         """Render elements back to ASS text format.
         
@@ -73,28 +116,6 @@ class AssEvent:
         """
         from sublib.ass.services import AssTextRenderer
         return AssTextRenderer().render(self.text_elements)
-    
-    def extract_line_scoped_tags(self) -> dict[str, Any]:
-        """Extract effective line-scoped tags.
-        
-        Delegates to services.extract_line_scoped_tags().
-        
-        Returns:
-            Dict mapping tag name to effective value.
-        """
-        from sublib.ass.services import extract_line_scoped_tags
-        return extract_line_scoped_tags(self.text_elements)
-    
-    def extract_text_scoped_segments(self) -> list[AssTextSegment]:
-        """Extract text segments with their formatting tags.
-        
-        Delegates to services.extract_text_scoped_segments().
-        
-        Returns:
-            List of AssTextSegment.
-        """
-        from sublib.ass.services import extract_text_scoped_segments
-        return extract_text_scoped_segments(self.text_elements)
 
 
 @dataclass
@@ -115,14 +136,15 @@ class AssFile:
     @classmethod
     def from_file(cls, path: Path | str) -> "AssFile":
         """Load ASS file from path."""
-        from sublib.ass.file_parser import parse_ass_file
-        return parse_ass_file(Path(path))
+        from sublib.ass.io import load_ass_file
+        return load_ass_file(Path(path))
     
     def to_string(self) -> str:
         """Render to ASS format string."""
-        from sublib.ass.file_renderer import render_ass_file
-        return render_ass_file(self)
+        from sublib.ass.io import save_ass_string
+        return save_ass_string(self)
     
     def save(self, path: Path | str) -> None:
         """Save to file."""
-        Path(path).write_text(self.to_string(), encoding='utf-8-sig')
+        from sublib.ass.io import save_ass_file
+        save_ass_file(self, Path(path))
