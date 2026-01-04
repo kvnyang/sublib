@@ -8,9 +8,9 @@ from sublib.ass.elements import (
     AssTextElement,
     AssOverrideTag,
     AssPlainText,
-    AssNewLine,
-    AssHardSpace,
-    AssBlock,
+    AssSpecialChar,
+    SpecialCharType,
+    AssOverrideBlock,
     AssComment,
 )
 from sublib.ass.tags import (
@@ -110,13 +110,15 @@ class AssTextParser:
                 )
                 elements.append(block)
             else:
-                # Newline \N, \n or hard space \h
+                # Special characters \N, \n, \h
                 char = match.group(2)
                 if char == 'h':
-                    elements.append(AssHardSpace())
+                    elements.append(AssSpecialChar(type=SpecialCharType.HARD_SPACE))
                 else:
-                    hard = char == 'N'
-                    elements.append(AssNewLine(hard=hard))
+                    if char == 'N':
+                        elements.append(AssSpecialChar(type=SpecialCharType.HARD_NEWLINE))
+                    else:  # 'n'
+                        elements.append(AssSpecialChar(type=SpecialCharType.SOFT_NEWLINE))
             
             last_end = match.end()
         
@@ -137,7 +139,7 @@ class AssTextParser:
         block_text: str, 
         line_number: int | None = None,
         position: int | None = None
-    ) -> AssBlock:
+    ) -> AssOverrideBlock:
         """Parse a single override block {...} content (always permissive)."""
         block_elements: list[Union[AssOverrideTag, AssComment]] = []
         last_end = 0
@@ -188,7 +190,7 @@ class AssTextParser:
             if comment_text:
                 block_elements.append(AssComment(content=comment_text))
         
-        return AssBlock(elements=block_elements)
+        return AssOverrideBlock(elements=block_elements)
     
     def _extract_tag_from_match(self, match: re.Match) -> tuple[str, str, bool]:
         """Extract tag name, value, and is_function from regex match groups."""
@@ -236,7 +238,7 @@ class AssTextParser:
         """Collect all comments from elements."""
         comments = []
         for elem in elements:
-            if isinstance(elem, AssBlock):
+            if isinstance(elem, AssOverrideBlock):
                 for item in elem.elements:
                     if isinstance(item, AssComment):
                         comments.append(item)

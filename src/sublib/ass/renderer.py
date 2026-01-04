@@ -6,9 +6,8 @@ from typing import Any
 from sublib.ass.elements import (
     AssOverrideTag,
     AssPlainText,
-    AssNewLine,
-    AssHardSpace,
-    AssBlock,
+    AssSpecialChar, SpecialCharType,
+    AssOverrideBlock,
     AssComment,
 )
 from sublib.ass.tags import get_tag, format_tag
@@ -30,7 +29,7 @@ class AssTextRenderer:
         pending_tags: list[str] = []
         
         for elem in elements:
-            if isinstance(elem, AssBlock):
+            if isinstance(elem, AssOverrideBlock):
                 result.append("{")
                 for item in elem.elements:
                     if isinstance(item, AssOverrideTag):
@@ -45,10 +44,8 @@ class AssTextRenderer:
                         result.append(item.content)
                 result.append("}")
             
-            elif isinstance(elem, AssNewLine):
-                result.append("\\N" if elem.hard else "\\n")
-            elif isinstance(elem, AssHardSpace):
-                result.append("\\h")
+            elif isinstance(elem, AssSpecialChar):
+                result.append(elem.render())
             elif isinstance(elem, AssPlainText):
                 result.append(elem.content)
         

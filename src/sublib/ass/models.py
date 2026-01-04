@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 from pathlib import Path
 
-from sublib.ass.elements import AssTextElement, AssPlainText, AssNewLine, AssHardSpace, AssTextSegment
+from sublib.ass.elements import AssTextElement, AssPlainText, AssSpecialChar, SpecialCharType, AssTextSegment
 
 
 @dataclass
@@ -84,7 +84,7 @@ class AssEvent:
         Raises:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
-        from sublib.ass.elements import AssOverrideTag, AssBlock
+        from sublib.ass.elements import AssOverrideTag, AssOverrideBlock
         from sublib.ass.tags import MUTUAL_EXCLUSIVES
         from sublib.exceptions import SubtitleParseError
         
@@ -95,7 +95,7 @@ class AssEvent:
         # Flatten elements to check tags inside blocks
         flat_elements = []
         for elem in self.text_elements:
-            if isinstance(elem, AssBlock):
+            if isinstance(elem, AssOverrideBlock):
                 flat_elements.extend(item for item in elem.elements if isinstance(item, AssOverrideTag))
         
         for elem in flat_elements:
@@ -157,7 +157,7 @@ class AssEvent:
         Raises:
             SubtitleParseError: If strict=True and duplicates/conflicts found.
         """
-        from sublib.ass.elements import AssOverrideTag, AssPlainText, AssNewLine, AssHardSpace, AssBlock
+        from sublib.ass.elements import AssTextElement, AssPlainText, AssSpecialChar, SpecialCharType, AssTextSegment
         from sublib.ass.tags import MUTUAL_EXCLUSIVES
         from sublib.exceptions import SubtitleParseError
         
@@ -213,11 +213,12 @@ class AssEvent:
         for elem in self.text_elements:
             if isinstance(elem, AssPlainText):
                 current_text += elem.content
-            elif isinstance(elem, AssNewLine):
-                current_text += "\\N" if elem.hard else "\\n"
-            elif isinstance(elem, AssHardSpace):
-                current_text += "\\h"
-            elif isinstance(elem, AssBlock):
+            elif isinstance(elem, AssSpecialChar):
+                if elem.is_newline:
+                    current_text += r"\N" if elem.is_hard_newline else r"\n"
+                else:  # HARD_SPACE
+                    current_text += r"\h"
+            elif isinstance(elem, AssOverrideBlock):
                 # Process tags inside block
                 for item in elem.elements:
                     if isinstance(item, AssOverrideTag):

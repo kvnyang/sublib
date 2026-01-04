@@ -6,10 +6,10 @@ from sublib.ass.elements import (
     AssTextElement,
     AssOverrideTag,
     AssPlainText,
-    AssNewLine,
-    AssHardSpace,
+    AssSpecialChar,
+    SpecialCharType,
     AssTextSegment,
-    AssBlock,
+    AssOverrideBlock,
     AssComment,
 )
 from sublib.ass.parser import AssTextParser
@@ -55,8 +55,8 @@ __all__ = [
     "AssTextElement",
     "AssOverrideTag",
     "AssPlainText",
-    "AssNewLine",
-    "AssHardSpace",
+    "AssSpecialChar",
+    "SpecialCharType",
     "AssTextSegment",
     # Parser/Renderer
     "AssTextParser",
