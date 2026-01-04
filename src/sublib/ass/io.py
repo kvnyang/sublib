@@ -68,6 +68,13 @@ def load_ass_string(content: str) -> AssFile:
 def save_ass_file(ass_file: AssFile, path: str | Path) -> None:
     """Save an ASS file to disk."""
     path = Path(path)
+    content = save_ass_string(ass_file)
+    with open(path, 'w', encoding='utf-8-sig') as f:
+        f.write(content)
+
+
+def save_ass_string(ass_file: AssFile) -> str:
+    """Render ASS file to string."""
     lines = []
     
     # Script Info
@@ -92,8 +99,7 @@ def save_ass_file(ass_file: AssFile, path: str | Path) -> None:
     for event in ass_file.events:
         lines.append(_format_dialogue_line(event))
     
-    with open(path, 'w', encoding='utf-8-sig') as f:
-        f.write('\n'.join(lines))
+    return '\n'.join(lines)
 
 
 def _parse_style_line(line: str) -> AssStyle | None:
