@@ -103,14 +103,13 @@ class AssFile:
     
     Represents a complete .ass file with styles and events.
     """
-    title: str = ""
-    original_script: str = ""
-    script_type: str = "v4.00+"
-    play_res_x: int = 1920
-    play_res_y: int = 1080
-    scaled_border_and_shadow: bool = True
-    wrap_style: int = 0
-    styles: list[AssStyle] = field(default_factory=list)
+    # Script Info section (arbitrary key-value pairs)
+    script_info: dict[str, str] = field(default_factory=dict)
+    
+    # Styles by name
+    styles: dict[str, AssStyle] = field(default_factory=dict)
+    
+    # Dialogue events
     events: list[AssEvent] = field(default_factory=list)
     
     @classmethod
