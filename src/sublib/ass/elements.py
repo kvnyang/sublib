@@ -58,7 +58,7 @@ class AssHardSpace:
 class AssTextSegment:
     """A text segment with its preceding inline formatting tags.
     
-    Returned by AssEvent.extract_segments() to represent a contiguous
+    Returned by AssEvent.extract_text_scoped_segments() to represent a contiguous
     piece of text with consistent formatting.
     
     Attributes:

@@ -71,7 +71,7 @@ class AssEvent:
         from sublib.ass.renderer import AssTextRenderer
         return AssTextRenderer().render(self.text_elements)
     
-    def extract_event_tags(self, strict: bool = False) -> dict[str, Any]:
+    def extract_line_scoped_tags(self, strict: bool = False) -> dict[str, Any]:
         """Extract event-level tags with exclusion rules applied.
         
         Args:
@@ -138,7 +138,7 @@ class AssEvent:
         
         return result
     
-    def extract_segments(self, strict: bool = False) -> list[AssTextSegment]:
+    def extract_text_scoped_segments(self, strict: bool = False) -> list[AssTextSegment]:
         """Extract text segments with their preceding inline tags.
         
         Each segment contains:
