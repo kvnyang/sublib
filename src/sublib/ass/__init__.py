@@ -20,8 +20,10 @@ from sublib.ass.services import (
 )
 from sublib.ass.io import load_ass_file, save_ass_file
 
-# Tag value types (multi-field dataclasses only)
-from sublib.ass.tags import (
+# Value types (canonical source is types/)
+from sublib.ass.types import (
+    Color,
+    Alpha,
     Position,
     Move,
     RectClip,
@@ -29,13 +31,11 @@ from sublib.ass.tags import (
     ClipValue,
     Fade,
     FadeComplex,
-    Transform,
-    Karaoke,
-    Color,
-    Alpha,
     Alignment,
     WrapStyle,
     StyleReset,
+    Transform,
+    Karaoke,
 )
 
 __all__ = [
@@ -60,7 +60,9 @@ __all__ = [
     "AssTextRenderer",
     "extract_line_scoped_tags",
     "extract_text_scoped_segments",
-    # Tag Values
+    # Value Types
+    "Color",
+    "Alpha",
     "Position",
     "Move",
     "RectClip",
@@ -68,11 +70,9 @@ __all__ = [
     "ClipValue",
     "Fade",
     "FadeComplex",
-    "Transform",
-    "Karaoke",
-    "Color",
-    "Alpha",
     "Alignment",
     "WrapStyle",
     "StyleReset",
+    "Transform",
+    "Karaoke",
 ]

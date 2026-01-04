@@ -1,48 +1,16 @@
 # sublib/ass/tags/color.py
 """Color and alpha tag definitions."""
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import ClassVar
 
 from sublib.ass.tags._base import TagCategory, tag
-
-
-@dataclass
-class Color:
-    """Color value in BGR format (ASS native)."""
-    value: int  # 0xBBGGRR
-    
-    @property
-    def blue(self) -> int:
-        return (self.value >> 16) & 0xFF
-    
-    @property
-    def green(self) -> int:
-        return (self.value >> 8) & 0xFF
-    
-    @property
-    def red(self) -> int:
-        return self.value & 0xFF
-    
-    @classmethod
-    def from_rgb(cls, r: int, g: int, b: int) -> "Color":
-        return cls((b << 16) | (g << 8) | r)
-
-
-@dataclass
-class Alpha:
-    """Alpha value (0=visible, 255=transparent)."""
-    value: int
-    
-    @property
-    def opacity(self) -> float:
-        return 1.0 - (self.value / 255.0)
+from sublib.ass.types import Color, Alpha
 
 
 def _parse_color(raw: str) -> Color | None:
     raw = raw.strip().strip("&H").strip("&")
     try:
-        return Color(value=int(raw, 16))
+        return Color(bgr=int(raw, 16))
     except ValueError:
         return None
 

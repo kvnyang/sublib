@@ -1,29 +1,10 @@
 # sublib/ass/tags/layout.py
 """Alignment, wrap style, and reset tag definitions."""
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from sublib.ass.tags._base import TagCategory, tag
-
-
-@dataclass
-class Alignment:
-    """Alignment value (numpad style 1-9)."""
-    value: int
-    legacy: bool = False
-
-
-@dataclass
-class WrapStyle:
-    """Wrap style value (0-3)."""
-    style: Literal[0, 1, 2, 3]
-
-
-@dataclass
-class StyleReset:
-    """Style reset value."""
-    style_name: str | None = None
+from sublib.ass.types import Alignment, WrapStyle, StyleReset
 
 
 @tag

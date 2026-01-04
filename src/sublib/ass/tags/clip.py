@@ -1,29 +1,10 @@
 # sublib/ass/tags/clip.py
 """Clip tag definitions."""
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import ClassVar
 
 from sublib.ass.tags._base import TagCategory, tag
-
-
-@dataclass
-class RectClip:
-    """Rectangle clip value."""
-    x1: int
-    y1: int
-    x2: int
-    y2: int
-
-
-@dataclass
-class VectorClip:
-    """Vector drawing clip value."""
-    drawing: str
-    scale: int = 1
-
-
-ClipValue = RectClip | VectorClip
+from sublib.ass.types import RectClip, VectorClip, ClipValue
 
 
 def _parse_clip(raw: str) -> ClipValue | None:
