@@ -134,7 +134,7 @@ class AssFile:
     events: list[AssEvent] = field(default_factory=list)
     
     @classmethod
-    def from_file(cls, path: Path | str) -> "AssFile":
+    def load(cls, path: Path | str) -> "AssFile":
         """Load ASS file from path."""
         from sublib.ass.io import load_ass_file
         return load_ass_file(Path(path))
