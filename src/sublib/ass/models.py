@@ -71,171 +71,114 @@ class AssEvent:
         from sublib.ass.renderer import AssTextRenderer
         return AssTextRenderer().render(self.text_elements)
     
-    def extract_line_scoped_tags(self, strict: bool = False) -> dict[str, Any]:
-        """Extract event-level tags with exclusion rules applied.
+    def extract_line_scoped_tags(self) -> dict[str, Any]:
+        """Extract effective line-scoped tags.
         
-        Args:
-            strict: If True, raise SubtitleParseError on duplicate or mutually
-                    exclusive tags. If False, apply rules silently (default).
+        Applies first-wins/last-wins and mutual exclusion rules.
+        Comments are automatically ignored (type filtering).
         
         Returns:
-            Dict mapping tag name to parsed value.
-            
-        Raises:
-            SubtitleParseError: If strict=True and duplicates/conflicts found.
+            Dict mapping tag name to effective value.
         """
         from sublib.ass.elements import AssOverrideTag, AssOverrideBlock
         from sublib.ass.tags import MUTUAL_EXCLUSIVES
-        from sublib.exceptions import SubtitleParseError
         
         result: dict[str, Any] = {}
         seen_first_win: set[str] = set()
-        seen_tags: set[str] = set()  # For strict mode
         
-        # Flatten elements to check tags inside blocks
-        flat_elements = []
+        # Collect all line-scoped tags from all blocks
         for elem in self.text_elements:
             if isinstance(elem, AssOverrideBlock):
-                flat_elements.extend(item for item in elem.elements if isinstance(item, AssOverrideTag))
-        
-        for elem in flat_elements:
-            if not elem.is_line_scoped:
-                continue
-            
-            name = elem.name
-            
-            # Check for mutual exclusion
-            exclusives = MUTUAL_EXCLUSIVES.get(name, set())
-            conflicting_first_wins = [ex for ex in exclusives if ex in seen_first_win]
-            has_conflict = any(ex in result for ex in exclusives)
-            
-            if strict:
-                # Strict mode: error on duplicates or mutual exclusion
-                if name in seen_tags:
-                    raise SubtitleParseError(f"Duplicate event-level tag: \\{name}")
-                if has_conflict:
-                    conflicting = [ex for ex in exclusives if ex in result]
-                    raise SubtitleParseError(
-                        f"Mutually exclusive tags: \\{name} conflicts with \\{conflicting[0]}"
-                    )
-                seen_tags.add(name)
-            
-            # If a mutually exclusive first-wins tag already exists, skip this tag
-            if conflicting_first_wins:
-                continue
-            
-            # First-wins: skip if already seen (self-exclusion)
-            if elem.first_wins:
-                if name in seen_first_win:
-                    continue
-                seen_first_win.add(name)
-            
-            # Remove mutually exclusive tags (for last-wins tags)
-            for excl in exclusives:
-                result.pop(excl, None)
-            
-            result[name] = elem.value
+                for item in elem.elements:
+                    if isinstance(item, AssOverrideTag) and item.is_line_scoped:
+                        name = item.name
+                        exclusives = MUTUAL_EXCLUSIVES.get(name, set())
+                        
+                        # If a mutually exclusive first-wins tag exists, skip
+                        if any(ex in seen_first_win for ex in exclusives):
+                            continue
+                        
+                        # First-wins: skip if already seen
+                        if item.first_wins:
+                            if name in seen_first_win:
+                                continue
+                            seen_first_win.add(name)
+                        
+                        # Remove mutually exclusive tags (last-wins behavior)
+                        for excl in exclusives:
+                            result.pop(excl, None)
+                        
+                        result[name] = item.value
         
         return result
     
-    def extract_text_scoped_segments(self, strict: bool = False) -> list[AssTextSegment]:
-        """Extract text segments with their preceding inline tags.
+    def extract_text_scoped_segments(self) -> list[AssTextSegment]:
+        """Extract text segments with their formatting tags.
         
-        Each segment contains:
-        - tags: list of AssOverrideTag (is_line_scoped=False), with
-                first-wins/last-wins and mutual exclusion rules applied
-        - text: the text content (may include \\N newlines)
-        
-        Args:
-            strict: If True, raise SubtitleParseError on duplicate or mutually
-                    exclusive tags within a segment. If False, apply rules
-                    silently (default).
+        Behavior:
+        - Adjacent override blocks are merged
+        - Tag conflicts resolved with last-wins
+        - Comments are ignored (type filtering)
+        - Tags reset after each text segment (no accumulation)
         
         Returns:
-            List of AssTextSegment.
-            
-        Raises:
-            SubtitleParseError: If strict=True and duplicates/conflicts found.
+            List of AssTextSegment, each with:
+            - tags: dict of effective text-scoped tag values
+            - content: list of text content elements
         """
-        from sublib.ass.elements import AssOverrideBlock, AssOverrideTag, AssPlainText, AssSpecialChar, SpecialCharType, AssTextSegment
+        from sublib.ass.elements import (
+            AssOverrideBlock, AssOverrideTag, 
+            AssPlainText, AssSpecialChar, AssTextSegment
+        )
         from sublib.ass.tags import MUTUAL_EXCLUSIVES
-        from sublib.exceptions import SubtitleParseError
         
         segments: list[AssTextSegment] = []
-        current_tags: list[AssOverrideTag] = []
-        current_text = ""
+        pending_tags: dict[str, Any] = {}
+        current_content: list[AssPlainText | AssSpecialChar] = []
         
-        def apply_tag_rules(tags: list[AssOverrideTag]) -> list[AssOverrideTag]:
-            """Apply first-wins, self-exclusion, and mutual exclusion."""
-            result: list[AssOverrideTag] = []
-            seen_first_win: set[str] = set()
-            seen_tags: set[str] = set()  # For strict mode
+        def apply_tag_rules(tags: dict[str, Any], new_tag: AssOverrideTag) -> dict[str, Any]:
+            """Apply last-wins and mutual exclusion rules."""
+            name = new_tag.name
+            exclusives = MUTUAL_EXCLUSIVES.get(name, set())
             
-            for tag in tags:
-                name = tag.name
-                exclusives = MUTUAL_EXCLUSIVES.get(name, set())
-                conflicting_first_wins = [ex for ex in exclusives if ex in seen_first_win]
-                has_conflict = any(ex in [t.name for t in result] for ex in exclusives)
-                
-                if strict:
-                    if name in seen_tags and not tag.first_wins:
-                        # Last-wins allows duplicates
-                        pass
-                    elif name in seen_tags and tag.first_wins:
-                        raise SubtitleParseError(f"Duplicate inline tag: \\{name}")
-                    if has_conflict:
-                        conflicting = [ex for ex in exclusives if ex in [t.name for t in result]]
-                        raise SubtitleParseError(
-                            f"Mutually exclusive tags: \\{name} conflicts with \\{conflicting[0]}"
-                        )
-                    seen_tags.add(name)
-                
-                # If a mutually exclusive first-wins tag already exists, skip
-                if conflicting_first_wins:
-                    continue
-                
-                # First-wins: skip if already seen (self-exclusion)
-                if tag.first_wins and name in seen_first_win:
-                    continue
-                seen_first_win.add(name)
-                
-                # Self-exclusion: remove previous same-name tag (last-wins)
-                if not tag.first_wins:
-                    result = [t for t in result if t.name != name]
-                
-                # Mutual exclusion: remove conflicting tags (for last-wins)
-                result = [t for t in result if t.name not in exclusives]
-                
-                result.append(tag)
+            # Remove mutually exclusive tags
+            for excl in exclusives:
+                tags.pop(excl, None)
             
-            return result
+            # Last-wins: overwrite
+            tags[name] = new_tag.value
+            return tags
         
         for elem in self.text_elements:
-            if isinstance(elem, AssPlainText):
-                current_text += elem.content
-            elif isinstance(elem, AssSpecialChar):
-                if elem.is_newline:
-                    current_text += r"\N" if elem.is_hard_newline else r"\n"
-                else:  # HARD_SPACE
-                    current_text += r"\h"
-            elif isinstance(elem, AssOverrideBlock):
-                # Process tags inside block
+            if isinstance(elem, AssOverrideBlock):
+                # New block after content = new segment
+                if current_content:
+                    segments.append(AssTextSegment(
+                        tags=pending_tags.copy(),
+                        content=current_content.copy()
+                    ))
+                    pending_tags = {}
+                    current_content = []
+                
+                # Collect text-scoped tags (last-wins)
                 for item in elem.elements:
-                    if isinstance(item, AssOverrideTag):
-                        if not item.is_line_scoped:
-                            if current_text:
-                                # Flush previous segment
-                                segments.append(AssTextSegment(tags=apply_tag_rules(current_tags), text=current_text))
-                                current_tags = []
-                                current_text = ""
-                            current_tags.append(item)
+                    if isinstance(item, AssOverrideTag) and not item.is_line_scoped:
+                        apply_tag_rules(pending_tags, item)
+            
+            elif isinstance(elem, AssPlainText):
+                current_content.append(elem)
+            
+            elif isinstance(elem, AssSpecialChar):
+                current_content.append(elem)
         
         # Final segment
-        if current_text or current_tags:
-            segments.append(AssTextSegment(tags=apply_tag_rules(current_tags), text=current_text))
+        if current_content:
+            segments.append(AssTextSegment(
+                tags=pending_tags,
+                content=current_content
+            ))
         
         return segments
-
 
 
 @dataclass

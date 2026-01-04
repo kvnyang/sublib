@@ -119,11 +119,35 @@ class AssTextSegment:
     a contiguous piece of text with consistent formatting.
     
     Attributes:
-        tags: Dict of text-scoped tags that apply to this segment
-        text: The text content
+        tags: Dict of effective text-scoped tag values.
+              Conflicts are resolved (last-wins), so dict is appropriate.
+        content: List of content elements, preserving type info.
+                 Allows distinct handling of plain text vs special chars.
     """
     tags: dict[str, Any]
-    text: str
+    content: list["AssPlainText | AssSpecialChar"]
+    
+    def get_text(self) -> str:
+        """Get combined text as string.
+        
+        Convenience method for simple use cases.
+        Special chars rendered as escape sequences (\\N, \\n, \\h).
+        """
+        result = []
+        for item in self.content:
+            if isinstance(item, AssPlainText):
+                result.append(item.content)
+            elif isinstance(item, AssSpecialChar):
+                result.append(item.render())
+        return "".join(result)
+    
+    def __len__(self) -> int:
+        """Return total character length of text content."""
+        return len(self.get_text())
+    
+    def __bool__(self) -> bool:
+        """Return True if segment has content."""
+        return bool(self.content)
 
 
 # ===== Element Union =====
