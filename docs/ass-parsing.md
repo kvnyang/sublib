@@ -2,13 +2,13 @@
 
 ## Overview
 
-This implementation follows **Aegisub's actual behavior** (reference implementation for ASS format), with precise handling of event-level tags, mutual exclusivity, and multiple occurrence precedence.
+This implementation follows **Aegisub's actual behavior** (reference implementation for ASS format), with precise handling of line-scoped tags, mutual exclusivity, and multiple occurrence precedence.
 
 ---
 
 ## Tag Categories
 
-### Event-level Tags (is_event=True)
+### Line-scoped Tags (is_event=True)
 
 Tags that affect the entire line. Position-independent, should appear at most once per line.
 
@@ -30,11 +30,11 @@ Tags that affect the entire line. Position-independent, should appear at most on
 - ⚠️ Logical = Logical extension (sets line property, position-independent)
 - First-wins: True = first occurrence wins, False = last occurrence wins
 
-### Inline Tags (is_event=False)
+### Text-scoped Tags (is_event=False)
 
 All other tags (43 total). Affect text following them, can appear multiple times.
 
-**All inline tags**: `first_wins=False` (last occurrence always wins)
+**All text-scoped tags**: `first_wins=False` (last occurrence always wins)
 
 Examples: b, i, u, s, fn, fs, c, 1c, fscx, fscy, bord, shad, etc.
 
@@ -85,20 +85,20 @@ Each tag defines a precise parameter pattern (`param_pattern`):
 
 | Feature | Spec | Implementation |
 |---------|------|----------------|
-| 7 event-level tags | ✓ | ✓ |
+| 7 line-scoped tags | ✓ | ✓ |
 | Mutual exclusivity | ✓ | ✓ |
-| Inline tags multi-occurrence | ✓ | ✓ |
+| Text-scoped tags multi-occurrence | ✓ | ✓ |
 | Comment preservation | ✓ | ✓ |
 
 ### Logical Extensions ⚠️
 
 | Extension | Rationale |
 |-----------|-----------|
-| an, a, q as event-level | Set line properties, position-independent |
+| an, a, q as line-scoped | Set line properties, position-independent |
 
 ### Specification Gaps (Resolved via Testing)
 
-The spec says event-level tags "should appear at most once" but doesn't specify what happens if violated:
+The spec says line-scoped tags "should appear at most once" but doesn't specify what happens if violated:
 
 | Tag(s) | Spec Gap | Implementation | Verified |
 |--------|----------|----------------|----------|
@@ -126,7 +126,7 @@ All behaviors verified in Aegisub:
 # Wrap style: last-wins
 {\q0\q2}  → q2 wins
 
-# Inline tags: always last-wins
+# Text-scoped tags: always last-wins
 {\b1\b0}Text  → b0 wins (not bold)
 ```
 
