@@ -8,7 +8,7 @@ This implementation follows **Aegisub's actual behavior** (reference implementat
 
 ## Tag Categories
 
-### Line-scoped Tags (is_event=True)
+### Line-scoped Tags (is_line_scoped=True)
 
 Tags that affect the entire line. Position-independent, should appear at most once per line.
 
@@ -30,7 +30,7 @@ Tags that affect the entire line. Position-independent, should appear at most on
 - ⚠️ Logical = Logical extension (sets line property, position-independent)
 - First-wins: True = first occurrence wins, False = last occurrence wins
 
-### Text-scoped Tags (is_event=False)
+### Text-scoped Tags (is_line_scoped=False)
 
 All other tags (43 total). Affect text following them, can appear multiple times.
 
