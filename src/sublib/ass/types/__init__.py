@@ -6,6 +6,7 @@ from .clip import RectClip, VectorClip, ClipValue
 from .fade import Fade, FadeComplex
 from .layout import Alignment, WrapStyle, StyleReset
 from .animation import Transform, Karaoke
+from .timestamp import Timestamp
 
 __all__ = [
     # Color
@@ -28,4 +29,6 @@ __all__ = [
     # Animation
     "Transform",
     "Karaoke",
+    # Time
+    "Timestamp",
 ]

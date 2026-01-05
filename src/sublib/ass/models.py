@@ -6,7 +6,7 @@ from typing import Any
 from pathlib import Path
 
 from sublib.ass.ast import AssTextElement
-from sublib.ass.types import Color
+from sublib.ass.types import Color, Timestamp
 
 
 @dataclass
@@ -51,7 +51,7 @@ class AssEvent:
         
         # Parse text to elements
         elements = AssTextParser().parse(text)
-        event = AssEvent(text_elements=elements, start_ms=0, end_ms=1000)
+        event = AssEvent(text_elements=elements, start=Timestamp(cs=0), end=Timestamp(cs=100))
         
         # Render elements to text
         text = AssTextRenderer().render(event.text_elements)
@@ -61,8 +61,8 @@ class AssEvent:
         tags = extract_line_scoped_tags(event.text_elements)
     """
     # Timing fields
-    start_ms: int = 0
-    end_ms: int = 0
+    start: Timestamp = field(default_factory=Timestamp)
+    end: Timestamp = field(default_factory=Timestamp)
     
     # ASS-specific fields
     text_elements: list[AssTextElement] = field(default_factory=list)
@@ -73,6 +73,11 @@ class AssEvent:
     margin_r: int = 0
     margin_v: int = 0
     effect: str = ""
+    
+    @property
+    def duration(self) -> Timestamp:
+        """Get event duration."""
+        return self.end - self.start
 
 
 @dataclass

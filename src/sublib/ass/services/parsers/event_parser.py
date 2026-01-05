@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sublib.ass.models import AssEvent
+from sublib.ass.types import Timestamp
 from .text_parser import AssTextParser
 
 
@@ -35,8 +36,8 @@ def parse_event_line(
     text = parts[9]
     
     return AssEvent(
-        start_ms=parse_timestamp(parts[1]),
-        end_ms=parse_timestamp(parts[2]),
+        start=Timestamp.from_ass_str(parts[1]),
+        end=Timestamp.from_ass_str(parts[2]),
         text_elements=text_parser.parse(text, line_number=line_number),
         style=parts[3].strip(),
         layer=int(parts[0]),
@@ -46,22 +47,3 @@ def parse_event_line(
         margin_v=int(parts[7]),
         effect=parts[8].strip(),
     )
-
-
-def parse_timestamp(ts: str) -> int:
-    """Parse ASS timestamp to milliseconds.
-    
-    Format: H:MM:SS.CC (centiseconds)
-    """
-    ts = ts.strip()
-    parts = ts.split(':')
-    if len(parts) != 3:
-        return 0
-    
-    hours = int(parts[0])
-    minutes = int(parts[1])
-    seconds_parts = parts[2].split('.')
-    seconds = int(seconds_parts[0])
-    centiseconds = int(seconds_parts[1]) if len(seconds_parts) > 1 else 0
-    
-    return (hours * 3600 + minutes * 60 + seconds) * 1000 + centiseconds * 10

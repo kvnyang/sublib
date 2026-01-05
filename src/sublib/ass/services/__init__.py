@@ -11,14 +11,12 @@ from .parsers import (
     AssTextParser,
     parse_style_line,
     parse_event_line,
-    parse_timestamp,
     parse_ass_string,
 )
 from .renderers import (
     AssTextRenderer,
     render_style_line,
     render_event_line,
-    format_timestamp,
     render_ass_string,
 )
 from .extractor import (
@@ -36,8 +34,6 @@ __all__ = [
     # Event level
     "parse_event_line",
     "render_event_line",
-    "parse_timestamp",
-    "format_timestamp",
     # File level
     "parse_ass_string",
     "render_ass_string",
