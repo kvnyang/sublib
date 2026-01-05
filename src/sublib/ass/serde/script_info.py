@@ -2,55 +2,37 @@
 """Parse and render [Script Info] section."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sublib.ass.models import ScriptInfo as ScriptInfoType
-
+from dataclasses import fields
 from sublib.ass.models import ScriptInfo
 
 
-# Mapping from ASS key names to ScriptInfo field names
-_KEY_TO_FIELD: dict[str, str] = {
-    "scripttype": "script_type",
-    "script type": "script_type",
-    "playresx": "play_res_x",
-    "playresy": "play_res_y",
-    "wrapstyle": "wrap_style",
-    "collisions": "collisions",
-    "timer": "timer",
-    "ycbcr matrix": "ycbcr_matrix",
-    "scaledborderandshadow": "scaled_border_and_shadow",
-    "title": "title",
-    "original script": "original_script",
-    "original translation": "original_translation",
-    "original editing": "original_editing",
-    "original timing": "original_timing",
-    "synch point": "synch_point",
-    "script updated by": "script_updated_by",
-    "update details": "update_details",
-}
-
-
-# Ordered list of standard fields for consistent output
-_STANDARD_FIELDS = [
-    ("script_type", "ScriptType"),
-    ("title", "Title"),
-    ("play_res_x", "PlayResX"),
-    ("play_res_y", "PlayResY"),
-    ("wrap_style", "WrapStyle"),
-    ("scaled_border_and_shadow", "ScaledBorderAndShadow"),
-    ("collisions", "Collisions"),
-    ("ycbcr_matrix", "YCbCr Matrix"),
-    ("timer", "Timer"),
-    ("synch_point", "Synch Point"),
-    ("original_script", "Original Script"),
-    ("original_translation", "Original Translation"),
-    ("original_editing", "Original Editing"),
-    ("original_timing", "Original Timing"),
-    ("script_updated_by", "Script Updated By"),
-    ("update_details", "Update Details"),
+# Field metadata: (field_name, canonical_key, aliases)
+# Aliases are alternative ASS key names that map to the same field
+_FIELD_METADATA: list[tuple[str, str, tuple[str, ...]]] = [
+    ("script_type", "ScriptType", ("Script Type",)),
+    ("title", "Title", ()),
+    ("play_res_x", "PlayResX", ()),
+    ("play_res_y", "PlayResY", ()),
+    ("wrap_style", "WrapStyle", ()),
+    ("scaled_border_and_shadow", "ScaledBorderAndShadow", ()),
+    ("collisions", "Collisions", ()),
+    ("ycbcr_matrix", "YCbCr Matrix", ()),
+    ("timer", "Timer", ()),
+    ("synch_point", "Synch Point", ()),
+    ("original_script", "Original Script", ()),
+    ("original_translation", "Original Translation", ()),
+    ("original_editing", "Original Editing", ()),
+    ("original_timing", "Original Timing", ()),
+    ("script_updated_by", "Script Updated By", ()),
+    ("update_details", "Update Details", ()),
 ]
+
+# Build lookup table: lowercase ASS key -> field name
+_KEY_TO_FIELD: dict[str, str] = {}
+for field_name, canonical_key, aliases in _FIELD_METADATA:
+    _KEY_TO_FIELD[canonical_key.lower()] = field_name
+    for alias in aliases:
+        _KEY_TO_FIELD[alias.lower()] = field_name
 
 
 def parse_script_info_line(line: str) -> tuple[str, str] | None:
@@ -150,6 +132,9 @@ def parse_script_info(lines: list[tuple[str, str]]) -> ScriptInfo:
         elif field_name == "original_script":
             info.original_script = value if value else "<unknown>"
         
+        elif field_name == "ycbcr_matrix":
+            info.ycbcr_matrix = value if value else None
+        
         else:
             # Optional string fields
             setattr(info, field_name, value if value else None)
@@ -163,7 +148,7 @@ def parse_script_info(lines: list[tuple[str, str]]) -> ScriptInfo:
     return info
 
 
-def render_script_info(info: "ScriptInfoType") -> list[str]:
+def render_script_info(info: ScriptInfo) -> list[str]:
     """Render ScriptInfo to ASS format lines.
     
     Args:
@@ -174,7 +159,7 @@ def render_script_info(info: "ScriptInfoType") -> list[str]:
     """
     lines = []
     
-    for field_name, key_name in _STANDARD_FIELDS:
+    for field_name, canonical_key, _ in _FIELD_METADATA:
         value = getattr(info, field_name)
         
         if value is None:
@@ -182,11 +167,11 @@ def render_script_info(info: "ScriptInfoType") -> list[str]:
         
         # Format specific types
         if field_name == "timer":
-            lines.append(f"{key_name}: {value:.4f}")
+            lines.append(f"{canonical_key}: {value:.4f}")
         elif isinstance(value, bool):
-            lines.append(f"{key_name}: {'yes' if value else 'no'}")
+            lines.append(f"{canonical_key}: {'yes' if value else 'no'}")
         else:
-            lines.append(f"{key_name}: {value}")
+            lines.append(f"{canonical_key}: {value}")
     
     # Add extra (non-standard) fields
     for key, value in info.extra.items():
