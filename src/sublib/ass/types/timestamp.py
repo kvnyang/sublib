@@ -40,9 +40,8 @@ class Timestamp:
         """Get total time in seconds."""
         return self.cs / 100.0
     
-    @property
-    def total_ms(self) -> int:
-        """Get total time in milliseconds."""
+    def to_ms(self) -> int:
+        """Convert to milliseconds."""
         return self.cs * 10
     
     @classmethod
