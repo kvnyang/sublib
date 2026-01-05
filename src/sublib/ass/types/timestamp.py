@@ -40,6 +40,11 @@ class Timestamp:
         """Get total time in seconds."""
         return self.cs / 100.0
     
+    @classmethod
+    def from_ms(cls, ms: int) -> "Timestamp":
+        """Create from milliseconds."""
+        return cls(cs=ms // 10)
+    
     def to_ms(self) -> int:
         """Convert to milliseconds."""
         return self.cs * 10
@@ -70,11 +75,6 @@ class Timestamp:
             return cls(cs=total_cs)
         except ValueError:
             return cls(cs=0)
-    
-    @classmethod
-    def from_ms(cls, ms: int) -> "Timestamp":
-        """Create from milliseconds."""
-        return cls(cs=ms // 10)
     
     def to_ass_str(self) -> str:
         """Format as ASS timestamp string (H:MM:SS.CC)."""
