@@ -9,7 +9,7 @@ from sublib.ass.models import ScriptInfo
 # Field metadata: (field_name, canonical_key, aliases)
 # Aliases are alternative ASS key names that map to the same field
 _FIELD_METADATA: list[tuple[str, str, tuple[str, ...]]] = [
-    ("script_type", "ScriptType", ("Script Type",)),
+    ("script_type", "ScriptType", ()),
     ("title", "Title", ()),
     ("play_res_x", "PlayResX", ()),
     ("play_res_y", "PlayResY", ()),
