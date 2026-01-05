@@ -56,8 +56,11 @@ class Color:
         return f"&H{self.bgr:06X}&"
     
     def to_style_str(self) -> str:
-        """Format for style output (e.g., &H00FFFFFF&)."""
-        return f"&H{self.alpha:02X}{self.bgr:06X}&"
+        """Format for style output (e.g., &H00FFFFFF).
+        
+        Style format has no trailing &, per libass Wiki.
+        """
+        return f"&H{self.alpha:02X}{self.bgr:06X}"
 
 
 @dataclass
