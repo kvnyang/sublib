@@ -1,178 +1,137 @@
-# ASS Tag Parsing Implementation
+# ASS Parsing and Rendering Strategy
 
 ## Overview
 
-This implementation follows **Aegisub's actual behavior** (reference implementation for ASS format), with precise handling of line-scoped tags, mutual exclusivity, and multiple occurrence precedence.
+This document outlines the parsing and rendering strategies used in `sublib` for ASS (Advanced SubStation Alpha v4+) implementation.
+
+The architecture follows a strict separation of concerns:
+1.  **File Parsing**: Resolves file sections into high-level models (`AssFile`, `AssEvent`, `AssStyle`)
+2.  **Text Parsing**: Resolves event text into an Abstract Syntax Tree (AST)
 
 ---
 
-## Tag Categories
+## 1. File Structure Parsing
 
-### Line-scoped Tags (is_line_scoped=True)
+The file parser handles the high-level ASS file structure, which consists of section headers (e.g., `[Events]`) followed by content.
 
-Tags that affect the entire line. Position-independent, should appear at most once per line.
+### Strategy: Section-Aware Parsing
 
-| Tag | Spec Listed | First-wins | Exclusives | Verified |
-|-----|-------------|-----------|-----------|----------|
-| pos | ✓ | True | move | - |
-| move | ✓ | True | pos | - |
-| org | ✓ | True | - | - |
-| clip | ✓ | **False** | iclip | ✓ Tested |
-| iclip | ✓ | **False** | clip | ✓ Tested |
-| fad | ✓ | True | fade | ✓ Tested |
-| fade | ✓ | True | fad | ✓ Tested |
-| an | ⚠️ Logical | True | - | - |
-| a | ⚠️ Logical | True | - | - |
-| q | ⚠️ Logical | **False** | - | ✓ Tested |
+| Section | Strategy | Validation Behavior |
+|---------|----------|---------------------|
+| `[Script Info]` | **Typed + Extensible** | **Warnings only**. Parses all fields. Validates critical fields (e.g., `ScriptType`, `PlayResX`) and collects issues in `script_info.warnings`. |
+| `[V4+ Styles]` | **CSV Parsing** | Validates column count and types. Invalid lines are skipped (logged). |
+| `[Events]` | **CSV Parsing** | Validates column count. Text field is kept raw until explicitly parsed via `AssTextParser`. |
 
-**Legend**:
-- ✓ = Explicitly listed in ASS specification
-- ⚠️ Logical = Logical extension (sets line property, position-independent)
-- First-wins: True = first occurrence wins, False = last occurrence wins
+### Script Info Validation rules
 
-### Text-scoped Tags (is_line_scoped=False)
-
-All other tags (43 total). Affect text following them, can appear multiple times.
-
-**All text-scoped tags**: `first_wins=False` (last occurrence always wins)
-
-Examples: b, i, u, s, fn, fs, c, 1c, fscx, fscy, bord, shad, etc.
+- **ScriptType**: Must be `v4.00+` (case-insensitive).
+- **PlayResX/Y**: Must be present and positive integers.
+- **Timer**: Must be positive float.
+- **WrapStyle**: Must be 0-3.
+- **Collisions**: Must be `Normal` or `Reverse`.
+- **Unknown Fields**: Preserved in `script_info.extra` for roundtrip fidelity.
 
 ---
 
-## Parsing Strategy
+## 2. Tag Parsing (Event Text)
 
-### 1. Regex-Constrained Greedy Matching
+This implementation follows **Aegisub's actual behavior** (the reference implementation), with precise handling of line-scoped tags, mutual exclusivity, and multiple occurrence precedence.
 
-Each tag defines a precise parameter pattern (`param_pattern`):
+### Architecture: Parse-then-Validate
+
+1.  **Parse Phase (Permissive)**:
+    - Uses **Regex-Constrained Greedy Matching**.
+    - Each tag has a precise parameter pattern (e.g., `\c` matches `&H[0-9A-Fa-f]+&`).
+    - Valid tags are resolved to `AssOverrideTag`.
+    - **Anything** that doesn't match a known tag pattern is preserved as `AssComment` (unrecognized text).
+    - **No data loss**: The AST preserves all characters from the original string.
+
+2.  **Validate Phase (Optional)**:
+    - If `strict=True`, validating presence of `AssComment` nodes raises `SubtitleParseError`.
+    - If `strict=False`, comments are silently ignored (standard playback behavior).
+
+### Tag Categories & Precedence
+
+#### Line-scoped Tags (`is_line_scoped=True`)
+
+affect the entire line regardless of position.
+
+| Tag | Spec Listed | Precedence | Exclusives | Verified |
+|-----|-------------|------------|------------|----------|
+| `\pos` | ✓ | **First-wins** | `\move` | ✓ |
+| `\move` | ✓ | **First-wins** | `\pos` | ✓ |
+| `\org` | ✓ | **First-wins** | - | ✓ |
+| `\fad` | ✓ | **First-wins** | `\fade` | ✓ |
+| `\fade` | ✓ | **First-wins** | `\fad` | ✓ |
+| `\clip` | ✓ | **Last-wins** | `\iclip` | ✓ |
+| `\iclip` | ✓ | **Last-wins** | `\clip` | ✓ |
+| `\an`, `\a`, `\q` | ⚠️ Logical | **Last-wins** | - | - |
+
+#### Text-scoped Tags (`is_line_scoped=False`)
+
+All other tags (e.g., `\b`, `\fs`, `\c`).
+- **Precedence**: Last occurrence always wins (`first_wins=False`).
+- **Scope**: Affects text following the tag until reset or overridden.
+
+---
+
+## 3. AST Structure
+
+The text parser produces a list of `AssTextElement` nodes.
 
 ```python
-# Example patterns
-'b': r'(?:[01]|[1-9]00)'      # Bold: 0, 1, or 100-900
-'fs': r'\d+'                   # Font size: positive integer
-'c': r'&H[0-9A-Fa-f]+&'        # Color: BGR hex format
-'fn': r'[^\\]+'                # Font name: to next tag or end
-```
-
-**Behavior**: Pattern naturally defines parameter boundary (auto-stops at invalid characters).
-
-### 2. Parse-then-Validate Architecture
-
-**Two phases**:
-
-1. **Parse** (always permissive): Preserve all content, unrecognized text → `AssComment`
-2. **Validate** (optional): Check for comments in strict mode
-
-**Modes**:
-- `strict=True`: Raise error if comments found (development/validation)
-- `strict=False`: Silently preserve comments (production/playback)
-
-### 3. Comment Handling
-
-**Definition**: Unrecognized text within override blocks `{...}`
-
-**Behavior**:
-- Parse: Identified and preserved as `AssComment`
-- Render to ASS: Output as-is (roundtrip preservation)
-- Render to video: Ignored (no visual effect)
-- Strict mode: Validation error
-
----
-
-## Specification vs Implementation
-
-### Complete Alignment ✓
-
-| Feature | Spec | Implementation |
-|---------|------|----------------|
-| 7 line-scoped tags | ✓ | ✓ |
-| Mutual exclusivity | ✓ | ✓ |
-| Text-scoped tags multi-occurrence | ✓ | ✓ |
-| Comment preservation | ✓ | ✓ |
-
-### Logical Extensions ⚠️
-
-| Extension | Rationale |
-|-----------|-----------|
-| an, a, q as line-scoped | Set line properties, position-independent |
-
-### Specification Gaps (Resolved via Testing)
-
-The spec says line-scoped tags "should appear at most once" but doesn't specify what happens if violated:
-
-| Tag(s) | Spec Gap | Implementation | Verified |
-|--------|----------|----------------|----------|
-| fad, fade | First or last wins? | **First-wins** | ✓ Aegisub tested |
-| clip, iclip, q | First or last wins? | **Last-wins** | ✓ Aegisub tested |
-| Mutual exclusive | Error or precedence? | Last-wins (no error) | ✓ Tested |
-
----
-
-## Testing Summary
-
-All behaviors verified in Aegisub:
-
-```ass
-# Clip: last-wins
-{\clip(100,100,300,300)\clip(500,500,700,700)}  → (500,500,700,700) wins
-
-# Fade: first-wins  
-{\fad(200,200)\fad(1000,1000)}  → (200,200) wins
-
-# Mutual exclusivity: last-wins
-{\clip(...)\iclip(...)}  → iclip wins
-{\fad(200,200)\fade(...)}  → fad wins (first overall)
-
-# Wrap style: last-wins
-{\q0\q2}  → q2 wins
-
-# Text-scoped tags: always last-wins
-{\b1\b0}Text  → b0 wins (not bold)
+AssFile
+  └── AssEvent
+      └── text_elements: list[AssTextElement]
+            ├── AssPlainText ("Hello")
+            ├── AssSpecialChar ("\N")
+            └── AssOverrideBlock ("{\pos(100,100)\b1}")
+                  └── elements: list[AssBlockElement]
+                        ├── AssOverrideTag (name="pos", value=Position(100,100))
+                        ├── AssOverrideTag (name="b", value=True)
+                        └── AssComment ("unknowntag")
 ```
 
 ---
 
-## API Usage
+## 4. API Usage
 
-### Parser
+### File Loading and Validation
 
 ```python
-from sublib.ass.parser import AssTextParser
+from sublib.ass import AssFile
 
-# Strict mode (development)
-parser = AssTextParser(strict=True)
-elements = parser.parse("{\\b1}Text")  # OK
-# parser.parse("{\\b1 extra}Text")  # → SubtitleParseError
+# Load file
+ass = AssFile.load("file.ass")
 
-# Permissive mode (production)  
-parser = AssTextParser(strict=False)
-elements = parser.parse("{\\b1 extra}Text")  # OK, preserves comment
+# Check file-level validation (Script Info)
+if ass.script_info.warnings:
+    print("Script Info issues:", ass.script_info.warnings)
 ```
 
-### Renderer
+### Text Parsing (Manual)
 
 ```python
-from sublib.ass.renderer import AssTextRenderer
+from sublib.ass import AssTextParser
 
-renderer = AssTextRenderer()
-output = renderer.render(elements)  # Roundtrip-perfect
+text = "{\\pos(100,100)\\unknown}Hello"
+
+# Strict mode: Raises error on '\unknown'
+try:
+    AssTextParser(strict=True).parse(text)
+except SubtitleParseError as e:
+    print(e)
+
+# Permissive mode: Preserves '\unknown' as comment
+elements = AssTextParser(strict=False).parse(text)
 ```
 
 ---
 
-## Implementation Status
+## 5. References
 
-✅ **100% Aegisub-compatible**
-✅ **53 tags** with precise parameter patterns
-✅ **Parse-then-validate** architecture
-✅ **Strict/permissive** modes
-✅ **Comment preservation**
-✅ **Roundtrip fidelity**
-
----
-
-## References
-
-- **ASS Specification**: [Aegisub Documentation](https://aegisub.org/docs/latest/ass_tags/)
-- **Implementation**: `/home/yang/projects/sublib/src/sublib/ass/`
-- **Tag Definitions**: `/home/yang/projects/sublib/src/sublib/ass/tags/`
+- **Implementation**: `src/sublib/ass/`
+- **Tag Definitions**: `src/sublib/ass/tags/`
+- **Validation Logic**: 
+    - `src/sublib/ass/services/parsers/script_info_parser.py`
+    - `src/sublib/ass/services/parsers/text_parser.py`
