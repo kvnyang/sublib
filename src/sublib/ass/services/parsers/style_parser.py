@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sublib.ass.models import AssStyle
+from sublib.ass.types import Color
 
 
 def parse_style_line(line: str) -> AssStyle | None:
@@ -25,10 +26,10 @@ def parse_style_line(line: str) -> AssStyle | None:
         name=parts[0].strip(),
         fontname=parts[1].strip(),
         fontsize=float(parts[2]),
-        primary_color=_parse_ass_color(parts[3]),
-        secondary_color=_parse_ass_color(parts[4]),
-        outline_color=_parse_ass_color(parts[5]),
-        back_color=_parse_ass_color(parts[6]),
+        primary_color=_parse_style_color(parts[3]),
+        secondary_color=_parse_style_color(parts[4]),
+        outline_color=_parse_style_color(parts[5]),
+        back_color=_parse_style_color(parts[6]),
         bold=parts[7].strip() != '0',
         italic=parts[8].strip() != '0',
         underline=parts[9].strip() != '0',
@@ -48,10 +49,11 @@ def parse_style_line(line: str) -> AssStyle | None:
     )
 
 
-def _parse_ass_color(color_str: str) -> int:
-    """Parse ASS color string to int."""
+def _parse_style_color(color_str: str) -> Color:
+    """Parse ASS style color string to Color."""
     color_str = color_str.strip().strip('&H').strip('&')
     try:
-        return int(color_str, 16)
+        value = int(color_str, 16)
+        return Color.from_style_int(value)
     except ValueError:
-        return 0
+        return Color(bgr=0, alpha=0)

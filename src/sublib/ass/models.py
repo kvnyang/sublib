@@ -6,6 +6,7 @@ from typing import Any
 from pathlib import Path
 
 from sublib.ass.ast import AssTextElement
+from sublib.ass.types import Color
 
 
 @dataclass
@@ -17,10 +18,10 @@ class AssStyle:
     name: str
     fontname: str
     fontsize: float
-    primary_color: int  # 0xAABBGGRR format
-    secondary_color: int
-    outline_color: int
-    back_color: int
+    primary_color: Color
+    secondary_color: Color
+    outline_color: Color
+    back_color: Color
     bold: bool = False
     italic: bool = False
     underline: bool = False
