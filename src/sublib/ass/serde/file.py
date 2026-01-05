@@ -6,7 +6,7 @@ from sublib.ass.models import AssFile
 from .text import AssTextParser
 from .style import parse_style_line, render_style_line
 from .event import parse_event_line, render_event_line
-from .script_info import parse_script_info_line, parse_script_info, render_script_info
+from .script_info import parse_script_info, render_script_info
 
 
 def parse_ass_string(content: str) -> AssFile:
@@ -20,7 +20,7 @@ def parse_ass_string(content: str) -> AssFile:
     lines = content.splitlines()
     current_section = None
     line_number = 0
-    script_info_lines: list[tuple[str, str]] = []
+    script_info_lines: list[str] = []
     
     for line in lines:
         line_number += 1
@@ -35,9 +35,7 @@ def parse_ass_string(content: str) -> AssFile:
             continue
         
         if current_section == 'script info':
-            parsed = parse_script_info_line(line)
-            if parsed:
-                script_info_lines.append(parsed)
+            script_info_lines.append(line)
         
         elif current_section in ('v4 styles', 'v4+ styles'):
             if line.startswith('Style:'):
@@ -51,7 +49,6 @@ def parse_ass_string(content: str) -> AssFile:
                 if event:
                     ass_file.events.append(event)
     
-    # Parse collected script info lines with validation
     ass_file.script_info = parse_script_info(script_info_lines)
     
     return ass_file

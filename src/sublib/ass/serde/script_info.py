@@ -6,7 +6,6 @@ from sublib.ass.models import ScriptInfo
 
 
 # Ordered field definitions: (field_name, ass_key)
-# Order determines output order when rendering
 _FIELDS: list[tuple[str, str]] = [
     ("script_type", "ScriptType"),
     ("title", "Title"),
@@ -26,25 +25,30 @@ _FIELDS: list[tuple[str, str]] = [
     ("update_details", "Update Details"),
 ]
 
-# Build case-insensitive lookup: lowercase key -> field name
+# Case-insensitive lookup: lowercase key -> field name
 _KEY_TO_FIELD: dict[str, str] = {
     ass_key.lower(): field_name for field_name, ass_key in _FIELDS
 }
 
 
-def parse_script_info_line(line: str) -> tuple[str, str] | None:
-    """Parse a single Script Info line to key-value pair."""
-    if ':' not in line:
-        return None
-    key, _, value = line.partition(':')
-    return key.strip(), value.strip()
-
-
-def parse_script_info(lines: list[tuple[str, str]]) -> ScriptInfo:
-    """Parse key-value pairs into ScriptInfo with validation."""
+def parse_script_info(lines: list[str]) -> ScriptInfo:
+    """Parse [Script Info] section lines into ScriptInfo.
+    
+    Args:
+        lines: Raw lines from [Script Info] section (without section header)
+        
+    Returns:
+        ScriptInfo with populated fields and validation warnings
+    """
     info = ScriptInfo()
     
-    for key, value in lines:
+    for line in lines:
+        if ':' not in line:
+            continue
+        key, _, value = line.partition(':')
+        key = key.strip()
+        value = value.strip()
+        
         field_name = _KEY_TO_FIELD.get(key.lower())
         
         if field_name is None:
@@ -127,7 +131,14 @@ def parse_script_info(lines: list[tuple[str, str]]) -> ScriptInfo:
 
 
 def render_script_info(info: ScriptInfo) -> list[str]:
-    """Render ScriptInfo to ASS format lines."""
+    """Render ScriptInfo to [Script Info] section lines.
+    
+    Args:
+        info: ScriptInfo to render
+        
+    Returns:
+        Lines for [Script Info] section (without section header)
+    """
     lines = []
     
     for field_name, ass_key in _FIELDS:
@@ -143,7 +154,6 @@ def render_script_info(info: ScriptInfo) -> list[str]:
         else:
             lines.append(f"{ass_key}: {value}")
     
-    # Extra fields
     for key, value in info.extra.items():
         lines.append(f"{key}: {value}")
     
