@@ -36,11 +36,6 @@ class Color:
         return self.bgr & 0xFF
     
     @classmethod
-    def from_rgb(cls, r: int, g: int, b: int, alpha: int = 0) -> "Color":
-        """Create from RGB values."""
-        return cls(bgr=(b << 16) | (g << 8) | r, alpha=alpha)
-    
-    @classmethod
     def from_style_str(cls, s: str) -> "Color":
         """Parse from style string (&HAABBGGRR).
         
