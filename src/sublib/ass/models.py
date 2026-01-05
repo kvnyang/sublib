@@ -10,6 +10,42 @@ from sublib.ass.types import Color, Timestamp
 
 
 @dataclass
+class ScriptInfo:
+    """Typed Script Info for ASS V4.00+ format.
+    
+    Provides typed access to standard fields with validation warnings.
+    Non-standard fields are stored in `extra`.
+    """
+    # Required field
+    script_type: str = "v4.00+"
+    
+    # Functional fields
+    play_res_x: int | None = None
+    play_res_y: int | None = None
+    wrap_style: int = 0  # 0-3
+    collisions: str = "Normal"  # Normal/Reverse
+    timer: float = 100.0
+    ycbcr_matrix: str | None = None  # TV.601, TV.709, PC.601, PC.709, None
+    scaled_border_and_shadow: bool = True  # yes/no in ASS format
+    
+    # Metadata fields
+    title: str = "<untitled>"
+    original_script: str = "<unknown>"
+    original_translation: str | None = None
+    original_editing: str | None = None
+    original_timing: str | None = None
+    synch_point: str | None = None
+    script_updated_by: str | None = None
+    update_details: str | None = None
+    
+    # Non-standard fields
+    extra: dict[str, str] = field(default_factory=dict)
+    
+    # Validation warnings (populated during parsing)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
 class AssStyle:
     """ASS style definition.
     
@@ -86,8 +122,8 @@ class AssFile:
     
     Represents a complete .ass file with styles and events.
     """
-    # Script Info section (arbitrary key-value pairs)
-    script_info: dict[str, str] = field(default_factory=dict)
+    # Script Info section (typed with validation)
+    script_info: ScriptInfo = field(default_factory=ScriptInfo)
     
     # Styles by name
     styles: dict[str, AssStyle] = field(default_factory=dict)

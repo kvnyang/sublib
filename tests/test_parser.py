@@ -2,10 +2,10 @@
 """Tests for AssTextParser."""
 import pytest
 
-from sublib.ass.parser import AssTextParser
+from sublib.ass.services.parsers import AssTextParser
 from sublib.exceptions import SubtitleParseError
 from sublib.ass.tags import Position, Alignment
-from sublib.ass.elements import AssOverrideTag, AssPlainText, AssNewLine, AssBlock, AssComment
+from sublib.ass.ast import AssOverrideTag, AssPlainText, AssSpecialChar, AssOverrideBlock, AssComment
 
 
 class TestAssTextParser:
@@ -24,8 +24,7 @@ class TestAssTextParser:
         assert len(elements) == 3
         assert isinstance(elements[0], AssPlainText)
         assert elements[0].content == "Line1"
-        assert isinstance(elements[1], AssNewLine)
-        assert elements[1].hard == True
+        assert isinstance(elements[1], AssSpecialChar)
         assert isinstance(elements[2], AssPlainText)
         assert elements[2].content == "Line2"
     
@@ -36,7 +35,7 @@ class TestAssTextParser:
         assert len(elements) == 2
         
         # Element 0 is AssBlock containing AssOverrideTag
-        assert isinstance(elements[0], AssBlock)
+        assert isinstance(elements[0], AssOverrideBlock)
         block_elements = elements[0].elements
         assert len(block_elements) == 1
         assert isinstance(block_elements[0], AssOverrideTag)
@@ -52,7 +51,7 @@ class TestAssTextParser:
         elements = parser.parse("{\\pos(100,200)}Text")
         
         assert len(elements) == 2
-        assert isinstance(elements[0], AssBlock)
+        assert isinstance(elements[0], AssOverrideBlock)
         block_elements = elements[0].elements
         assert len(block_elements) == 1
         assert isinstance(block_elements[0], AssOverrideTag)
@@ -65,7 +64,7 @@ class TestAssTextParser:
         elements = parser.parse("{comment\\pos(10,10)more comment}Text")
         
         assert len(elements) == 2
-        assert isinstance(elements[0], AssBlock)
+        assert isinstance(elements[0], AssOverrideBlock)
         
         # Block structure: comment -> tag -> comment
         items = elements[0].elements
@@ -100,7 +99,7 @@ class TestAssTextParser:
         elements = parser.parse("{\\zunknown123}Text")
         
         assert len(elements) == 2
-        assert isinstance(elements[0], AssBlock)
+        assert isinstance(elements[0], AssOverrideBlock)
         assert len(elements[0].elements) == 1
         assert isinstance(elements[0].elements[0], AssComment)
         assert elements[0].elements[0].content == "\\zunknown123"

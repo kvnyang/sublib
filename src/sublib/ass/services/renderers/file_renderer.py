@@ -5,6 +5,7 @@ from __future__ import annotations
 from sublib.ass.models import AssFile
 from .style_renderer import render_style_line
 from .event_renderer import render_event_line
+from .script_info_renderer import render_script_info
 
 
 def render_ass_string(ass_file: AssFile) -> str:
@@ -20,8 +21,7 @@ def render_ass_string(ass_file: AssFile) -> str:
     
     # Script Info
     lines.append('[Script Info]')
-    for key, value in ass_file.script_info.items():
-        lines.append(f'{key}: {value}')
+    lines.extend(render_script_info(ass_file.script_info))
     lines.append('')
     
     # Styles
