@@ -57,10 +57,10 @@ class TestAssTextParser:
         assert isinstance(block_elements[0], AssOverrideTag)
         assert block_elements[0].name == "pos"
         assert block_elements[0].value == Position(x=100.0, y=200.0)
-        assert block_elements[0].is_event == True
+        assert block_elements[0].is_line_scoped == True
 
     def test_parse_block_with_comment(self):
-        parser = AssTextParser()
+        parser = AssTextParser(strict=False)
         elements = parser.parse("{comment\\pos(10,10)more comment}Text")
         
         assert len(elements) == 2
@@ -95,7 +95,7 @@ class TestAssTextParser:
         # This is actually better for robustness/losslessness!
         # Note: We use \zunknown because \unknowntag starts with \u which IS a valid tag!
         
-        parser = AssTextParser()
+        parser = AssTextParser(strict=False)
         elements = parser.parse("{\\zunknown123}Text")
         
         assert len(elements) == 2
