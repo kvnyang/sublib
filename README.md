@@ -30,7 +30,7 @@ pip install sublib
 #### Loading and Saving
 
 ```python
-from sublib.ass import AssFile
+from sublib import AssFile
 
 # Load an ASS file
 ass_file = AssFile.load("subtitles.ass")
@@ -94,7 +94,9 @@ sublib/
 ├── ass/                # ASS v4+ implementation
 │   ├── ast/            # Abstract Syntax Tree nodes
 │   ├── models.py       # Data models (AssFile, AssEvent, ScriptInfo)
-│   ├── services/       # Parsers and Renderers
+│   ├── serde/          # Serialization/deserialization
+│   ├── extractor.py    # Tag and segment extraction utilities
+│   ├── tags/           # Override tag definitions
 │   └── types/          # Value types (Color, Timestamp, etc.)
 └── exceptions.py       # Shared exceptions
 ```

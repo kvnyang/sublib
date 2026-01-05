@@ -1,12 +1,12 @@
-# sublib/ass/services/parsers/file_parser.py
-"""Parse ASS file content."""
+# sublib/ass/serde/file.py
+"""Parse and render complete ASS files."""
 from __future__ import annotations
 
 from sublib.ass.models import AssFile
-from .text_parser import AssTextParser
-from .style_parser import parse_style_line
-from .event_parser import parse_event_line
-from .script_info_parser import parse_script_info_line, parse_script_info
+from .text import AssTextParser
+from .style import parse_style_line, render_style_line
+from .event import parse_event_line, render_event_line
+from .script_info import parse_script_info_line, parse_script_info, render_script_info
 
 
 def parse_ass_string(content: str) -> AssFile:
@@ -55,3 +55,38 @@ def parse_ass_string(content: str) -> AssFile:
     ass_file.script_info = parse_script_info(script_info_lines)
     
     return ass_file
+
+
+def render_ass_string(ass_file: AssFile) -> str:
+    """Render AssFile to ASS format string.
+    
+    Args:
+        ass_file: AssFile to render
+        
+    Returns:
+        Complete ASS file content as string
+    """
+    lines = []
+    
+    # Script Info
+    lines.append('[Script Info]')
+    lines.extend(render_script_info(ass_file.script_info))
+    lines.append('')
+    
+    # Styles
+    lines.append('[V4+ Styles]')
+    lines.append('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, '
+                 'OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
+                 'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, '
+                 'Alignment, MarginL, MarginR, MarginV, Encoding')
+    for style in ass_file.styles.values():
+        lines.append(render_style_line(style))
+    lines.append('')
+    
+    # Events
+    lines.append('[Events]')
+    lines.append('Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text')
+    for event in ass_file.events:
+        lines.append(render_event_line(event))
+    
+    return '\n'.join(lines)

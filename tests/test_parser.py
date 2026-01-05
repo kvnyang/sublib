@@ -2,9 +2,9 @@
 """Tests for AssTextParser."""
 import pytest
 
-from sublib.ass.services.parsers import AssTextParser
+from sublib.ass.serde import AssTextParser
 from sublib.exceptions import SubtitleParseError
-from sublib.ass.tags import Position, Alignment
+from sublib.ass.types import Position
 from sublib.ass.ast import AssOverrideTag, AssPlainText, AssSpecialChar, AssOverrideBlock, AssComment
 
 
@@ -82,19 +82,8 @@ class TestAssTextParser:
         assert isinstance(elements[1], AssPlainText)
         assert elements[1].content == "Text"
 
-    def test_unknown_tag_is_not_error_in_parsing(self):
-        # NOTE: Previous behavior raised Error, but strict strict parsing might be configurable.
-        # But wait, logic in parser.py still raises SubtitleParseError if tag unknown.
-        # Let's keep the error test but update it for Block context if needed.
-        # But wait, my parsing logic:
-        # "content before this tag is comment"
-        # It finds tags using `_get_known_tags_pattern`, which only matches KNOWN tags.
-        # So unknown tags will actually be treated as COMMENTS now!
-        # Because regex only matches known tags.
-        # So `{\unknowntag}` -> regex finds nothing -> whole string is extracted as comment.
-        # This is actually better for robustness/losslessness!
-        # Note: We use \zunknown because \unknowntag starts with \u which IS a valid tag!
-        
+    def test_unknown_tag_is_comment_in_permissive_mode(self):
+        """Unknown tags are preserved as comments in permissive mode."""
         parser = AssTextParser(strict=False)
         elements = parser.parse("{\\zunknown123}Text")
         
@@ -103,5 +92,3 @@ class TestAssTextParser:
         assert len(elements[0].elements) == 1
         assert isinstance(elements[0].elements[0], AssComment)
         assert elements[0].elements[0].content == "\\zunknown123"
-    
-

@@ -1,7 +1,7 @@
 # sublib/ass/io.py
 """ASS file I/O operations.
 
-Pure file I/O - delegates to services for parsing and rendering.
+Pure file I/O - delegates to serde for parsing and rendering.
 """
 from __future__ import annotations
 from pathlib import Path
@@ -18,7 +18,7 @@ def load_ass_file(path: str | Path) -> AssFile:
     Returns:
         Parsed AssFile
     """
-    from sublib.ass.services import parse_ass_string
+    from sublib.ass.serde import parse_ass_string
     
     path = Path(path)
     with open(path, 'r', encoding='utf-8-sig') as f:
@@ -33,7 +33,7 @@ def save_ass_file(ass_file: AssFile, path: str | Path) -> None:
         ass_file: AssFile to save
         path: Destination path
     """
-    from sublib.ass.services import render_ass_string
+    from sublib.ass.serde import render_ass_string
     
     path = Path(path)
     content = render_ass_string(ass_file)

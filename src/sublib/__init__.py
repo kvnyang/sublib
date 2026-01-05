@@ -3,28 +3,17 @@
 A Python library for parsing and rendering subtitle files.
 
 Supported formats:
-- ASS/SSA (Advanced SubStation Alpha)
+- ASS (Advanced SubStation Alpha v4+)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
-# ASS format - main exports
-from sublib.ass import (
-    # File-level
-    AssFile,
-    AssEvent,
-    AssStyle,
-    # I/O
-    load_ass_file,
-    save_ass_file,
-)
+# ASS format - main exports (Facade API)
+from sublib.ass import AssFile, AssEvent, AssStyle
 
 __all__ = [
     "__version__",
-    # ASS
     "AssFile",
     "AssEvent",
     "AssStyle",
-    "load_ass_file",
-    "save_ass_file",
 ]

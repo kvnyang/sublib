@@ -1,10 +1,10 @@
-# sublib/ass/services/parsers/event_parser.py
-"""Parse Dialogue: lines."""
+# sublib/ass/serde/event.py
+"""Parse and render Dialogue: lines."""
 from __future__ import annotations
 
 from sublib.ass.models import AssEvent
 from sublib.ass.types import Timestamp
-from .text_parser import AssTextParser
+from .text import AssTextParser, AssTextRenderer
 
 
 def parse_event_line(
@@ -46,4 +46,21 @@ def parse_event_line(
         margin_r=int(parts[6]),
         margin_v=int(parts[7]),
         effect=parts[8].strip(),
+    )
+
+
+def render_event_line(event: AssEvent) -> str:
+    """Render AssEvent to Dialogue: line.
+    
+    Args:
+        event: AssEvent to render
+        
+    Returns:
+        Formatted Dialogue: line
+    """
+    text = AssTextRenderer().render(event.text_elements)
+    return (
+        f"Dialogue: {event.layer},{event.start.to_ass_str()},"
+        f"{event.end.to_ass_str()},{event.style},{event.name},"
+        f"{event.margin_l},{event.margin_r},{event.margin_v},{event.effect},{text}"
     )

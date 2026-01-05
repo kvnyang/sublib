@@ -1,5 +1,5 @@
-# sublib/ass/parser.py
-"""Parse ASS event text into structured elements."""
+# sublib/ass/serde/text.py
+"""Parse and render ASS event text."""
 from __future__ import annotations
 import re
 from typing import Any, Union
@@ -180,7 +180,7 @@ class AssTextParser:
                     last_end = match.end()
                     continue
             
-            # Failed to parse or unknown tag → treat as comment
+            # Failed to parse or unknown tag -> treat as comment
             block_elements.append(AssComment(content=match.group(0)))
             last_end = match.end()
         
@@ -243,3 +243,41 @@ class AssTextParser:
                     if isinstance(item, AssComment):
                         comments.append(item)
         return comments
+
+
+class AssTextRenderer:
+    """Render ASS text string from elements.
+    
+    Converts parsed elements back to ASS text format.
+    """
+    
+    def render(self, elements: list[AssTextElement]) -> str:
+        """Render elements to ASS text string.
+        
+        If tag has 'raw' field, uses it for exact roundtrip.
+        Otherwise, uses the tag's formatter to render from value.
+        """
+        result = []
+        
+        for elem in elements:
+            if isinstance(elem, AssOverrideBlock):
+                result.append("{")
+                for item in elem.elements:
+                    if isinstance(item, AssOverrideTag):
+                        # Use raw if available, otherwise render from value
+                        if item.raw:
+                            result.append(item.raw)
+                        else:
+                            tag_cls = get_tag(item.name)
+                            if tag_cls:
+                                result.append(tag_cls.format(item.value))
+                    elif isinstance(item, AssComment):
+                        result.append(item.content)
+                result.append("}")
+            
+            elif isinstance(elem, AssSpecialChar):
+                result.append(elem.render())
+            elif isinstance(elem, AssPlainText):
+                result.append(elem.content)
+        
+        return "".join(result)

@@ -1,5 +1,5 @@
-# sublib/ass/services/extractor.py
-"""Extraction services for ASS text elements.
+# sublib/ass/extractor.py
+"""Extraction utilities for ASS text elements.
 
 These functions extract structured information from parsed AST.
 """

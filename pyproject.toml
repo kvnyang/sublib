@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sublib"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Python library for parsing and rendering subtitle files (ASS, SRT, VTT, ...)"
 readme = "README.md"
 license = "MIT"

@@ -11,16 +11,6 @@ Value types are in sublib.ass.types.
 # Base
 from sublib.ass.tags._base import TagCategory, TagDefinition
 
-# Re-export value types for convenience (canonical source is types/)
-from sublib.ass.types import (
-    Color, Alpha,
-    Position, Move,
-    RectClip, VectorClip, ClipValue,
-    Fade, FadeComplex,
-    Alignment, WrapStyle, StyleReset,
-    Transform, Karaoke,
-)
-
 # Registry functions
 from sublib.ass.tags._registry import (
     TAGS,
@@ -36,13 +26,6 @@ __all__ = [
     # Base
     "TagCategory",
     "TagDefinition",
-    # Value types (from types/)
-    "Color", "Alpha",
-    "Position", "Move",
-    "RectClip", "VectorClip", "ClipValue",
-    "Fade", "FadeComplex",
-    "Alignment", "WrapStyle", "StyleReset",
-    "Transform", "Karaoke",
     # Registry
     "TAGS",
     "MUTUAL_EXCLUSIVES",
