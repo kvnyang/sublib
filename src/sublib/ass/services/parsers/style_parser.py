@@ -26,10 +26,10 @@ def parse_style_line(line: str) -> AssStyle | None:
         name=parts[0].strip(),
         fontname=parts[1].strip(),
         fontsize=float(parts[2]),
-        primary_color=_parse_style_color(parts[3]),
-        secondary_color=_parse_style_color(parts[4]),
-        outline_color=_parse_style_color(parts[5]),
-        back_color=_parse_style_color(parts[6]),
+        primary_color=Color.from_style_str(parts[3]),
+        secondary_color=Color.from_style_str(parts[4]),
+        outline_color=Color.from_style_str(parts[5]),
+        back_color=Color.from_style_str(parts[6]),
         bold=parts[7].strip() != '0',
         italic=parts[8].strip() != '0',
         underline=parts[9].strip() != '0',
@@ -47,13 +47,3 @@ def parse_style_line(line: str) -> AssStyle | None:
         margin_v=int(parts[21]),
         encoding=int(parts[22]),
     )
-
-
-def _parse_style_color(color_str: str) -> Color:
-    """Parse ASS style color string to Color."""
-    color_str = color_str.strip().strip('&H').strip('&')
-    try:
-        value = int(color_str, 16)
-        return Color.from_style_int(value)
-    except ValueError:
-        return Color(bgr=0, alpha=0)

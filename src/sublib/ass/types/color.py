@@ -13,7 +13,7 @@ class Color:
     
     ASS colors are in BGR format (Blue-Green-Red).
     
-    Style format: &HAABBGGRR& (8 hex digits, includes alpha)
+    Style format: &HAABBGGRR (8 hex digits, includes alpha)
     Tag format: &HBBGGRR& (6 hex digits, no alpha)
     
     Attributes:
@@ -41,19 +41,40 @@ class Color:
         return cls(bgr=(b << 16) | (g << 8) | r, alpha=alpha)
     
     @classmethod
-    def from_style_int(cls, value: int) -> "Color":
-        """Parse from Style format integer (0xAABBGGRR)."""
-        alpha = (value >> 24) & 0xFF
-        bgr = value & 0xFFFFFF
-        return cls(bgr=bgr, alpha=alpha)
+    def from_style_str(cls, s: str) -> "Color":
+        """Parse from style string (&HAABBGGRR).
+        
+        Args:
+            s: Style color string, e.g. "&H00FFFFFF" or "&H80000000"
+            
+        Returns:
+            Color with parsed bgr and alpha
+        """
+        s = s.strip().lstrip("&H").rstrip("&")
+        try:
+            value = int(s, 16)
+            alpha = (value >> 24) & 0xFF
+            bgr = value & 0xFFFFFF
+            return cls(bgr=bgr, alpha=alpha)
+        except ValueError:
+            return cls(bgr=0, alpha=0)
     
-    def to_style_int(self) -> int:
-        """Convert to Style format integer (0xAABBGGRR)."""
-        return (self.alpha << 24) | self.bgr
-    
-    def to_tag_str(self) -> str:
-        """Format for tag output (e.g., &HFFFFFF&)."""
-        return f"&H{self.bgr:06X}&"
+    @classmethod
+    def from_tag_str(cls, s: str) -> "Color":
+        """Parse from tag string (&HBBGGRR&).
+        
+        Args:
+            s: Tag color string, e.g. "&HFFFFFF&"
+            
+        Returns:
+            Color with parsed bgr (alpha defaults to 0)
+        """
+        s = s.strip().lstrip("&H").rstrip("&")
+        try:
+            bgr = int(s, 16)
+            return cls(bgr=bgr, alpha=0)
+        except ValueError:
+            return cls(bgr=0, alpha=0)
     
     def to_style_str(self) -> str:
         """Format for style output (e.g., &H00FFFFFF).
@@ -61,6 +82,10 @@ class Color:
         Style format has no trailing &, per libass Wiki.
         """
         return f"&H{self.alpha:02X}{self.bgr:06X}"
+    
+    def to_tag_str(self) -> str:
+        """Format for tag output (e.g., &HFFFFFF&)."""
+        return f"&H{self.bgr:06X}&"
 
 
 @dataclass
