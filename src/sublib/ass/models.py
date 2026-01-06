@@ -109,10 +109,16 @@ class AssFile:
     @classmethod
     def load(cls, path: Path | str) -> "AssFile":
         """Load ASS file from path."""
-        from sublib.ass.io import load_ass_file
-        return load_ass_file(Path(path))
+        from sublib.io import read_text_file
+        from sublib.ass.serde import parse_ass_string
+        
+        content = read_text_file(path, encoding='utf-8-sig')
+        return parse_ass_string(content)
     
     def save(self, path: Path | str) -> None:
         """Save to file."""
-        from sublib.ass.io import save_ass_file
-        save_ass_file(self, Path(path))
+        from sublib.io import write_text_file
+        from sublib.ass.serde import render_ass_string
+        
+        content = render_ass_string(self)
+        write_text_file(path, content, encoding='utf-8-sig')
