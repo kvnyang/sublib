@@ -140,7 +140,15 @@ class AssTextParser:
         line_number: int | None = None,
         position: int | None = None
     ) -> AssOverrideBlock:
-        """Parse a single override block {...} content (always permissive)."""
+        """Parse a single override block {...} content (always permissive).
+        
+        Whitespace is stripped from block content and comments.
+        """
+        # Strip leading/trailing whitespace from block content
+        block_text = block_text.strip()
+        if not block_text:
+            return AssOverrideBlock(elements=[])
+        
         block_elements: list[Union[AssOverrideTag, AssComment]] = []
         last_end = 0
         
@@ -148,9 +156,9 @@ class AssTextParser:
         pattern = self._build_smart_pattern()
         
         for match in pattern.finditer(block_text):
-            # Content before this tag is comment
+            # Content before this tag is comment (stripped)
             if match.start() > last_end:
-                comment_text = block_text[last_end:match.start()]
+                comment_text = block_text[last_end:match.start()].strip()
                 if comment_text:
                     block_elements.append(AssComment(content=comment_text))
             
@@ -184,9 +192,9 @@ class AssTextParser:
             block_elements.append(AssComment(content=match.group(0)))
             last_end = match.end()
         
-        # Remaining text is comment
+        # Remaining text is comment (stripped)
         if last_end < len(block_text):
-            comment_text = block_text[last_end:]
+            comment_text = block_text[last_end:].strip()
             if comment_text:
                 block_elements.append(AssComment(content=comment_text))
         

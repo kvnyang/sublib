@@ -60,17 +60,23 @@ def extract_text_scoped_segments(elements: list[AssTextElement]) -> list[AssText
     """Extract text segments with their formatting tags.
     
     Behavior:
-    - Adjacent override blocks are merged
-    - Tag conflicts resolved with last-wins
+    - Each override block boundary creates a new segment (including empty blocks)
+    - Adjacent blocks (without intervening text) are merged into one segment
+    - Within a segment, tags are processed in order with last-wins and mutual exclusion
     - Comments are ignored (type filtering)
-    - Tags reset after each text segment (no accumulation)
+    - Tag accumulation is NOT handled here (renderer's responsibility)
+    
+    Edge cases:
+    - Leading text without block: creates segment with empty tags
+    - Trailing blocks without text: ignored (no segment created)
+    - Blocks only (no text): returns empty list
     
     Args:
         elements: Parsed AST elements from parser
         
     Returns:
         List of AssTextSegment, each with:
-        - block_tags: dict of effective text-scoped tag values
+        - block_tags: dict of effective text-scoped tag values for this segment
         - content: list of text content elements
     """
     segments: list[AssTextSegment] = []
