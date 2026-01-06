@@ -1,160 +1,116 @@
 # sublib/ass/serde/script_info.py
-"""Parse and render [Script Info] section."""
+"""Parse and render Script Info lines."""
 from __future__ import annotations
+import logging
+from typing import Any
 
-from sublib.ass.models import ScriptInfo
+logger = logging.getLogger(__name__)
 
 
-# Ordered field definitions: (field_name, ass_key)
-_FIELDS: list[tuple[str, str]] = [
-    ("script_type", "ScriptType"),
-    ("title", "Title"),
-    ("play_res_x", "PlayResX"),
-    ("play_res_y", "PlayResY"),
-    ("wrap_style", "WrapStyle"),
-    ("scaled_border_and_shadow", "ScaledBorderAndShadow"),
-    ("collisions", "Collisions"),
-    ("ycbcr_matrix", "YCbCr Matrix"),
-    ("timer", "Timer"),
-    ("synch_point", "Synch Point"),
-    ("original_script", "Original Script"),
-    ("original_translation", "Original Translation"),
-    ("original_editing", "Original Editing"),
-    ("original_timing", "Original Timing"),
-    ("script_updated_by", "Script Updated By"),
-    ("update_details", "Update Details"),
-]
-
-# Case-insensitive lookup: lowercase key -> field name
-_KEY_TO_FIELD: dict[str, str] = {
-    ass_key.lower(): field_name for field_name, ass_key in _FIELDS
+# Known fields with their types: key -> (type, validator)
+# type: 'int', 'float', 'bool', 'str'
+KNOWN_FIELDS: dict[str, str] = {
+    "ScriptType": "str",
+    "Title": "str",
+    "PlayResX": "int",
+    "PlayResY": "int",
+    "WrapStyle": "int",
+    "ScaledBorderAndShadow": "bool",
+    "Collisions": "str",
+    "YCbCr Matrix": "str",
+    "Timer": "float",
+    "Synch Point": "str",
+    "Original Script": "str",
+    "Original Translation": "str",
+    "Original Editing": "str",
+    "Original Timing": "str",
+    "Script Updated By": "str",
+    "Update Details": "str",
 }
 
+# Case-insensitive lookup: lowercase key -> canonical key
+_CANONICAL_KEY: dict[str, str] = {k.lower(): k for k in KNOWN_FIELDS}
 
-def parse_script_info(lines: list[str]) -> ScriptInfo:
-    """Parse [Script Info] section lines into ScriptInfo.
+
+def parse_script_info_line(line: str) -> tuple[str, Any] | None:
+    """Parse a single Script Info line.
     
     Args:
-        lines: Raw lines from [Script Info] section (without section header)
+        line: Raw line (e.g., "PlayResX: 1920")
         
     Returns:
-        ScriptInfo with populated fields and validation warnings
+        (key, typed_value) or None if line is invalid.
+        Logs warnings for validation issues.
     """
-    info = ScriptInfo()
+    if ':' not in line:
+        return None
     
-    for line in lines:
-        if ':' not in line:
-            continue
-        key, _, value = line.partition(':')
-        key = key.strip()
-        value = value.strip()
-        
-        field_name = _KEY_TO_FIELD.get(key.lower())
-        
-        if field_name is None:
-            info.extra[key] = value
-            continue
-        
-        # Parse and validate
-        if field_name == "script_type":
-            info.script_type = value
-            if value.lower() != "v4.00+":
-                info.warnings.append(f"ScriptType '{value}' is not 'v4.00+'")
-        
-        elif field_name == "play_res_x":
-            try:
-                val = int(value)
-                if val <= 0:
-                    info.warnings.append(f"PlayResX must be positive, got {val}")
-                else:
-                    info.play_res_x = val
-            except ValueError:
-                info.warnings.append(f"PlayResX must be integer, got '{value}'")
-        
-        elif field_name == "play_res_y":
-            try:
-                val = int(value)
-                if val <= 0:
-                    info.warnings.append(f"PlayResY must be positive, got {val}")
-                else:
-                    info.play_res_y = val
-            except ValueError:
-                info.warnings.append(f"PlayResY must be integer, got '{value}'")
-        
-        elif field_name == "wrap_style":
-            try:
-                val = int(value)
-                if val not in (0, 1, 2, 3):
-                    info.warnings.append(f"WrapStyle must be 0-3, got {val}")
-                else:
-                    info.wrap_style = val
-            except ValueError:
-                info.warnings.append(f"WrapStyle must be integer, got '{value}'")
-        
-        elif field_name == "collisions":
-            if value not in ("Normal", "Reverse"):
-                info.warnings.append(f"Collisions must be 'Normal' or 'Reverse', got '{value}'")
-            info.collisions = value
-        
-        elif field_name == "timer":
-            try:
-                val = float(value)
-                if val <= 0:
-                    info.warnings.append(f"Timer must be positive, got {val}")
-                else:
-                    info.timer = val
-            except ValueError:
-                info.warnings.append(f"Timer must be number, got '{value}'")
-        
-        elif field_name == "scaled_border_and_shadow":
-            info.scaled_border_and_shadow = value.lower() in ("yes", "1", "true")
-        
-        elif field_name == "title":
-            info.title = value if value else "<untitled>"
-        
-        elif field_name == "original_script":
-            info.original_script = value if value else "<unknown>"
-        
-        elif field_name == "ycbcr_matrix":
-            info.ycbcr_matrix = value if value else None
-        
-        else:
-            setattr(info, field_name, value if value else None)
+    key, _, value = line.partition(':')
+    key, value = key.strip(), value.strip()
     
-    # Validate required fields
-    if info.play_res_x is None:
-        info.warnings.append("PlayResX is required for correct rendering")
-    if info.play_res_y is None:
-        info.warnings.append("PlayResY is required for correct rendering")
+    if not key:
+        return None
     
-    return info
+    # Normalize to canonical key if known
+    canonical = _CANONICAL_KEY.get(key.lower())
+    if canonical:
+        key = canonical
+        field_type = KNOWN_FIELDS[canonical]
+        parsed = _parse_typed_value(key, value, field_type)
+        return key, parsed
+    else:
+        logger.warning(f"Unknown Script Info field: {key}")
+        return key, value
 
 
-def render_script_info(info: ScriptInfo) -> list[str]:
-    """Render ScriptInfo to [Script Info] section lines.
+def _parse_typed_value(key: str, value: str, field_type: str) -> Any:
+    """Parse value according to field type."""
+    if field_type == "int":
+        try:
+            val = int(value)
+            if val <= 0 and key in ("PlayResX", "PlayResY"):
+                logger.warning(f"{key} must be positive, got {val}")
+            return val
+        except ValueError:
+            logger.warning(f"{key} must be integer, got '{value}'")
+            return value  # Keep as string on failure
+    
+    elif field_type == "float":
+        try:
+            val = float(value)
+            if val <= 0 and key == "Timer":
+                logger.warning(f"{key} must be positive, got {val}")
+            return val
+        except ValueError:
+            logger.warning(f"{key} must be number, got '{value}'")
+            return value
+    
+    elif field_type == "bool":
+        return value.lower() in ("yes", "1", "true")
+    
+    else:  # str
+        return value
+
+
+def render_script_info_line(key: str, value: Any) -> str:
+    """Render a single Script Info line.
     
     Args:
-        info: ScriptInfo to render
+        key: ASS key name (e.g., "PlayResX")
+        value: Typed value
         
     Returns:
-        Lines for [Script Info] section (without section header)
+        Formatted line (e.g., "PlayResX: 1920")
     """
-    lines = []
-    
-    for field_name, ass_key in _FIELDS:
-        value = getattr(info, field_name)
-        
-        if value is None:
-            continue
-        
-        if field_name == "timer":
-            lines.append(f"{ass_key}: {value:.4f}")
-        elif isinstance(value, bool):
-            lines.append(f"{ass_key}: {'yes' if value else 'no'}")
-        else:
-            lines.append(f"{ass_key}: {value}")
-    
-    for key, value in info.extra.items():
-        lines.append(f"{key}: {value}")
-    
-    return lines
+    formatted = _format_value(key, value)
+    return f"{key}: {formatted}"
+
+
+def _format_value(key: str, value: Any) -> str:
+    """Format value for rendering."""
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    elif isinstance(value, float) and key == "Timer":
+        return f"{value:.4f}"
+    else:
+        return str(value)

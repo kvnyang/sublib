@@ -1,18 +1,23 @@
 # sublib/ass/serde/file.py
 """Parse and render complete ASS files."""
 from __future__ import annotations
+import logging
+from typing import Any
 
 from sublib.ass.models import AssFile
 from .text import AssTextParser
 from .style import parse_style_line, render_style_line
 from .event import parse_event_line, render_event_line
-from .script_info import parse_script_info, render_script_info
+from .script_info import parse_script_info_line, render_script_info_line
+
+logger = logging.getLogger(__name__)
 
 
 def parse_ass_string(content: str) -> AssFile:
     """Parse ASS content from string.
     
     Returns an AssFile with all events having their text parsed into elements.
+    Script info fields are stored in insertion order with typed values.
     """
     text_parser = AssTextParser()
     
@@ -20,7 +25,6 @@ def parse_ass_string(content: str) -> AssFile:
     lines = content.splitlines()
     current_section = None
     line_number = 0
-    script_info_lines: list[str] = []
     
     for line in lines:
         line_number += 1
@@ -35,7 +39,12 @@ def parse_ass_string(content: str) -> AssFile:
             continue
         
         if current_section == 'script info':
-            script_info_lines.append(line)
+            result = parse_script_info_line(line)
+            if result:
+                key, value = result
+                if key in ass_file.script_info:
+                    logger.warning(f"Duplicate Script Info key: {key}")
+                ass_file.script_info[key] = value  # last-wins, preserves first occurrence order
         
         elif current_section in ('v4 styles', 'v4+ styles'):
             if line.startswith('Style:'):
@@ -48,8 +57,6 @@ def parse_ass_string(content: str) -> AssFile:
                 event = parse_event_line(line, text_parser, line_number)
                 if event:
                     ass_file.events.append(event)
-    
-    ass_file.script_info = parse_script_info(script_info_lines)
     
     return ass_file
 
@@ -67,7 +74,8 @@ def render_ass_string(ass_file: AssFile) -> str:
     
     # Script Info
     lines.append('[Script Info]')
-    lines.extend(render_script_info(ass_file.script_info))
+    for key, value in ass_file.script_info.items():
+        lines.append(render_script_info_line(key, value))
     lines.append('')
     
     # Styles
