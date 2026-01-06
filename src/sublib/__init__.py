@@ -6,7 +6,7 @@ Supported formats:
 - ASS (Advanced SubStation Alpha v4+)
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 # ASS format - main exports (Facade API)
 from sublib.ass import AssFile, AssEvent, AssStyle
