@@ -3,11 +3,10 @@
 from __future__ import annotations
 from typing import ClassVar
 
-from sublib.ass.tags._base import TagCategory, tag
+from sublib.ass.tags.registry import TagCategory
 from sublib.ass.types import Position, Move
 
 
-@tag
 class PosTag:
     """\\pos(x,y) tag definition."""
     name: ClassVar[str] = "pos"
@@ -33,7 +32,6 @@ class PosTag:
         return f"\\pos({val.x},{val.y})"
 
 
-@tag
 class MoveTag:
     """\\move(x1,y1,x2,y2[,t1,t2]) tag definition."""
     name: ClassVar[str] = "move"
@@ -73,7 +71,6 @@ class MoveTag:
         return f"\\move({val.x1},{val.y1},{val.x2},{val.y2})"
 
 
-@tag
 class OrgTag:
     """\\org(x,y) tag definition."""
     name: ClassVar[str] = "org"

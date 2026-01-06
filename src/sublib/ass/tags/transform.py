@@ -3,11 +3,10 @@
 from __future__ import annotations
 from typing import ClassVar, Literal
 
-from sublib.ass.tags._base import TagCategory, tag
+from sublib.ass.tags.registry import TagCategory
 from sublib.ass.types import Transform, Karaoke
 
 
-@tag
 class TTag:
     """\\t(...) animation tag definition."""
     name: ClassVar[str] = "t"
@@ -81,7 +80,6 @@ def _parse_karaoke(raw: str) -> int | None:
 # Karaoke Tags
 # ============================================================
 
-@tag
 class KTag:
     """\\k karaoke tag definition."""
     name: ClassVar[str] = "k"
@@ -102,7 +100,6 @@ class KTag:
         return f"\\k{val}"
 
 
-@tag
 class KUpperTag:
     """\\K karaoke tag definition."""
     name: ClassVar[str] = "K"
@@ -123,7 +120,6 @@ class KUpperTag:
         return f"\\K{val}"
 
 
-@tag
 class KfTag:
     """\\kf karaoke tag definition."""
     name: ClassVar[str] = "kf"
@@ -145,7 +141,6 @@ class KfTag:
         return f"\\kf{val}"
 
 
-@tag
 class KoTag:
     """\\ko karaoke tag definition."""
     name: ClassVar[str] = "ko"
@@ -167,7 +162,6 @@ class KoTag:
         return f"\\ko{val}"
 
 
-@tag
 class KtTag:
     """\\kt karaoke tag definition."""
     name: ClassVar[str] = "kt"

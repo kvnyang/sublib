@@ -3,11 +3,10 @@
 from __future__ import annotations
 from typing import ClassVar
 
-from sublib.ass.tags._base import TagCategory, tag
+from sublib.ass.tags.registry import TagCategory
 from sublib.ass.types import Fade, FadeComplex
 
 
-@tag
 class FadTag:
     """\\fad(fadein,fadeout) tag definition.
     
@@ -37,7 +36,6 @@ class FadTag:
         return f"\\fad({val.fadein},{val.fadeout})"
 
 
-@tag
 class FadeTag:
     """\\fade(a1,a2,a3,t1,t2,t3,t4) tag definition.
     

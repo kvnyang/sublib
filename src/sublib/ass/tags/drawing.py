@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import ClassVar
 
-from sublib.ass.tags._base import TagCategory, tag
+from sublib.ass.tags.registry import TagCategory
 
 
 def _parse_int(raw: str, *, ge: int | None = None) -> int | None:
@@ -16,7 +16,6 @@ def _parse_int(raw: str, *, ge: int | None = None) -> int | None:
         return None
 
 
-@tag
 class PTag:
     """\\p drawing mode tag definition."""
     name: ClassVar[str] = "p"
@@ -36,7 +35,6 @@ class PTag:
         return f"\\p{val}"
 
 
-@tag
 class PboTag:
     """\\pbo baseline offset tag definition."""
     name: ClassVar[str] = "pbo"
