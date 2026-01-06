@@ -3,7 +3,7 @@
 
 from sublib.ass.models import AssFile, AssEvent, AssStyle
 from sublib.ass.serde import AssTextParser, AssTextRenderer
-from sublib.ass.extractor import extract_line_scoped_tags, extract_text_scoped_segments
+from sublib.ass.extractor import extract_event_level_tags, extract_inline_segments
 from sublib.ass.types import Color, Timestamp
 
 __all__ = [
@@ -15,8 +15,8 @@ __all__ = [
     "AssTextParser",
     "AssTextRenderer",
     # Extractor
-    "extract_line_scoped_tags",
-    "extract_text_scoped_segments",
+    "extract_event_level_tags",
+    "extract_inline_segments",
     # Common types
     "Color",
     "Timestamp",

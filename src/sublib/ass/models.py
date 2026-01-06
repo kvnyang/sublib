@@ -57,8 +57,8 @@ class AssEvent:
         text = AssTextRenderer().render(event.text_elements)
         
         # Extract tags or segments
-        from sublib.ass.services import extract_line_scoped_tags
-        tags = extract_line_scoped_tags(event.text_elements)
+        from sublib.ass.services import extract_event_level_tags
+        tags = extract_event_level_tags(event.text_elements)
     """
     # Timing fields
     start: Timestamp = field(default_factory=Timestamp)

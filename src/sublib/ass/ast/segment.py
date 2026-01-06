@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class AssTextSegment:
     """A text segment with its formatting tags.
     
-    Returned by extract_text_scoped_segments() to represent 
+    Returned by extract_inline_segments() to represent 
     a contiguous piece of text with consistent formatting.
     
     Attributes:

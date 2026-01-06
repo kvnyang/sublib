@@ -14,8 +14,8 @@ from sublib.ass.ast import (
 from sublib.ass.tags import MUTUAL_EXCLUSIVES
 
 
-def extract_line_scoped_tags(elements: list[AssTextElement]) -> dict[str, Any]:
-    """Extract effective line-scoped tags from AST.
+def extract_event_level_tags(elements: list[AssTextElement]) -> dict[str, Any]:
+    """Extract effective event-level tags from AST.
     
     Applies first-wins/last-wins and mutual exclusion rules.
     Comments are automatically ignored (type filtering).
@@ -29,7 +29,7 @@ def extract_line_scoped_tags(elements: list[AssTextElement]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     seen_first_win: set[str] = set()
     
-    # Collect all line-scoped tags from all blocks
+    # Collect all event-level tags from all blocks
     for elem in elements:
         if isinstance(elem, AssOverrideBlock):
             for item in elem.elements:
@@ -56,7 +56,7 @@ def extract_line_scoped_tags(elements: list[AssTextElement]) -> dict[str, Any]:
     return result
 
 
-def extract_text_scoped_segments(elements: list[AssTextElement]) -> list[AssTextSegment]:
+def extract_inline_segments(elements: list[AssTextElement]) -> list[AssTextSegment]:
     """Extract text segments with their formatting tags.
     
     Behavior:
@@ -76,7 +76,7 @@ def extract_text_scoped_segments(elements: list[AssTextElement]) -> list[AssText
         
     Returns:
         List of AssTextSegment, each with:
-        - block_tags: dict of effective text-scoped tag values for this segment
+        - block_tags: dict of effective inline tag values for this segment
         - content: list of text content elements
     """
     segments: list[AssTextSegment] = []
