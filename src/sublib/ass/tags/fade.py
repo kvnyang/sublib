@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import ClassVar
 
-from sublib.ass.tags.registry import TagCategory
+from sublib.ass.tags.base import TagCategory
 from sublib.ass.types import Fade, FadeComplex
 
 

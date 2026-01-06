@@ -2,66 +2,22 @@
 """Tag registry - unified access interface for all ASS override tags.
 
 This module:
-1. Defines TagCategory and TagDefinition
+1. Imports TagCategory and TagDefinition from base
 2. Imports all tag classes from their modules
 3. Builds TAGS dict with explicit registration
 4. Provides query functions (get_tag, parse_tag, format_tag)
+
+Dependency graph:
+    base.py <- position.py, color.py, ...
+            <- registry.py (this file)
 """
 from __future__ import annotations
-from typing import Any, Type, ClassVar, Protocol, runtime_checkable
-from enum import Enum, auto
+from typing import Any, Type
 
+# Import base types (no circular dependency)
+from sublib.ass.tags.base import TagCategory, TagDefinition
 
-class TagCategory(Enum):
-    """Categories of ASS override tags."""
-    POSITION = auto()
-    CLIP = auto()
-    FADE = auto()
-    ALIGNMENT = auto()
-    FONT = auto()
-    TEXT_STYLE = auto()
-    BORDER = auto()
-    SHADOW = auto()
-    BLUR = auto()
-    COLOR = auto()
-    ALPHA = auto()
-    ROTATION = auto()
-    SHEAR = auto()
-    KARAOKE = auto()
-    DRAWING = auto()
-    ANIMATION = auto()
-    RESET = auto()
-
-
-@runtime_checkable
-class TagDefinition(Protocol):
-    """Protocol for tag definitions.
-    
-    Each tag class must implement these class variables and methods.
-    """
-    name: ClassVar[str]
-    category: ClassVar[TagCategory]
-    param_pattern: ClassVar[str | None]
-    is_line_scoped: ClassVar[bool]
-    is_function: ClassVar[bool]
-    first_wins: ClassVar[bool]
-    exclusives: ClassVar[frozenset[str]]
-    
-    @staticmethod
-    def parse(raw: str) -> Any:
-        """Parse raw string value to typed value."""
-        ...
-    
-    @staticmethod
-    def format(value: Any) -> str:
-        """Format typed value to ASS string."""
-        ...
-
-
-# ============================================================
 # Import tag classes from their modules
-# ============================================================
-
 from sublib.ass.tags.position import PosTag, MoveTag, OrgTag
 from sublib.ass.tags.clip import ClipTag, IClipTag
 from sublib.ass.tags.fade import FadTag, FadeTag

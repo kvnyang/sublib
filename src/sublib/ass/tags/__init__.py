@@ -8,9 +8,11 @@ This package provides:
 Value types are in sublib.ass.types.
 """
 
+# Base types (no circular dependencies)
+from sublib.ass.tags.base import TagCategory, TagDefinition
+
+# Registry data and functions
 from sublib.ass.tags.registry import (
-    TagCategory,
-    TagDefinition,
     TAGS,
     MUTUAL_EXCLUSIVES,
     get_tag,
