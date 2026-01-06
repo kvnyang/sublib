@@ -50,6 +50,8 @@ def parse_ass_string(content: str) -> AssFile:
             if line.startswith('Style:'):
                 style = parse_style_line(line)
                 if style:
+                    if style.name in ass_file.styles:
+                        logger.warning(f"Duplicate style name: {style.name}")
                     ass_file.styles[style.name] = style
         
         elif current_section == 'events':
