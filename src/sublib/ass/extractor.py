@@ -33,7 +33,7 @@ def extract_line_scoped_tags(elements: list[AssTextElement]) -> dict[str, Any]:
     for elem in elements:
         if isinstance(elem, AssOverrideBlock):
             for item in elem.elements:
-                if isinstance(item, AssOverrideTag) and item.is_line_scoped:
+                if isinstance(item, AssOverrideTag) and item.is_event_level:
                     name = item.name
                     exclusives = MUTUAL_EXCLUSIVES.get(name, set())
                     
@@ -109,7 +109,7 @@ def extract_text_scoped_segments(elements: list[AssTextElement]) -> list[AssText
             
             # Collect text-scoped tags (last-wins)
             for item in elem.elements:
-                if isinstance(item, AssOverrideTag) and not item.is_line_scoped:
+                if isinstance(item, AssOverrideTag) and not item.is_event_level:
                     apply_tag_rules(pending_tags, item)
         
         elif isinstance(elem, AssPlainText):

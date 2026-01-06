@@ -35,7 +35,7 @@ class BordTag:
     name: ClassVar[str] = "bord"
     category: ClassVar[TagCategory] = TagCategory.BORDER
     param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -54,7 +54,7 @@ class XbordTag:
     name: ClassVar[str] = "xbord"
     category: ClassVar[TagCategory] = TagCategory.BORDER
     param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -73,7 +73,7 @@ class YbordTag:
     name: ClassVar[str] = "ybord"
     category: ClassVar[TagCategory] = TagCategory.BORDER
     param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -96,7 +96,7 @@ class ShadTag:
     name: ClassVar[str] = "shad"
     category: ClassVar[TagCategory] = TagCategory.SHADOW
     param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -115,7 +115,7 @@ class XshadTag:
     name: ClassVar[str] = "xshad"
     category: ClassVar[TagCategory] = TagCategory.SHADOW
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -134,7 +134,7 @@ class YshadTag:
     name: ClassVar[str] = "yshad"
     category: ClassVar[TagCategory] = TagCategory.SHADOW
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -157,7 +157,7 @@ class BeTag:
     name: ClassVar[str] = "be"
     category: ClassVar[TagCategory] = TagCategory.BLUR
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -176,7 +176,7 @@ class BlurTag:
     name: ClassVar[str] = "blur"
     category: ClassVar[TagCategory] = TagCategory.BLUR
     param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

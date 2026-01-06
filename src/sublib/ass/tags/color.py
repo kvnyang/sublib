@@ -32,7 +32,7 @@ class CTag:
     name: ClassVar[str] = "c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -51,7 +51,7 @@ class C1Tag:
     name: ClassVar[str] = "1c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -70,7 +70,7 @@ class C2Tag:
     name: ClassVar[str] = "2c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -89,7 +89,7 @@ class C3Tag:
     name: ClassVar[str] = "3c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -108,7 +108,7 @@ class C4Tag:
     name: ClassVar[str] = "4c"
     category: ClassVar[TagCategory] = TagCategory.COLOR
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -131,7 +131,7 @@ class AlphaTag:
     name: ClassVar[str] = "alpha"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -150,7 +150,7 @@ class A1Tag:
     name: ClassVar[str] = "1a"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -169,7 +169,7 @@ class A2Tag:
     name: ClassVar[str] = "2a"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -188,7 +188,7 @@ class A3Tag:
     name: ClassVar[str] = "3a"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -207,7 +207,7 @@ class A4Tag:
     name: ClassVar[str] = "4a"
     category: ClassVar[TagCategory] = TagCategory.ALPHA
     param_pattern: ClassVar[str | None] = r'&H[0-9A-Fa-f]+&'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

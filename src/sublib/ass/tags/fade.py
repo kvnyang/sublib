@@ -16,7 +16,7 @@ class FadTag:
     name: ClassVar[str] = "fad"
     category: ClassVar[TagCategory] = TagCategory.FADE
     param_pattern: ClassVar[str | None] = None
-    is_line_scoped: ClassVar[bool] = True
+    is_event_level: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset({"fade"})
@@ -45,7 +45,7 @@ class FadeTag:
     name: ClassVar[str] = "fade"
     category: ClassVar[TagCategory] = TagCategory.FADE
     param_pattern: ClassVar[str | None] = None
-    is_line_scoped: ClassVar[bool] = True
+    is_event_level: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset({"fad"})

@@ -44,7 +44,7 @@ class ClipTag:
     name: ClassVar[str] = "clip"
     category: ClassVar[TagCategory] = TagCategory.CLIP
     param_pattern: ClassVar[str | None] = None
-    is_line_scoped: ClassVar[bool] = True
+    is_event_level: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset({"iclip"})
@@ -69,7 +69,7 @@ class IClipTag:
     name: ClassVar[str] = "iclip"
     category: ClassVar[TagCategory] = TagCategory.CLIP
     param_pattern: ClassVar[str | None] = None
-    is_line_scoped: ClassVar[bool] = True
+    is_event_level: ClassVar[bool] = True
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset({"clip"})

@@ -39,7 +39,7 @@ class TagDefinition(Protocol):
     name: ClassVar[str]
     category: ClassVar[TagCategory]
     param_pattern: ClassVar[str | None]
-    is_line_scoped: ClassVar[bool]
+    is_event_level: ClassVar[bool]
     is_function: ClassVar[bool]
     first_wins: ClassVar[bool]
     exclusives: ClassVar[frozenset[str]]

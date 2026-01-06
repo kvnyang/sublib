@@ -59,7 +59,7 @@ class FnTag:
     name: ClassVar[str] = "fn"
     category: ClassVar[TagCategory] = TagCategory.FONT
     param_pattern: ClassVar[str | None] = r'[^\\]+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -78,7 +78,7 @@ class FsTag:
     name: ClassVar[str] = "fs"
     category: ClassVar[TagCategory] = TagCategory.FONT
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -98,7 +98,7 @@ class FscxTag:
     category: ClassVar[TagCategory] = TagCategory.FONT
     param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -118,7 +118,7 @@ class FscyTag:
     category: ClassVar[TagCategory] = TagCategory.FONT
     param_pattern: ClassVar[str | None] = r'\d+(?:\.\d+)?'
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -138,7 +138,7 @@ class FspTag:
     category: ClassVar[TagCategory] = TagCategory.FONT
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -157,7 +157,7 @@ class FeTag:
     name: ClassVar[str] = "fe"
     category: ClassVar[TagCategory] = TagCategory.FONT
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -180,7 +180,7 @@ class BTag:
     name: ClassVar[str] = "b"
     category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
     param_pattern: ClassVar[str | None] = r'(?:[01]|[1-9]00)'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -201,7 +201,7 @@ class ITag:
     name: ClassVar[str] = "i"
     category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
     param_pattern: ClassVar[str | None] = r'[01]'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -220,7 +220,7 @@ class UTag:
     name: ClassVar[str] = "u"
     category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
     param_pattern: ClassVar[str | None] = r'[01]'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -239,7 +239,7 @@ class STag:
     name: ClassVar[str] = "s"
     category: ClassVar[TagCategory] = TagCategory.TEXT_STYLE
     param_pattern: ClassVar[str | None] = r'[01]'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -263,7 +263,7 @@ class FrxTag:
     category: ClassVar[TagCategory] = TagCategory.ROTATION
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -283,7 +283,7 @@ class FryTag:
     category: ClassVar[TagCategory] = TagCategory.ROTATION
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -303,7 +303,7 @@ class FrzTag:
     category: ClassVar[TagCategory] = TagCategory.ROTATION
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -322,7 +322,7 @@ class FrTag:
     name: ClassVar[str] = "fr"
     category: ClassVar[TagCategory] = TagCategory.ROTATION
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -345,7 +345,7 @@ class FaxTag:
     name: ClassVar[str] = "fax"
     category: ClassVar[TagCategory] = TagCategory.SHEAR
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -364,7 +364,7 @@ class FayTag:
     name: ClassVar[str] = "fay"
     category: ClassVar[TagCategory] = TagCategory.SHEAR
     param_pattern: ClassVar[str | None] = r'-?\d+(?:\.\d+)?'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

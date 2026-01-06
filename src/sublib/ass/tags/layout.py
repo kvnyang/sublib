@@ -13,7 +13,7 @@ class AnTag:
     category: ClassVar[TagCategory] = TagCategory.ALIGNMENT
     param_pattern: ClassVar[str | None] = r'(?:[1-3]|[5-7]|9|1[01])'
     param_pattern: ClassVar[str | None] = r'[1-9]'
-    is_line_scoped: ClassVar[bool] = True
+    is_event_level: ClassVar[bool] = True
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -38,7 +38,7 @@ class ATag:
     name: ClassVar[str] = "a"
     category: ClassVar[TagCategory] = TagCategory.ALIGNMENT
     param_pattern: ClassVar[str | None] = r'(?:[1-3]|[5-7]|9|1[01])'
-    is_line_scoped: ClassVar[bool] = True
+    is_event_level: ClassVar[bool] = True
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = True
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -63,7 +63,7 @@ class QTag:
     name: ClassVar[str] = "q"
     category: ClassVar[TagCategory] = TagCategory.ALIGNMENT
     param_pattern: ClassVar[str | None] = r'[0-3]'
-    is_line_scoped: ClassVar[bool] = True
+    is_event_level: ClassVar[bool] = True
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -88,7 +88,7 @@ class RTag:
     name: ClassVar[str] = "r"
     category: ClassVar[TagCategory] = TagCategory.RESET
     param_pattern: ClassVar[str | None] = r'[^\\]*'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()

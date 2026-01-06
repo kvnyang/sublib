@@ -57,7 +57,7 @@ class TestAssTextParser:
         assert isinstance(block_elements[0], AssOverrideTag)
         assert block_elements[0].name == "pos"
         assert block_elements[0].value == Position(x=100.0, y=200.0)
-        assert block_elements[0].is_line_scoped == True
+        assert block_elements[0].is_event_level == True
 
     def test_parse_block_with_comment(self):
         parser = AssTextParser(strict=False)

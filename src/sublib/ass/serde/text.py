@@ -181,7 +181,7 @@ class AssTextParser:
                         name=tag_name,
                         value=parsed_value,
                         raw=raw,
-                        is_line_scoped=spec.is_line_scoped,
+                        is_event_level=spec.is_event_level,
                         first_wins=spec.first_wins,
                         is_function=is_function,
                     ))

@@ -12,7 +12,7 @@ class TTag:
     name: ClassVar[str] = "t"
     category: ClassVar[TagCategory] = TagCategory.ANIMATION
     param_pattern: ClassVar[str | None] = None
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = True
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -86,7 +86,7 @@ class KTag:
     category: ClassVar[TagCategory] = TagCategory.KARAOKE
     param_pattern: ClassVar[str | None] = r'\d+'
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -106,7 +106,7 @@ class KUpperTag:
     category: ClassVar[TagCategory] = TagCategory.KARAOKE
     param_pattern: ClassVar[str | None] = r'\d+'
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -127,7 +127,7 @@ class KfTag:
     param_pattern: ClassVar[str | None] = r'\d+'
     param_pattern: ClassVar[str | None] = r'\d+'
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -148,7 +148,7 @@ class KoTag:
     param_pattern: ClassVar[str | None] = r'\d+'
     param_pattern: ClassVar[str | None] = r'\d+'
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
@@ -169,7 +169,7 @@ class KtTag:
     param_pattern: ClassVar[str | None] = r'\d+'
     param_pattern: ClassVar[str | None] = r'\d+'
     param_pattern: ClassVar[str | None] = r'\d+'
-    is_line_scoped: ClassVar[bool] = False
+    is_event_level: ClassVar[bool] = False
     is_function: ClassVar[bool] = False
     first_wins: ClassVar[bool] = False
     exclusives: ClassVar[frozenset[str]] = frozenset()
