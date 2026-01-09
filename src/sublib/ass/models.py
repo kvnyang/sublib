@@ -45,20 +45,13 @@ class AssEvent:
     """ASS dialogue event.
     
     Represents a Dialogue line from the [Events] section.
-    Pure data class - use services for parsing and rendering:
     
-        from sublib.ass.services import AssTextParser, AssTextRenderer
-        
-        # Parse text to elements
-        elements = AssTextParser().parse(text)
-        event = AssEvent(text_elements=elements, start=Timestamp(cs=0), end=Timestamp(cs=100))
-        
-        # Render elements to text
-        text = AssTextRenderer().render(event.text_elements)
-        
-        # Extract tags or segments
-        from sublib.ass.services import extract_event_level_tags
-        tags = extract_event_level_tags(event.text_elements)
+    High-level extraction methods:
+        event.extract_event_tags() -> dict[str, Any]
+        event.extract_segments() -> list[AssTextSegment]
+    
+    Low-level access:
+        event.text_elements -> list[AssTextElement]
     """
     # Timing fields
     start: Timestamp = field(default_factory=Timestamp)
@@ -78,6 +71,24 @@ class AssEvent:
     def duration(self) -> Timestamp:
         """Get event duration."""
         return self.end - self.start
+    
+    def extract_event_tags(self) -> dict[str, Any]:
+        """Extract event-level tags from text.
+        
+        Returns:
+            dict mapping tag name to parsed value (e.g., {"pos": Position(...), "an": 8})
+        """
+        from sublib.ass.extractor import extract_event_level_tags
+        return extract_event_level_tags(self.text_elements)
+    
+    def extract_segments(self) -> list:
+        """Extract inline text segments from text.
+        
+        Returns:
+            list of AssTextSegment, each with text and block_tags
+        """
+        from sublib.ass.extractor import extract_inline_segments
+        return extract_inline_segments(self.text_elements)
 
 
 @dataclass
