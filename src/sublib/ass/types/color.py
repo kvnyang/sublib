@@ -11,29 +11,22 @@ from dataclasses import dataclass
 class Color:
     """ASS color value.
     
-    ASS colors are in BGR format (Blue-Green-Red).
+    ASS files use BGR format internally, but this class stores
+    color channels in the more intuitive r, g, b, a format.
     
     Style format: &HAABBGGRR (8 hex digits, includes alpha)
     Tag format: &HBBGGRR& (6 hex digits, no alpha)
     
     Attributes:
-        bgr: Color value in 0xBBGGRR format
-        alpha: Alpha value (0=visible, 255=transparent)
+        r: Red channel (0-255)
+        g: Green channel (0-255)
+        b: Blue channel (0-255)
+        a: Alpha value (0=visible, 255=transparent)
     """
-    bgr: int
-    alpha: int = 0
-    
-    @property
-    def blue(self) -> int:
-        return (self.bgr >> 16) & 0xFF
-    
-    @property
-    def green(self) -> int:
-        return (self.bgr >> 8) & 0xFF
-    
-    @property
-    def red(self) -> int:
-        return self.bgr & 0xFF
+    r: int
+    g: int
+    b: int
+    a: int = 0
     
     @classmethod
     def from_style_str(cls, s: str) -> "Color":
@@ -43,16 +36,18 @@ class Color:
             s: Style color string, e.g. "&H00FFFFFF" or "&H80000000"
             
         Returns:
-            Color with parsed bgr and alpha
+            Color with parsed r, g, b, a
         """
         s = s.strip().lstrip("&H").rstrip("&")
         try:
             value = int(s, 16)
-            alpha = (value >> 24) & 0xFF
-            bgr = value & 0xFFFFFF
-            return cls(bgr=bgr, alpha=alpha)
+            a = (value >> 24) & 0xFF
+            b = (value >> 16) & 0xFF
+            g = (value >> 8) & 0xFF
+            r = value & 0xFF
+            return cls(r=r, g=g, b=b, a=a)
         except ValueError:
-            return cls(bgr=0, alpha=0)
+            return cls(r=0, g=0, b=0, a=0)
     
     @classmethod
     def from_tag_str(cls, s: str) -> "Color":
@@ -62,25 +57,28 @@ class Color:
             s: Tag color string, e.g. "&HFFFFFF&"
             
         Returns:
-            Color with parsed bgr (alpha defaults to 0)
+            Color with parsed r, g, b (alpha defaults to 0)
         """
         s = s.strip().lstrip("&H").rstrip("&")
         try:
-            bgr = int(s, 16)
-            return cls(bgr=bgr, alpha=0)
+            value = int(s, 16)
+            b = (value >> 16) & 0xFF
+            g = (value >> 8) & 0xFF
+            r = value & 0xFF
+            return cls(r=r, g=g, b=b, a=0)
         except ValueError:
-            return cls(bgr=0, alpha=0)
+            return cls(r=0, g=0, b=0, a=0)
     
     def to_style_str(self) -> str:
         """Format for style output (e.g., &H00FFFFFF).
         
         Style format has no trailing &, per libass Wiki.
         """
-        return f"&H{self.alpha:02X}{self.bgr:06X}"
+        return f"&H{self.a:02X}{self.b:02X}{self.g:02X}{self.r:02X}"
     
     def to_tag_str(self) -> str:
         """Format for tag output (e.g., &HFFFFFF&)."""
-        return f"&H{self.bgr:06X}&"
+        return f"&H{self.b:02X}{self.g:02X}{self.r:02X}&"
 
 
 @dataclass
