@@ -35,7 +35,7 @@ The file parser handles the high-level ASS file structure, which consists of sec
 
 ## 2. Tag Parsing (Event Text)
 
-This implementation follows **Aegisub's actual behavior** (the reference implementation), with precise handling of line-scoped tags, mutual exclusivity, and multiple occurrence precedence.
+This implementation follows **Aegisub's actual behavior** (the reference implementation), with precise handling of event-level tags, mutual exclusivity, and multiple occurrence precedence.
 
 ### Architecture: Parse-then-Validate
 
@@ -52,9 +52,9 @@ This implementation follows **Aegisub's actual behavior** (the reference impleme
 
 ### Tag Categories & Precedence
 
-#### Line-scoped Tags (`is_line_scoped=True`)
+#### Event-level Tags (`is_event_level=True`)
 
-affect the entire line regardless of position.
+Affect the entire event regardless of position.
 
 | Tag | Spec Listed | Precedence | Exclusives | Verified |
 |-----|-------------|------------|------------|----------|
@@ -67,7 +67,7 @@ affect the entire line regardless of position.
 | `\iclip` | ✓ | **Last-wins** | `\clip` | ✓ |
 | `\an`, `\a`, `\q` | ⚠️ Logical | **Last-wins** | - | - |
 
-#### Text-scoped Tags (`is_line_scoped=False`)
+#### Inline Tags (`is_event_level=False`)
 
 All other tags (e.g., `\b`, `\fs`, `\c`).
 - **Precedence**: Last occurrence always wins (`first_wins=False`).
