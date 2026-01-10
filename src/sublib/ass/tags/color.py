@@ -8,9 +8,9 @@ from sublib.ass.types import Color, Alpha
 
 
 def _parse_color(raw: str) -> Color | None:
-    raw = raw.strip().strip("&H").strip("&")
+    """Parse color tag value to Color."""
     try:
-        return Color(bgr=int(raw, 16))
+        return Color.from_tag_str(raw)
     except ValueError:
         return None
 
@@ -43,7 +43,7 @@ class CTag:
     
     @staticmethod
     def format(val: Color) -> str:
-        return f"\\c&H{val.value:06X}&"
+        return f"\\c{val.to_tag_str()}"
 
 
 class C1Tag:
@@ -62,7 +62,7 @@ class C1Tag:
     
     @staticmethod
     def format(val: Color) -> str:
-        return f"\\1c&H{val.value:06X}&"
+        return f"\\1c{val.to_tag_str()}"
 
 
 class C2Tag:
@@ -81,7 +81,7 @@ class C2Tag:
     
     @staticmethod
     def format(val: Color) -> str:
-        return f"\\2c&H{val.value:06X}&"
+        return f"\\2c{val.to_tag_str()}"
 
 
 class C3Tag:
@@ -100,7 +100,7 @@ class C3Tag:
     
     @staticmethod
     def format(val: Color) -> str:
-        return f"\\3c&H{val.value:06X}&"
+        return f"\\3c{val.to_tag_str()}"
 
 
 class C4Tag:
@@ -119,7 +119,7 @@ class C4Tag:
     
     @staticmethod
     def format(val: Color) -> str:
-        return f"\\4c&H{val.value:06X}&"
+        return f"\\4c{val.to_tag_str()}"
 
 
 # ============================================================
