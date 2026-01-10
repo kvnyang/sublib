@@ -142,93 +142,133 @@ class AssTextParser:
     ) -> AssOverrideBlock:
         """Parse a single override block {...} content (always permissive).
         
-        Whitespace is stripped from block content and comments.
+        Uses manual scanning with bracket counting to correctly handle nested
+        parentheses in function tags like \t(\clip(...)).
         """
-        # Strip leading/trailing whitespace from block content
         block_text = block_text.strip()
         if not block_text:
             return AssOverrideBlock(elements=[])
         
         block_elements: list[Union[AssOverrideTag, AssComment]] = []
-        last_end = 0
+        i = 0
+        comment_start = 0
         
-        # Use smart pattern with regex-constrained matching
-        pattern = self._build_smart_pattern()
+        while i < len(block_text):
+            # Look for backslash (tag start)
+            if block_text[i] == '\\':
+                # Add any comment text before this tag
+                if i > comment_start:
+                    comment_text = block_text[comment_start:i].strip()
+                    if comment_text:
+                        block_elements.append(AssComment(content=comment_text))
+                
+                # Parse tag starting at position i
+                tag_result = self._parse_single_tag(block_text, i)
+                if tag_result:
+                    tag_elem, end_pos = tag_result
+                    block_elements.append(tag_elem)
+                    i = end_pos
+                    comment_start = i
+                else:
+                    # Failed to parse, move to next character
+                    i += 1
+            else:
+                i += 1
         
-        for match in pattern.finditer(block_text):
-            # Content before this tag is comment (stripped)
-            if match.start() > last_end:
-                comment_text = block_text[last_end:match.start()].strip()
-                if comment_text:
-                    block_elements.append(AssComment(content=comment_text))
-            
-            # Extract tag name and value from match groups
-            # The pattern creates nested groups, need to find which one matched
-            tag_name, raw_value, is_function = self._extract_tag_from_match(match)
-            
-            # Special case: \c is alias for \1c
-            if tag_name == 'c' and tag_name != '1c':
-                tag_name = '1c'
-            
-            spec = get_tag(tag_name)
-            if spec:
-                # Try to parse the value
-                parsed_value = parse_tag(tag_name, raw_value)
-                if parsed_value is not None or not raw_value:
-                    # Successfully parsed
-                    raw = f"\\{tag_name}({raw_value})" if is_function else f"\\{tag_name}{raw_value}"
-                    block_elements.append(AssOverrideTag(
-                        name=tag_name,
-                        value=parsed_value,
-                        raw=raw,
-                        is_event_level=spec.is_event_level,
-                        first_wins=spec.first_wins,
-                        is_function=is_function,
-                    ))
-                    last_end = match.end()
-                    continue
-            
-            # Failed to parse or unknown tag -> treat as comment
-            block_elements.append(AssComment(content=match.group(0)))
-            last_end = match.end()
-        
-        # Remaining text is comment (stripped)
-        if last_end < len(block_text):
-            comment_text = block_text[last_end:].strip()
+        # Add any remaining comment text
+        if comment_start < len(block_text):
+            comment_text = block_text[comment_start:].strip()
             if comment_text:
                 block_elements.append(AssComment(content=comment_text))
         
         return AssOverrideBlock(elements=block_elements)
     
-    def _extract_tag_from_match(self, match: re.Match) -> tuple[str, str, bool]:
-        """Extract tag name, value, and is_function from regex match groups."""
-        # Pattern creates groups like: (\tag(value)|(\tag)(value))
-        # Need to iterate to find which one matched
-        groups = match.groups()
+    def _parse_single_tag(self, text: str, start: int) -> tuple[AssOverrideTag | AssComment, int] | None:
+        """Parse a single tag starting at position 'start'.
         
-        # Find the first non-None group (the outer group)
-        for i, group in enumerate(groups):
-            if group is not None and group.startswith('\\'):
-                # This is the matched tag
-                tag_str = group
+        Returns (element, end_position) or None if not a valid tag.
+        """
+        if start >= len(text) or text[start] != '\\':
+            return None
+        
+        # Find tag name - match longest known tag name first
+        tag_start = start + 1
+        
+        for tag_name in sorted(TAGS.keys(), key=len, reverse=True):
+            if text[tag_start:].startswith(tag_name):
+                tag_cls = TAGS[tag_name]
+                value_start = tag_start + len(tag_name)
                 
-                # Check if it's a function tag
-                if '(' in tag_str:
-                    # Function tag: \tag(value)
-                    tag_name = tag_str[1:tag_str.index('(')]
-                    raw_value = tag_str[tag_str.index('(')+1:tag_str.rindex(')')]
-                    return tag_name, raw_value.strip(), True
+                if tag_cls.is_function:
+                    # Function tag: need to find matching closing parenthesis
+                    if value_start < len(text) and text[value_start] == '(':
+                        close_pos = self._find_matching_paren(text, value_start)
+                        if close_pos > 0:
+                            raw_value = text[value_start + 1:close_pos]
+                            end_pos = close_pos + 1
+                            raw = text[start:end_pos]
+                            
+                            parsed_value = parse_tag(tag_name, raw_value)
+                            return (AssOverrideTag(
+                                name=tag_name,
+                                value=parsed_value,
+                                raw=raw,
+                                is_event_level=tag_cls.is_event_level,
+                                first_wins=tag_cls.first_wins,
+                                is_function=True,
+                            ), end_pos)
+                    # No opening paren or no matching close - skip this tag
+                    return None
                 else:
-                    # Non-function tag: \tagvalue
-                    # Extract tag name from TAGS keys
-                    for possible_tag in sorted(TAGS.keys(), key=len, reverse=True):
-                        if tag_str.startswith(f'\\{possible_tag}'):
-                            tag_name = possible_tag
-                            raw_value = tag_str[len(possible_tag)+1:]
-                            return tag_name, raw_value.strip(), False
+                    # Non-function tag: read value until next backslash or end
+                    end_pos = value_start
+                    while end_pos < len(text) and text[end_pos] != '\\':
+                        end_pos += 1
+                    
+                    raw_value = text[value_start:end_pos].strip()
+                    raw = text[start:end_pos]
+                    
+                    # Validate with param_pattern if available
+                    if tag_cls.param_pattern:
+                        pattern = re.compile(f'^{tag_cls.param_pattern}')
+                        match = pattern.match(raw_value)
+                        if match:
+                            raw_value = match.group(0)
+                            end_pos = value_start + len(raw_value)
+                            raw = text[start:end_pos]
+                    
+                    parsed_value = parse_tag(tag_name, raw_value)
+                    if parsed_value is not None or not raw_value:
+                        return (AssOverrideTag(
+                            name=tag_name,
+                            value=parsed_value,
+                            raw=raw,
+                            is_event_level=tag_cls.is_event_level,
+                            first_wins=tag_cls.first_wins,
+                            is_function=False,
+                        ), end_pos)
         
-        # Fallback (should not reach here)
-        return "", "", False
+        return None
+    
+    def _find_matching_paren(self, text: str, start: int) -> int:
+        """Find the position of the closing parenthesis matching the one at 'start'.
+        
+        Uses bracket counting to handle nested parentheses.
+        Returns position of closing ')', or -1 if not found.
+        """
+        if start >= len(text) or text[start] != '(':
+            return -1
+        
+        depth = 1
+        i = start + 1
+        while i < len(text) and depth > 0:
+            if text[i] == '(':
+                depth += 1
+            elif text[i] == ')':
+                depth -= 1
+            i += 1
+        
+        return i - 1 if depth == 0 else -1
     
     def _validate_strict(self, elements: list[AssTextElement], line_number: int | None):
         """Validate elements in strict mode - raise error if comments found."""

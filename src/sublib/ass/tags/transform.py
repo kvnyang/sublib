@@ -8,8 +8,28 @@ from sublib.ass.tags.base import TagCategory
 from sublib.ass.types import Transform, Karaoke
 
 
+def _find_matching_paren(text: str, start: int) -> int:
+    """Find the position of the closing parenthesis matching the one at 'start'."""
+    if start >= len(text) or text[start] != '(':
+        return -1
+    
+    depth = 1
+    i = start + 1
+    while i < len(text) and depth > 0:
+        if text[i] == '(':
+            depth += 1
+        elif text[i] == ')':
+            depth -= 1
+        i += 1
+    
+    return i - 1 if depth == 0 else -1
+
+
 def parse_tags_string(tags_str: str) -> list[tuple[str, Any]]:
     """Parse a tags string into list of (name, value) tuples.
+    
+    Uses manual scanning with bracket counting to handle nested parentheses
+    in function tags like \\clip(...).
     
     Args:
         tags_str: Raw tags string like "\\fs40\\1c&HFF0000&"
@@ -25,30 +45,57 @@ def parse_tags_string(tags_str: str) -> list[tuple[str, Any]]:
     if not tags_str:
         return result
     
-    # Pattern to match tag names and their values
-    # Handles both function tags like \t(...) and simple tags like \fs40
-    # Sort by length descending to match longer names first (e.g., "fscx" before "fs")
-    tag_names = sorted(TAGS.keys(), key=len, reverse=True)
-    tag_pattern = "|".join(re.escape(name) for name in tag_names)
-    
-    # Pattern: \tagname followed by either (...) for function or value until next \ or end
-    pattern = re.compile(
-        rf'\\({tag_pattern})(?:\(([^)]*)\)|([^\\]*))',
-        re.IGNORECASE
-    )
-    
-    for match in pattern.finditer(tags_str):
-        tag_name = match.group(1)
-        func_value = match.group(2)  # Value inside parentheses
-        simple_value = match.group(3)  # Value after tag name
-        
-        raw_value = func_value if func_value is not None else (simple_value or "")
-        raw_value = raw_value.strip()
-        
-        # Parse the value
-        parsed = parse_tag(tag_name, raw_value)
-        if parsed is not None:
-            result.append((tag_name, parsed))
+    i = 0
+    while i < len(tags_str):
+        if tags_str[i] == '\\':
+            tag_start = i + 1
+            
+            # Find matching tag name (longest first)
+            for tag_name in sorted(TAGS.keys(), key=len, reverse=True):
+                if tags_str[tag_start:].startswith(tag_name):
+                    tag_cls = TAGS[tag_name]
+                    value_start = tag_start + len(tag_name)
+                    
+                    if tag_cls.is_function:
+                        # Function tag: find matching parenthesis
+                        if value_start < len(tags_str) and tags_str[value_start] == '(':
+                            close_pos = _find_matching_paren(tags_str, value_start)
+                            if close_pos > 0:
+                                raw_value = tags_str[value_start + 1:close_pos]
+                                parsed = parse_tag(tag_name, raw_value)
+                                if parsed is not None:
+                                    result.append((tag_name, parsed))
+                                i = close_pos + 1
+                                break
+                        # No valid function tag, skip
+                        i = value_start
+                        break
+                    else:
+                        # Non-function tag: read until next backslash
+                        end_pos = value_start
+                        while end_pos < len(tags_str) and tags_str[end_pos] != '\\':
+                            end_pos += 1
+                        
+                        raw_value = tags_str[value_start:end_pos].strip()
+                        
+                        # Validate with param_pattern if available
+                        if tag_cls.param_pattern:
+                            pattern = re.compile(f'^{tag_cls.param_pattern}')
+                            match = pattern.match(raw_value)
+                            if match:
+                                raw_value = match.group(0)
+                                end_pos = value_start + len(raw_value)
+                        
+                        parsed = parse_tag(tag_name, raw_value)
+                        if parsed is not None:
+                            result.append((tag_name, parsed))
+                        i = end_pos
+                        break
+            else:
+                # No tag matched, skip this backslash
+                i += 1
+        else:
+            i += 1
     
     return result
 
@@ -64,6 +111,39 @@ class TTag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
+    def _split_toplevel_commas(s: str, max_splits: int = -1) -> list[str]:
+        """Split string on commas that are not inside parentheses.
+        
+        Args:
+            s: String to split
+            max_splits: Maximum number of splits (-1 for unlimited)
+            
+        Returns:
+            List of substrings
+        """
+        result = []
+        current = []
+        depth = 0
+        splits = 0
+        
+        for char in s:
+            if char == '(':
+                depth += 1
+                current.append(char)
+            elif char == ')':
+                depth -= 1
+                current.append(char)
+            elif char == ',' and depth == 0 and (max_splits < 0 or splits < max_splits):
+                result.append(''.join(current))
+                current = []
+                splits += 1
+            else:
+                current.append(char)
+        
+        result.append(''.join(current))
+        return result
+    
+    @staticmethod
     def parse(raw: str) -> Transform | None:
         raw = raw.strip()
         
@@ -72,11 +152,12 @@ class TTag:
         accel: float | None = None
         tags_str: str = ""
         
-        # Form: (tags)
-        if not any(c.isdigit() for c in raw.split(",")[0] if c not in "\\"):
+        # Form: (tags) - no leading numeric parameter
+        if not any(c.isdigit() for c in TTag._split_toplevel_commas(raw, 1)[0] if c not in "\\"):
             tags_str = raw
         else:
-            parts = raw.split(",", 3)
+            # Split on top-level commas only (respecting nested parens)
+            parts = TTag._split_toplevel_commas(raw, 3)
             
             # Form: (accel, tags)
             if len(parts) == 2:
