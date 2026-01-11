@@ -78,8 +78,8 @@ class AssEvent:
         Returns:
             dict mapping tag name to parsed value (e.g., {"pos": Position(...), "an": 8})
         """
-        from sublib.ass.extractor import extract_event_level_tags
-        return extract_event_level_tags(self.text_elements)
+        from sublib.ass.extractor import extract_all
+        return extract_all(self.text_elements).event_tags
     
     def extract_segments(self) -> list:
         """Extract inline text segments from text.
@@ -87,8 +87,8 @@ class AssEvent:
         Returns:
             list of AssTextSegment, each with text and block_tags
         """
-        from sublib.ass.extractor import extract_inline_segments
-        return extract_inline_segments(self.text_elements)
+        from sublib.ass.extractor import extract_all
+        return extract_all(self.text_elements).segments
 
 
 @dataclass

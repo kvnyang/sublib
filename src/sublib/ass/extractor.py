@@ -4,7 +4,7 @@
 These functions extract structured information from parsed AST.
 """
 from __future__ import annotations
-from typing import Any
+from typing import Any, NamedTuple
 
 from sublib.ass.ast import (
     AssOverrideBlock, AssOverrideTag,
@@ -14,88 +14,77 @@ from sublib.ass.ast import (
 from sublib.ass.tags import MUTUAL_EXCLUSIVES
 
 
-def extract_event_level_tags(elements: list[AssTextElement]) -> dict[str, Any]:
-    """Extract effective event-level tags from AST.
+class ExtractionResult(NamedTuple):
+    """Result of extracting tags from ASS text elements."""
+    event_tags: dict[str, Any]
+    """Event-level tags (e.g., pos, an, move) with first-wins/last-wins rules applied."""
     
-    Applies first-wins/last-wins and mutual exclusion rules.
-    Comments are automatically ignored (type filtering).
+    segments: list[AssTextSegment]
+    """Inline segments with formatting and text content."""
+
+
+def extract_all(elements: list[AssTextElement]) -> ExtractionResult:
+    """Extract both event-level tags and inline segments in one pass.
+    
+    This is the primary extraction function that combines:
+    - Event-level tag extraction (with first-wins/last-wins and mutual exclusion)
+    - Inline segment extraction (with formatting tags per segment)
     
     Args:
         elements: Parsed AST elements from parser
         
     Returns:
-        Dict mapping tag name to effective value.
+        ExtractionResult with event_tags dict and segments list.
+        
+    Example:
+        result = extract_all(elements)
+        pos = result.event_tags.get("pos")
+        for seg in result.segments:
+            print(seg.content, seg.block_tags)
     """
-    result: dict[str, Any] = {}
+    # Event-level tag collection
+    event_tags: dict[str, Any] = {}
     seen_first_win: set[str] = set()
     
-    # Collect all event-level tags from all blocks
-    for elem in elements:
-        if isinstance(elem, AssOverrideBlock):
-            for item in elem.elements:
-                if isinstance(item, AssOverrideTag) and item.is_event_level:
-                    name = item.name
-                    exclusives = MUTUAL_EXCLUSIVES.get(name, set())
-                    
-                    # If a mutually exclusive first-wins tag exists, skip
-                    if any(ex in seen_first_win for ex in exclusives):
-                        continue
-                    
-                    # First-wins: skip if already seen
-                    if item.first_wins:
-                        if name in seen_first_win:
-                            continue
-                        seen_first_win.add(name)
-                    
-                    # Remove mutually exclusive tags (last-wins behavior)
-                    for excl in exclusives:
-                        result.pop(excl, None)
-                    
-                    result[name] = item.value
-    
-    return result
-
-
-def extract_inline_segments(elements: list[AssTextElement]) -> list[AssTextSegment]:
-    """Extract text segments with their formatting tags.
-    
-    Behavior:
-    - Each override block boundary creates a new segment (including empty blocks)
-    - Adjacent blocks (without intervening text) are merged into one segment
-    - Within a segment, tags are processed in order with last-wins and mutual exclusion
-    - Comments are ignored (type filtering)
-    - Tag accumulation is NOT handled here (renderer's responsibility)
-    
-    Edge cases:
-    - Leading text without block: creates segment with empty tags
-    - Trailing blocks without text: ignored (no segment created)
-    - Blocks only (no text): returns empty list
-    
-    Args:
-        elements: Parsed AST elements from parser
-        
-    Returns:
-        List of AssTextSegment, each with:
-        - block_tags: dict of effective inline tag values for this segment
-        - content: list of text content elements
-    """
+    # Segment collection
     segments: list[AssTextSegment] = []
     pending_tags: dict[str, Any] = {}
     current_content: list[AssPlainText | AssSpecialChar] = []
     
-    def apply_tag_rules(tags: dict[str, Any], new_tag: AssOverrideTag) -> dict[str, Any]:
-        """Apply last-wins and mutual exclusion rules."""
-        name = new_tag.name
+    def apply_event_level_rules(tag: AssOverrideTag) -> None:
+        """Apply first-wins/last-wins and mutual exclusion for event-level tags."""
+        name = tag.name
+        exclusives = MUTUAL_EXCLUSIVES.get(name, set())
+        
+        # If a mutually exclusive first-wins tag exists, skip
+        if any(ex in seen_first_win for ex in exclusives):
+            return
+        
+        # First-wins: skip if already seen
+        if tag.first_wins:
+            if name in seen_first_win:
+                return
+            seen_first_win.add(name)
+        
+        # Remove mutually exclusive tags (last-wins behavior)
+        for excl in exclusives:
+            event_tags.pop(excl, None)
+        
+        event_tags[name] = tag.value
+    
+    def apply_inline_rules(tag: AssOverrideTag) -> None:
+        """Apply last-wins and mutual exclusion for inline tags."""
+        name = tag.name
         exclusives = MUTUAL_EXCLUSIVES.get(name, set())
         
         # Remove mutually exclusive tags
         for excl in exclusives:
-            tags.pop(excl, None)
+            pending_tags.pop(excl, None)
         
         # Last-wins: overwrite
-        tags[name] = new_tag.value
-        return tags
+        pending_tags[name] = tag.value
     
+    # Single pass through elements
     for elem in elements:
         if isinstance(elem, AssOverrideBlock):
             # New block after content = new segment
@@ -107,10 +96,13 @@ def extract_inline_segments(elements: list[AssTextElement]) -> list[AssTextSegme
                 pending_tags = {}
                 current_content = []
             
-            # Collect text-scoped tags (last-wins)
+            # Process tags in block
             for item in elem.elements:
-                if isinstance(item, AssOverrideTag) and not item.is_event_level:
-                    apply_tag_rules(pending_tags, item)
+                if isinstance(item, AssOverrideTag):
+                    if item.is_event_level:
+                        apply_event_level_rules(item)
+                    else:
+                        apply_inline_rules(item)
         
         elif isinstance(elem, AssPlainText):
             current_content.append(elem)
@@ -125,4 +117,4 @@ def extract_inline_segments(elements: list[AssTextElement]) -> list[AssTextSegme
             content=current_content
         ))
     
-    return segments
+    return ExtractionResult(event_tags=event_tags, segments=segments)
