@@ -46,9 +46,9 @@ class AssEvent:
     
     Represents a Dialogue line from the [Events] section.
     
-    High-level extraction methods:
-        event.extract_event_tags() -> dict[str, Any]
-        event.extract_segments() -> list[AssTextSegment]
+    Text extraction/composition:
+        event.extract_all() -> ExtractionResult(event_tags, segments)
+        AssEvent.compose_all(event_tags, segments) -> list[AssTextElement]
     
     Low-level access:
         event.text_elements -> list[AssTextElement]
@@ -72,23 +72,44 @@ class AssEvent:
         """Get event duration."""
         return self.end - self.start
     
-    def extract_event_tags(self) -> dict[str, Any]:
-        """Extract event-level tags from text.
+    def extract_all(self):
+        """Extract event-level tags and inline segments from text.
         
         Returns:
-            dict mapping tag name to parsed value (e.g., {"pos": Position(...), "an": 8})
+            ExtractionResult with event_tags dict and segments list.
+            
+        Example:
+            result = event.extract_all()
+            pos = result.event_tags.get("pos")
+            for seg in result.segments:
+                print(seg.content, seg.block_tags)
         """
         from sublib.ass.text_transform import extract_all
-        return extract_all(self.text_elements).event_tags
+        return extract_all(self.text_elements)
     
-    def extract_segments(self) -> list:
-        """Extract inline text segments from text.
+    @staticmethod
+    def compose_all(event_tags=None, segments=None):
+        """Compose ASS text elements from event tags and segments.
         
+        This is the inverse of extract_all(). It builds AssTextElement list
+        that can be assigned to event.text_elements.
+        
+        Args:
+            event_tags: Event-level tags dict (e.g., {"pos": Position(...), "an": 8})
+            segments: Inline segments with formatting and text content
+            
         Returns:
-            list of AssTextSegment, each with text and block_tags
+            List of AssTextElement (AssOverrideBlock, AssPlainText, AssSpecialChar)
+            
+        Example:
+            elements = AssEvent.compose_all(
+                event_tags={"pos": Position(100, 200)},
+                segments=[AssTextSegment(block_tags={"b": True}, content=[...])]
+            )
+            event.text_elements = elements
         """
-        from sublib.ass.text_transform import extract_all
-        return extract_all(self.text_elements).segments
+        from sublib.ass.text_transform import compose_all
+        return compose_all(event_tags, segments)
 
 
 @dataclass
