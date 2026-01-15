@@ -118,3 +118,83 @@ def extract_all(elements: list[AssTextElement]) -> ExtractionResult:
         ))
     
     return ExtractionResult(event_tags=event_tags, segments=segments)
+
+
+def compose_all(
+    event_tags: dict[str, Any] | None = None,
+    segments: list[AssTextSegment] | None = None
+) -> list[AssTextElement]:
+    """Compose ASS text elements from event tags and segments.
+    
+    This is the inverse of extract_all(). It builds AssTextElement list
+    that can be rendered to ASS text using AssTextRenderer.
+    
+    Args:
+        event_tags: Event-level tags (e.g., {"pos": Position(...), "an": 8})
+        segments: Inline segments with formatting and text content
+        
+    Returns:
+        List of AssTextElement (AssOverrideBlock, AssPlainText, AssSpecialChar)
+        
+    Example:
+        elements = compose_all(
+            event_tags={"pos": Position(100, 200), "an": 8},
+            segments=[AssTextSegment(block_tags={"b": True}, content=[...])]
+        )
+        text = AssTextRenderer().render(elements)
+    """
+    from sublib.ass.tags import get_tag, format_tag
+    
+    elements: list[AssTextElement] = []
+    
+    # Build event-level tags block (always at the start)
+    event_block_tags: list[AssOverrideTag] = []
+    if event_tags:
+        for name, value in event_tags.items():
+            tag_cls = get_tag(name)
+            if tag_cls:
+                event_block_tags.append(AssOverrideTag(
+                    name=name,
+                    value=value,
+                    raw=format_tag(name, value),
+                    is_event_level=tag_cls.is_event_level,
+                    first_wins=tag_cls.first_wins,
+                    is_function=tag_cls.is_function,
+                ))
+    
+    # Process segments
+    if segments:
+        for i, seg in enumerate(segments):
+            # Build block tags for this segment
+            block_tags: list[AssOverrideTag] = []
+            
+            # First segment includes event-level tags
+            if i == 0:
+                block_tags.extend(event_block_tags)
+            
+            # Add segment's inline tags
+            if seg.block_tags:
+                for name, value in seg.block_tags.items():
+                    tag_cls = get_tag(name)
+                    if tag_cls:
+                        block_tags.append(AssOverrideTag(
+                            name=name,
+                            value=value,
+                            raw=format_tag(name, value),
+                            is_event_level=tag_cls.is_event_level,
+                            first_wins=tag_cls.first_wins,
+                            is_function=tag_cls.is_function,
+                        ))
+            
+            # Add override block if there are tags
+            if block_tags:
+                elements.append(AssOverrideBlock(elements=block_tags))
+            
+            # Add content
+            elements.extend(seg.content)
+    
+    elif event_block_tags:
+        # No segments but have event tags - create a single empty block
+        elements.append(AssOverrideBlock(elements=event_block_tags))
+    
+    return elements

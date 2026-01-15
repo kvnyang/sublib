@@ -3,7 +3,7 @@
 
 from sublib.ass.models import AssFile, AssEvent, AssStyle
 from sublib.ass.serde import AssTextParser, AssTextRenderer
-from sublib.ass.extractor import extract_all, ExtractionResult
+from sublib.ass.extractor import extract_all, ExtractionResult, compose_all
 from sublib.ass.types import Color, Timestamp
 
 __all__ = [
@@ -17,6 +17,7 @@ __all__ = [
     # Extractor
     "extract_all",
     "ExtractionResult",
+    "compose_all",
     # Common types
     "Color",
     "Timestamp",
