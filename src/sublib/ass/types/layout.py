@@ -22,8 +22,3 @@ class WrapStyle:
     """Wrap style value (0-3)."""
     style: Literal[0, 1, 2, 3]
 
-
-@dataclass
-class StyleReset:
-    """Style reset value for \\r tag."""
-    style_name: str | None = None

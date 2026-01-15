@@ -4,7 +4,7 @@ from .color import Color, Alpha
 from .position import Position, Move
 from .clip import RectClip, VectorClip, ClipValue
 from .fade import Fade, FadeComplex
-from .layout import Alignment, WrapStyle, StyleReset
+from .layout import Alignment, WrapStyle
 from .animation import Transform, Karaoke
 from .timestamp import Timestamp
 
@@ -25,10 +25,10 @@ __all__ = [
     # Layout
     "Alignment",
     "WrapStyle",
-    "StyleReset",
     # Animation
     "Transform",
     "Karaoke",
     # Time
     "Timestamp",
 ]
+

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from sublib.ass.tags.base import TagCategory
-from sublib.ass.types import Alignment, WrapStyle, StyleReset
+from sublib.ass.types import Alignment, WrapStyle
 
 
 class AnTag:
@@ -84,7 +84,11 @@ class QTag:
 
 
 class RTag:
-    """\\r or \\r<style> style reset tag definition."""
+    """\\r or \\r<style> style reset tag definition.
+    
+    Returns:
+        str | None: style name to reset to, or None for default reset
+    """
     name: ClassVar[str] = "r"
     category: ClassVar[TagCategory] = TagCategory.RESET
     param_pattern: ClassVar[str | None] = r'[^\\]*'
@@ -94,12 +98,13 @@ class RTag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> StyleReset:
+    def parse(raw: str) -> str | None:
         raw = raw.strip()
-        return StyleReset(style_name=raw if raw else None)
+        return raw if raw else None
     
     @staticmethod
-    def format(val: StyleReset) -> str:
-        if val.style_name:
-            return f"\\r{val.style_name}"
+    def format(val: str | None) -> str:
+        if val:
+            return f"\\r{val}"
         return "\\r"
+
