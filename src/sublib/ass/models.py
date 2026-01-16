@@ -155,10 +155,41 @@ class AssFile:
         content = read_text_file(path, encoding='utf-8-sig')
         return parse_ass_string(content)
     
-    def save(self, path: Path | str) -> None:
-        """Save to file."""
+    def save(self, path: Path | str, validate: bool = False) -> None:
+        """Save to file.
+        
+        Args:
+            path: Output file path
+            validate: If True, raise ValueError for undefined style references
+        """
         from sublib.io import write_text_file
         from sublib.ass.serde import render_ass_string
         
+        if validate:
+            errors = self._validate_styles()
+            if errors:
+                raise ValueError(f"Invalid style references:\n" + "\n".join(errors))
+        
         content = render_ass_string(self)
         write_text_file(path, content, encoding='utf-8-sig')
+    
+    def _validate_styles(self) -> list[str]:
+        """Validate that all style references are defined.
+        
+        Returns:
+            List of error messages (empty = valid)
+        """
+        errors = []
+        defined_styles = set(self.styles.keys())
+        
+        for i, event in enumerate(self.events):
+            if event.style not in defined_styles:
+                errors.append(f"Event {i+1}: style '{event.style}' not defined")
+            
+            result = event.extract_all()
+            for seg in result.segments:
+                r_style = seg.block_tags.get("r")
+                if r_style and r_style not in defined_styles:
+                    errors.append(f"Event {i+1}: \\r style '{r_style}' not defined")
+        
+        return errors
