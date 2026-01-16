@@ -65,7 +65,9 @@ Affect the entire event regardless of position.
 | `\fade` | ✓ | **First-wins** | `\fad` | ✓ |
 | `\clip` | ✓ | **Last-wins** | `\iclip` | ✓ |
 | `\iclip` | ✓ | **Last-wins** | `\clip` | ✓ |
-| `\an`, `\a`, `\q` | ⚠️ Logical | **Last-wins** | - | - |
+| `\an` | ✓ | **First-wins** | - | ✓ |
+| `\a` | ✓ | **First-wins** | - | ✓ |
+| `\q` | ✓ | **Last-wins** | - | ✓ |
 
 #### Inline Tags (`is_event_level=False`)
 
