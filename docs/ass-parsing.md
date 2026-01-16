@@ -96,7 +96,7 @@ AssFile
 
 ## 4. API Usage
 
-### File Loading and Validation
+### File Loading
 
 ```python
 from sublib.ass import AssFile
@@ -104,7 +104,7 @@ from sublib.ass import AssFile
 # Load file
 ass = AssFile.load("file.ass")
 
-# Check file-level validation (Script Info)
+# Check validation warnings
 if ass.script_info.warnings:
     print("Script Info issues:", ass.script_info.warnings)
 ```
@@ -126,12 +126,57 @@ except SubtitleParseError as e:
 elements = AssTextParser(strict=False).parse(text)
 ```
 
+### Text Extraction and Composition
+
+Extract structured data from event text:
+
+```python
+# Extract event tags and segments
+result = event.extract_all()
+
+# Access event-level tags (pos, an, move, etc.)
+pos = result.event_tags.get("pos")
+alignment = result.event_tags.get("an")
+
+# Access inline segments with formatting
+for seg in result.segments:
+    print(seg.get_text())  # Plain text
+    print(seg.block_tags)  # {"b": True, "i": False, ...}
+```
+
+Compose text elements from structured data:
+
+```python
+from sublib.ass import AssEvent
+from sublib.ass.ast import AssTextSegment, AssPlainText
+
+# Build segments
+segments = [
+    AssTextSegment(
+        block_tags={"b": True},
+        content=[AssPlainText(content="Bold text")]
+    ),
+    AssTextSegment(
+        block_tags={"i": True},
+        content=[AssPlainText(content="Italic text")]
+    )
+]
+
+# Compose into text elements
+elements = AssEvent.compose_all(
+    event_tags={"pos": Position(100, 200), "an": 8},
+    segments=segments
+)
+
+# Assign to event
+event.text_elements = elements
+```
+
 ---
 
 ## 5. References
 
 - **Implementation**: `src/sublib/ass/`
 - **Tag Definitions**: `src/sublib/ass/tags/`
-- **Validation Logic**: 
-    - `src/sublib/ass/services/parsers/script_info_parser.py`
-    - `src/sublib/ass/services/parsers/text_parser.py`
+- **Text Transform**: `src/sublib/ass/text_transform.py`
+
