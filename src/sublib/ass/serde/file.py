@@ -67,24 +67,9 @@ def parse_ass_string(content: str) -> AssFile:
 
 
 def _validate_style_references(ass_file: AssFile) -> None:
-    """Check that all style references are defined."""
-    defined_styles = set(ass_file.styles.keys())
-    
-    for i, event in enumerate(ass_file.events):
-        # Check event.style
-        if event.style not in defined_styles:
-            ass_file.warnings.append(
-                f"Line {i+1}: event style '{event.style}' not defined"
-            )
-        
-        # Check \r references in segments
-        result = event.extract_all()
-        for seg in result.segments:
-            r_style = seg.block_tags.get("r")
-            if r_style and r_style not in defined_styles:
-                ass_file.warnings.append(
-                    f"Line {i+1}: \\r style '{r_style}' not defined"
-                )
+    """Check that all style references are defined and add warnings."""
+    errors = ass_file._validate_styles()
+    ass_file.warnings.extend(errors)
 
 
 def render_ass_string(ass_file: AssFile) -> str:
