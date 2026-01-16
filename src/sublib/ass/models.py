@@ -117,11 +117,7 @@ class AssFile:
     """ASS subtitle file.
     
     Represents a complete .ass file with styles and events.
-    
-    After loading, check warnings for any validation issues:
-        if ass.warnings:
-            for w in ass.warnings:
-                print(f"Warning: {w}")
+    Validation warnings are logged during parsing.
     """
     # Script Info: key -> typed value (ordered dict, preserves insertion order)
     script_info: dict[str, Any] = field(default_factory=dict)
@@ -132,28 +128,44 @@ class AssFile:
     # Dialogue events
     events: list[AssEvent] = field(default_factory=list)
     
-    # Validation warnings (populated during load)
-    warnings: list[str] = field(default_factory=list)
-    
     @classmethod
     def from_string(cls, content: str) -> "AssFile":
-        """Parse ASS content from string."""
+        """Parse ASS content from string.
+        
+        Validation warnings are logged at WARNING level.
+        """
+        import logging
         from sublib.ass.serde import parse_ass_string
-        return parse_ass_string(content)
+        
+        ass_file = parse_ass_string(content)
+        # Log validation warnings
+        for warning in ass_file._validate_styles():
+            logging.getLogger(__name__).warning(warning)
+        return ass_file
     
-    def to_string(self) -> str:
-        """Render to ASS format string."""
+    def to_string(self, validate: bool = False) -> str:
+        """Render to ASS format string.
+        
+        Args:
+            validate: If True, raise ValueError for undefined style references
+        """
         from sublib.ass.serde import render_ass_string
+        
+        if validate:
+            errors = self._validate_styles()
+            if errors:
+                raise ValueError(f"Invalid style references:\n" + "\n".join(errors))
         return render_ass_string(self)
     
     @classmethod
     def load(cls, path: Path | str) -> "AssFile":
-        """Load ASS file from path."""
-        from sublib.io import read_text_file
-        from sublib.ass.serde import parse_ass_string
+        """Load ASS file from path.
         
+        Validation warnings are logged at WARNING level.
+        """
+        from sublib.io import read_text_file
         content = read_text_file(path, encoding='utf-8-sig')
-        return parse_ass_string(content)
+        return cls.from_string(content)
     
     def save(self, path: Path | str, validate: bool = False) -> None:
         """Save to file.
@@ -163,14 +175,7 @@ class AssFile:
             validate: If True, raise ValueError for undefined style references
         """
         from sublib.io import write_text_file
-        from sublib.ass.serde import render_ass_string
-        
-        if validate:
-            errors = self._validate_styles()
-            if errors:
-                raise ValueError(f"Invalid style references:\n" + "\n".join(errors))
-        
-        content = render_ass_string(self)
+        content = self.to_string(validate=validate)
         write_text_file(path, content, encoding='utf-8-sig')
     
     def _validate_styles(self) -> list[str]:

@@ -60,9 +60,6 @@ def parse_ass_string(content: str) -> AssFile:
                 if event:
                     ass_file.events.append(event)
     
-    # Validate style references
-    ass_file.warnings.extend(ass_file._validate_styles())
-    
     return ass_file
 
 
