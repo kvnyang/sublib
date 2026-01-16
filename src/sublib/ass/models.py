@@ -117,6 +117,11 @@ class AssFile:
     """ASS subtitle file.
     
     Represents a complete .ass file with styles and events.
+    
+    After loading, check warnings for any validation issues:
+        if ass.warnings:
+            for w in ass.warnings:
+                print(f"Warning: {w}")
     """
     # Script Info: key -> typed value (ordered dict, preserves insertion order)
     script_info: dict[str, Any] = field(default_factory=dict)
@@ -126,6 +131,9 @@ class AssFile:
     
     # Dialogue events
     events: list[AssEvent] = field(default_factory=list)
+    
+    # Validation warnings (populated during load)
+    warnings: list[str] = field(default_factory=list)
     
     @classmethod
     def from_string(cls, content: str) -> "AssFile":
