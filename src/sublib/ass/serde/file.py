@@ -61,15 +61,9 @@ def parse_ass_string(content: str) -> AssFile:
                     ass_file.events.append(event)
     
     # Validate style references
-    _validate_style_references(ass_file)
+    ass_file.warnings.extend(ass_file._validate_styles())
     
     return ass_file
-
-
-def _validate_style_references(ass_file: AssFile) -> None:
-    """Check that all style references are defined and add warnings."""
-    errors = ass_file._validate_styles()
-    ass_file.warnings.extend(errors)
 
 
 def render_ass_string(ass_file: AssFile) -> str:
