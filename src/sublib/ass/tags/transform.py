@@ -192,14 +192,15 @@ class TTag:
     
     @staticmethod
     def format(val: AssTransform) -> str:
+        from sublib.ass.tags.base import _format_float
         raw_tags = val.to_raw_tags()
         if val.t1 is None and val.t2 is None and val.accel is None:
             return f"\\t({raw_tags})"
         if val.t1 is None and val.t2 is None and val.accel is not None:
-            return f"\\t({val.accel},{raw_tags})"
+            return f"\\t({_format_float(val.accel)},{raw_tags})"
         if val.accel is None:
             return f"\\t({val.t1},{val.t2},{raw_tags})"
-        return f"\\t({val.t1},{val.t2},{val.accel},{raw_tags})"
+        return f"\\t({val.t1},{val.t2},{_format_float(val.accel)},{raw_tags})"
 
 
 def _parse_karaoke(raw: str) -> int | None:
