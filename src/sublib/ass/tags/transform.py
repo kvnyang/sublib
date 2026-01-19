@@ -1,4 +1,3 @@
-# sublib/ass/tags/transform.py
 """Animation and karaoke tag definitions."""
 from __future__ import annotations
 import re

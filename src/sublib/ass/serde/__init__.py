@@ -1,4 +1,3 @@
-# sublib/ass/serde/__init__.py
 """ASS serialization and deserialization."""
 from .text import AssTextParser, AssTextRenderer
 from .event import parse_event_line, render_event_line

@@ -1,4 +1,3 @@
-# sublib/ass/serde/script_info.py
 """Parse and render Script Info lines."""
 from __future__ import annotations
 import logging

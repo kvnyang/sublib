@@ -1,4 +1,3 @@
-# sublib/ass/tags/base.py
 """Base types for tag definitions.
 
 This module defines core types with no imports from other tag modules,

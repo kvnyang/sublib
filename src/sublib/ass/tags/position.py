@@ -1,4 +1,3 @@
-# sublib/ass/tags/position.py
 """Position and movement tag definitions."""
 from __future__ import annotations
 from typing import ClassVar

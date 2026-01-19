@@ -1,4 +1,3 @@
-# sublib/ass/tags/drawing.py
 """Drawing mode tag definitions."""
 from __future__ import annotations
 from typing import ClassVar

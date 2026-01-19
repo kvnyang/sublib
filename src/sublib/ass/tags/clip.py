@@ -1,4 +1,3 @@
-# sublib/ass/tags/clip.py
 """Clip tag definitions."""
 from __future__ import annotations
 from typing import ClassVar

@@ -1,4 +1,3 @@
-# sublib/ass/ast/elements.py
 """ASS text element types.
 
 These represent the parsed structure of ASS event text,

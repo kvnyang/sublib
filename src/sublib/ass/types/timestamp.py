@@ -1,4 +1,3 @@
-# sublib/ass/types/timestamp.py
 """Timestamp value type for ASS format.
 
 ASS uses H:MM:SS.CC format where CC is centiseconds (hundredths of a second).

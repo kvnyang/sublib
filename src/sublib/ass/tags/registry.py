@@ -1,4 +1,3 @@
-# sublib/ass/tags/registry.py
 """Tag registry - unified access interface for all ASS override tags.
 
 This module:

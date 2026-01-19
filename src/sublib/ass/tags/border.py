@@ -1,4 +1,3 @@
-# sublib/ass/tags/border.py
 """Border, shadow, and blur tag definitions."""
 from __future__ import annotations
 from typing import ClassVar

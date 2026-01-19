@@ -1,4 +1,3 @@
-# sublib/io.py
 """Generic file I/O utilities.
 
 Provides encoding-aware file read/write operations.

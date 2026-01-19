@@ -1,4 +1,3 @@
-# sublib/ass/serde/event.py
 """Parse and render Dialogue: lines."""
 from __future__ import annotations
 

@@ -1,4 +1,3 @@
-# sublib/ass/types/position.py
 """Position and movement value types for ASS format."""
 from __future__ import annotations
 from dataclasses import dataclass

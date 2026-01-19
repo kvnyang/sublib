@@ -1,4 +1,3 @@
-# sublib/ass/types/color.py
 """Color and alpha value types for ASS format.
 
 These types are shared between Style definitions and override tags.

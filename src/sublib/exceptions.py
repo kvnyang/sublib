@@ -1,4 +1,3 @@
-# sublib/exceptions.py
 """Subtitle processing exceptions."""
 
 

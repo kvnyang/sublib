@@ -1,4 +1,3 @@
-# sublib/ass/tags/__init__.py
 """ASS override tag definitions.
 
 This package provides:

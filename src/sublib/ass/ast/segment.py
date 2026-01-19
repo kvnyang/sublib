@@ -1,4 +1,3 @@
-# sublib/ass/ast/segment.py
 """Text segment type for extract results."""
 from __future__ import annotations
 from dataclasses import dataclass

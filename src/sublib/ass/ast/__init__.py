@@ -1,4 +1,3 @@
-# sublib/ass/ast/__init__.py
 """ASS Abstract Syntax Tree types.
 
 This module contains all AST node types for parsed ASS text.

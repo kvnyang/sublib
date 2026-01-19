@@ -1,4 +1,3 @@
-# sublib/ass/serde/style.py
 """Parse and render Style: lines."""
 from __future__ import annotations
 

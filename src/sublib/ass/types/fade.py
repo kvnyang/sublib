@@ -1,4 +1,3 @@
-# sublib/ass/types/fade.py
 """Fade effect value types for ASS format."""
 from __future__ import annotations
 from dataclasses import dataclass

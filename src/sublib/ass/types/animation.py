@@ -1,4 +1,3 @@
-# sublib/ass/types/animation.py
 """Animation and karaoke value types for ASS format."""
 from __future__ import annotations
 from dataclasses import dataclass, field

@@ -1,4 +1,3 @@
-# sublib/ass/tags/layout.py
 """Alignment, wrap style, and reset tag definitions."""
 from __future__ import annotations
 from typing import ClassVar

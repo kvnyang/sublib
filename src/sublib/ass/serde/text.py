@@ -1,4 +1,3 @@
-# sublib/ass/serde/text.py
 """Parse and render ASS event text."""
 from __future__ import annotations
 import re

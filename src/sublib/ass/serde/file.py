@@ -1,4 +1,3 @@
-# sublib/ass/serde/file.py
 """Parse and render complete ASS files."""
 from __future__ import annotations
 import logging

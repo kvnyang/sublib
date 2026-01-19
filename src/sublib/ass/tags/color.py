@@ -1,4 +1,3 @@
-# sublib/ass/tags/color.py
 """Color and alpha tag definitions."""
 from __future__ import annotations
 from typing import ClassVar

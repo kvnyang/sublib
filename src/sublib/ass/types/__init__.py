@@ -1,4 +1,3 @@
-# sublib/ass/types/__init__.py
 """ASS value types shared between styles and tags."""
 from .color import Color, Alpha
 from .position import Position, Move

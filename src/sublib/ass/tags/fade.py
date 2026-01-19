@@ -1,4 +1,3 @@
-# sublib/ass/tags/fade.py
 """Fade effect tag definitions."""
 from __future__ import annotations
 from typing import ClassVar
