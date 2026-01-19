@@ -9,6 +9,13 @@ from typing import Any, ClassVar, Protocol, runtime_checkable
 from enum import Enum, auto
 
 
+def _format_float(val: float) -> str:
+    """Format float to string, removing trailing .0 for integers."""
+    if val.is_integer():
+        return str(int(val))
+    return str(val)
+
+
 class TagCategory(Enum):
     """Categories of ASS override tags."""
     POSITION = auto()

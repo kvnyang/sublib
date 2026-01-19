@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, _format_float
 from sublib.ass.types import Position, Move
 
 
@@ -29,7 +29,7 @@ class PosTag:
     
     @staticmethod
     def format(val: Position) -> str:
-        return f"\\pos({val.x},{val.y})"
+        return f"\\pos({_format_float(val.x)},{_format_float(val.y)})"
 
 
 class MoveTag:
@@ -67,8 +67,8 @@ class MoveTag:
     @staticmethod
     def format(val: Move) -> str:
         if val.t1 is not None and val.t2 is not None:
-            return f"\\move({val.x1},{val.y1},{val.x2},{val.y2},{val.t1},{val.t2})"
-        return f"\\move({val.x1},{val.y1},{val.x2},{val.y2})"
+            return f"\\move({_format_float(val.x1)},{_format_float(val.y1)},{_format_float(val.x2)},{_format_float(val.y2)},{val.t1},{val.t2})"
+        return f"\\move({_format_float(val.x1)},{_format_float(val.y1)},{_format_float(val.x2)},{_format_float(val.y2)})"
 
 
 class OrgTag:
@@ -87,4 +87,4 @@ class OrgTag:
     
     @staticmethod
     def format(val: Position) -> str:
-        return f"\\org({val.x},{val.y})"
+        return f"\\org({_format_float(val.x)},{_format_float(val.y)})"

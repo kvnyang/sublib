@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, _format_float
 
 
 def _parse_float(raw: str, *, ge: float | None = None) -> float | None:
@@ -46,7 +46,7 @@ class BordTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\bord{val}"
+        return f"\\bord{_format_float(val)}"
 
 
 class XbordTag:
@@ -65,7 +65,7 @@ class XbordTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\xbord{val}"
+        return f"\\xbord{_format_float(val)}"
 
 
 class YbordTag:
@@ -84,7 +84,7 @@ class YbordTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\ybord{val}"
+        return f"\\ybord{_format_float(val)}"
 
 
 # ============================================================
@@ -107,7 +107,7 @@ class ShadTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\shad{val}"
+        return f"\\shad{_format_float(val)}"
 
 
 class XshadTag:
@@ -126,7 +126,7 @@ class XshadTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\xshad{val}"
+        return f"\\xshad{_format_float(val)}"
 
 
 class YshadTag:
@@ -145,7 +145,7 @@ class YshadTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\yshad{val}"
+        return f"\\yshad{_format_float(val)}"
 
 
 # ============================================================
@@ -187,4 +187,4 @@ class BlurTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\blur{val}"
+        return f"\\blur{_format_float(val)}"

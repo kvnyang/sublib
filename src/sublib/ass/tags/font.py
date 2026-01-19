@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.tags.base import TagCategory, _format_float
 
 
 def _parse_float(raw: str, *, gt: float | None = None, ge: float | None = None) -> float | None:
@@ -89,7 +89,7 @@ class FsTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\fs{val}"
+        return f"\\fs{_format_float(val)}"
 
 
 class FscxTag:
@@ -109,7 +109,7 @@ class FscxTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\fscx{val}"
+        return f"\\fscx{_format_float(val)}"
 
 
 class FscyTag:
@@ -129,7 +129,7 @@ class FscyTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\fscy{val}"
+        return f"\\fscy{_format_float(val)}"
 
 
 class FspTag:
@@ -149,7 +149,7 @@ class FspTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\fsp{val}"
+        return f"\\fsp{_format_float(val)}"
 
 
 class FeTag:
@@ -274,7 +274,7 @@ class FrxTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\frx{val}"
+        return f"\\frx{_format_float(val)}"
 
 
 class FryTag:
@@ -294,7 +294,7 @@ class FryTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\fry{val}"
+        return f"\\fry{_format_float(val)}"
 
 
 class FrzTag:
@@ -314,7 +314,7 @@ class FrzTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\frz{val}"
+        return f"\\frz{_format_float(val)}"
 
 
 class FrTag:
@@ -333,7 +333,7 @@ class FrTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\fr{val}"
+        return f"\\fr{_format_float(val)}"
 
 
 # ============================================================
@@ -356,7 +356,7 @@ class FaxTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\fax{val}"
+        return f"\\fax{_format_float(val)}"
 
 
 class FayTag:
@@ -375,4 +375,4 @@ class FayTag:
     
     @staticmethod
     def format(val: float) -> str:
-        return f"\\fay{val}"
+        return f"\\fay{_format_float(val)}"
