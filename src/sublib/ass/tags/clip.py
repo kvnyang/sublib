@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import ClassVar
 
 from sublib.ass.tags.base import TagCategory
-from sublib.ass.types import RectClip, VectorClip, ClipValue
+from sublib.ass.types import AssRectClip, AssVectorClip, AssClipValue
 
 
-def _parse_clip(raw: str) -> ClipValue | None:
+def _parse_clip(raw: str) -> AssClipValue | None:
     """Parse clip value (shared by ClipTag and IClipTag)."""
     raw = raw.strip()
     if not raw:
@@ -18,7 +18,7 @@ def _parse_clip(raw: str) -> ClipValue | None:
     if len(parts) == 4:
         try:
             if all(p.lstrip("-").isdigit() for p in parts):
-                return RectClip(
+                return AssRectClip(
                     x1=int(parts[0]), y1=int(parts[1]),
                     x2=int(parts[2]), y2=int(parts[3])
                 )
@@ -30,12 +30,12 @@ def _parse_clip(raw: str) -> ClipValue | None:
         try:
             scale = int(parts[0])
             drawing = ",".join(parts[1:]).strip()
-            return VectorClip(drawing=drawing, scale=scale)
+            return AssVectorClip(drawing=drawing, scale=scale)
         except ValueError:
             pass
     
     # Vector without scale
-    return VectorClip(drawing=raw, scale=1)
+    return AssVectorClip(drawing=raw, scale=1)
 
 
 class ClipTag:
@@ -49,14 +49,14 @@ class ClipTag:
     exclusives: ClassVar[frozenset[str]] = frozenset({"iclip"})
     
     @staticmethod
-    def parse(raw: str) -> ClipValue | None:
+    def parse(raw: str) -> AssClipValue | None:
         return _parse_clip(raw)
     
     @staticmethod
-    def format(val: ClipValue) -> str:
-        if isinstance(val, RectClip):
+    def format(val: AssClipValue) -> str:
+        if isinstance(val, AssRectClip):
             return f"\\clip({val.x1},{val.y1},{val.x2},{val.y2})"
-        elif isinstance(val, VectorClip):
+        elif isinstance(val, AssVectorClip):
             if val.scale != 1:
                 return f"\\clip({val.scale},{val.drawing})"
             return f"\\clip({val.drawing})"
@@ -74,14 +74,14 @@ class IClipTag:
     exclusives: ClassVar[frozenset[str]] = frozenset({"clip"})
     
     @staticmethod
-    def parse(raw: str) -> ClipValue | None:
+    def parse(raw: str) -> AssClipValue | None:
         return _parse_clip(raw)
     
     @staticmethod
-    def format(val: ClipValue) -> str:
-        if isinstance(val, RectClip):
+    def format(val: AssClipValue) -> str:
+        if isinstance(val, AssRectClip):
             return f"\\iclip({val.x1},{val.y1},{val.x2},{val.y2})"
-        elif isinstance(val, VectorClip):
+        elif isinstance(val, AssVectorClip):
             if val.scale != 1:
                 return f"\\iclip({val.scale},{val.drawing})"
             return f"\\iclip({val.drawing})"

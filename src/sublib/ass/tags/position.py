@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from sublib.ass.tags.base import TagCategory, _format_float
-from sublib.ass.types import Position, Move
+from sublib.ass.types import AssPosition, AssMove
 
 
 class PosTag:
@@ -17,17 +17,17 @@ class PosTag:
     exclusives: ClassVar[frozenset[str]] = frozenset({"move"})
     
     @staticmethod
-    def parse(raw: str) -> Position | None:
+    def parse(raw: str) -> AssPosition | None:
         parts = raw.split(",")
         if len(parts) != 2:
             return None
         try:
-            return Position(x=float(parts[0]), y=float(parts[1]))
+            return AssPosition(x=float(parts[0]), y=float(parts[1]))
         except ValueError:
             return None
     
     @staticmethod
-    def format(val: Position) -> str:
+    def format(val: AssPosition) -> str:
         return f"\\pos({_format_float(val.x)},{_format_float(val.y)})"
 
 
@@ -42,11 +42,11 @@ class MoveTag:
     exclusives: ClassVar[frozenset[str]] = frozenset({"pos"})
     
     @staticmethod
-    def parse(raw: str) -> Move | None:
+    def parse(raw: str) -> AssMove | None:
         parts = raw.split(",")
         if len(parts) == 4:
             try:
-                return Move(
+                return AssMove(
                     x1=float(parts[0]), y1=float(parts[1]),
                     x2=float(parts[2]), y2=float(parts[3])
                 )
@@ -54,7 +54,7 @@ class MoveTag:
                 return None
         elif len(parts) == 6:
             try:
-                return Move(
+                return AssMove(
                     x1=float(parts[0]), y1=float(parts[1]),
                     x2=float(parts[2]), y2=float(parts[3]),
                     t1=int(parts[4]), t2=int(parts[5])
@@ -64,7 +64,7 @@ class MoveTag:
         return None
     
     @staticmethod
-    def format(val: Move) -> str:
+    def format(val: AssMove) -> str:
         if val.t1 is not None and val.t2 is not None:
             return f"\\move({_format_float(val.x1)},{_format_float(val.y1)},{_format_float(val.x2)},{_format_float(val.y2)},{val.t1},{val.t2})"
         return f"\\move({_format_float(val.x1)},{_format_float(val.y1)},{_format_float(val.x2)},{_format_float(val.y2)})"
@@ -81,9 +81,9 @@ class OrgTag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Position | None:
+    def parse(raw: str) -> AssPosition | None:
         return PosTag.parse(raw)
     
     @staticmethod
-    def format(val: Position) -> str:
+    def format(val: AssPosition) -> str:
         return f"\\org({_format_float(val.x)},{_format_float(val.y)})"

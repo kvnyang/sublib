@@ -1,33 +1,18 @@
 """ASS value types shared between styles and tags."""
-from .color import Color, Alpha
-from .position import Position, Move
-from .clip import RectClip, VectorClip, ClipValue
-from .fade import Fade, FadeComplex
-from .layout import Alignment, WrapStyle
-from .animation import Transform, Karaoke
-from .timestamp import Timestamp
+from .color import AssColor, AssAlpha
+from .position import AssPosition, AssMove
+from .clip import AssRectClip, AssVectorClip, AssClipValue
+from .fade import AssFade, AssFadeComplex
+from .layout import AssAlignment, AssWrapStyle
+from .animation import AssTransform, AssKaraoke
+from .timestamp import AssTimestamp
 
 __all__ = [
-    # Color
-    "Color",
-    "Alpha",
-    # Position
-    "Position",
-    "Move",
-    # Clip
-    "RectClip",
-    "VectorClip",
-    "ClipValue",
-    # Fade
-    "Fade",
-    "FadeComplex",
-    # Layout
-    "Alignment",
-    "WrapStyle",
-    # Animation
-    "Transform",
-    "Karaoke",
-    # Time
-    "Timestamp",
+    "AssColor", "AssAlpha",
+    "AssPosition", "AssMove",
+    "AssRectClip", "AssVectorClip", "AssClipValue",
+    "AssFade", "AssFadeComplex",
+    "AssAlignment", "AssWrapStyle",
+    "AssTransform", "AssKaraoke",
+    "AssTimestamp",
 ]
-

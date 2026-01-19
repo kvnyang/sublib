@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import ClassVar
 
 from sublib.ass.tags.base import TagCategory
-from sublib.ass.types import Alignment, WrapStyle
+from sublib.ass.types import AssAlignment, AssWrapStyle
 
 
 class AnTag:
     """\\an<1-9> tag definition."""
     name: ClassVar[str] = "an"
     category: ClassVar[TagCategory] = TagCategory.ALIGNMENT
-    param_pattern: ClassVar[str | None] = r'(?:[1-3]|[5-7]|9|1[01])'
+    # param_pattern: ClassVar[str | None] = r'(?:[1-3]|[5-7]|9|1[01])'  # Old incorrect pattern?
     param_pattern: ClassVar[str | None] = r'[1-9]'
     is_event_level: ClassVar[bool] = True
     is_function: ClassVar[bool] = False
@@ -18,17 +18,17 @@ class AnTag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Alignment | None:
+    def parse(raw: str) -> AssAlignment | None:
         try:
             val = int(raw)
             if 1 <= val <= 9:
-                return Alignment(value=val)
+                return AssAlignment(value=val)
         except ValueError:
             pass
         return None
     
     @staticmethod
-    def format(val: Alignment) -> str:
+    def format(val: AssAlignment) -> str:
         return f"\\an{val.value}"
 
 
@@ -43,17 +43,17 @@ class ATag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Alignment | None:
+    def parse(raw: str) -> AssAlignment | None:
         try:
             val = int(raw)
             if val in {1, 2, 3, 5, 6, 7, 9, 10, 11}:
-                return Alignment(value=val, legacy=True)
+                return AssAlignment(value=val, legacy=True)
         except ValueError:
             pass
         return None
     
     @staticmethod
-    def format(val: Alignment) -> str:
+    def format(val: AssAlignment) -> str:
         return f"\\a{val.value}"
 
 
@@ -68,17 +68,17 @@ class QTag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> WrapStyle | None:
+    def parse(raw: str) -> AssWrapStyle | None:
         try:
             val = int(raw)
             if val in {0, 1, 2, 3}:
-                return WrapStyle(style=val)
+                return AssWrapStyle(style=val)
         except ValueError:
             pass
         return None
     
     @staticmethod
-    def format(val: WrapStyle) -> str:
+    def format(val: AssWrapStyle) -> str:
         return f"\\q{val.style}"
 
 

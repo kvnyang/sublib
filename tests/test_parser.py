@@ -4,7 +4,7 @@ import pytest
 
 from sublib.ass.serde import AssTextParser
 from sublib.exceptions import SubtitleParseError
-from sublib.ass.types import Position
+from sublib.ass.types import AssPosition
 from sublib.ass.ast import AssOverrideTag, AssPlainText, AssSpecialChar, AssOverrideBlock, AssComment
 
 
@@ -56,7 +56,7 @@ class TestAssTextParser:
         assert len(block_elements) == 1
         assert isinstance(block_elements[0], AssOverrideTag)
         assert block_elements[0].name == "pos"
-        assert block_elements[0].value == Position(x=100.0, y=200.0)
+        assert block_elements[0].value == AssPosition(x=100.0, y=200.0)
         assert block_elements[0].is_event_level == True
 
     def test_parse_block_with_comment(self):

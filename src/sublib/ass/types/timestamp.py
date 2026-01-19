@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Timestamp:
+class AssTimestamp:
     """ASS timestamp value.
     
     ASS format: H:MM:SS.CC (centiseconds, i.e. hundredths of a second)
@@ -40,7 +40,7 @@ class Timestamp:
         return self.cs / 100.0
     
     @classmethod
-    def from_ms(cls, ms: int) -> "Timestamp":
+    def from_ms(cls, ms: int) -> "AssTimestamp":
         """Create from milliseconds."""
         return cls(cs=ms // 10)
     
@@ -49,14 +49,14 @@ class Timestamp:
         return self.cs * 10
     
     @classmethod
-    def from_ass_str(cls, s: str) -> "Timestamp":
+    def from_ass_str(cls, s: str) -> "AssTimestamp":
         """Parse from ASS timestamp string (H:MM:SS.CC).
         
         Args:
             s: Timestamp string, e.g. "0:01:30.50"
             
         Returns:
-            Timestamp with parsed value
+            AssTimestamp with parsed value
         """
         s = s.strip()
         parts = s.split(':')
@@ -79,22 +79,25 @@ class Timestamp:
         """Format as ASS timestamp string (H:MM:SS.CC)."""
         return f"{self.hours}:{self.minutes:02d}:{self.seconds:02d}.{self.centiseconds:02d}"
     
-    def __sub__(self, other: "Timestamp") -> "Timestamp":
+    def __sub__(self, other: "AssTimestamp") -> "AssTimestamp":
         """Subtract two timestamps."""
-        return Timestamp(cs=self.cs - other.cs)
+        return AssTimestamp(cs=self.cs - other.cs)
     
-    def __add__(self, other: "Timestamp") -> "Timestamp":
+    def __add__(self, other: "AssTimestamp") -> "AssTimestamp":
         """Add two timestamps."""
-        return Timestamp(cs=self.cs + other.cs)
+        return AssTimestamp(cs=self.cs + other.cs)
     
-    def __lt__(self, other: "Timestamp") -> bool:
+    def __lt__(self, other: "AssTimestamp") -> bool:
         return self.cs < other.cs
     
-    def __le__(self, other: "Timestamp") -> bool:
+    def __le__(self, other: "AssTimestamp") -> bool:
         return self.cs <= other.cs
     
-    def __gt__(self, other: "Timestamp") -> bool:
+    def __gt__(self, other: "AssTimestamp") -> bool:
         return self.cs > other.cs
     
-    def __ge__(self, other: "Timestamp") -> bool:
+    def __ge__(self, other: "AssTimestamp") -> bool:
         return self.cs >= other.cs
+
+# Alias for backward compatibility (internal use only, public API should use AssTimestamp)
+

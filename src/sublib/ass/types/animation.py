@@ -5,12 +5,12 @@ from typing import Any, Literal
 
 
 @dataclass
-class Transform:
+class AssTransform:
     """Value for \\t(...) animated transform tag.
     
     Attributes:
         tags: Parsed modifier tags as list of (name, value) tuples.
-              e.g., [("fs", 40), ("1c", Color(255, 0, 0))]
+              e.g., [("fs", 40), ("1c", AssColor(255, 0, 0))]
         t1: Start time in milliseconds (None = line start)
         t2: End time in milliseconds (None = line end)
         accel: Acceleration factor (1.0 = linear)
@@ -27,8 +27,7 @@ class Transform:
 
 
 @dataclass
-class Karaoke:
+class AssKaraoke:
     """Value for karaoke tags (\\k, \\K, \\kf, \\ko, \\kt)."""
     duration: int
     type: Literal["k", "K", "kf", "ko", "kt"] = "k"
-

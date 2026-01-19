@@ -3,21 +3,21 @@ from __future__ import annotations
 from typing import ClassVar
 
 from sublib.ass.tags.base import TagCategory
-from sublib.ass.types import Color, Alpha
+from sublib.ass.types import AssColor, AssAlpha
 
 
-def _parse_color(raw: str) -> Color | None:
-    """Parse color tag value to Color."""
+def _parse_color(raw: str) -> AssColor | None:
+    """Parse color tag value to AssColor."""
     try:
-        return Color.from_tag_str(raw)
+        return AssColor.from_tag_str(raw)
     except ValueError:
         return None
 
 
-def _parse_alpha(raw: str) -> Alpha | None:
+def _parse_alpha(raw: str) -> AssAlpha | None:
     raw = raw.strip().strip("&H").strip("&")
     try:
-        return Alpha(value=int(raw, 16))
+        return AssAlpha(value=int(raw, 16))
     except ValueError:
         return None
 
@@ -37,11 +37,11 @@ class CTag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Color | None:
+    def parse(raw: str) -> AssColor | None:
         return _parse_color(raw)
     
     @staticmethod
-    def format(val: Color) -> str:
+    def format(val: AssColor) -> str:
         return f"\\c{val.to_tag_str()}"
 
 
@@ -56,11 +56,11 @@ class C1Tag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Color | None:
+    def parse(raw: str) -> AssColor | None:
         return _parse_color(raw)
     
     @staticmethod
-    def format(val: Color) -> str:
+    def format(val: AssColor) -> str:
         return f"\\1c{val.to_tag_str()}"
 
 
@@ -75,11 +75,11 @@ class C2Tag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Color | None:
+    def parse(raw: str) -> AssColor | None:
         return _parse_color(raw)
     
     @staticmethod
-    def format(val: Color) -> str:
+    def format(val: AssColor) -> str:
         return f"\\2c{val.to_tag_str()}"
 
 
@@ -94,11 +94,11 @@ class C3Tag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Color | None:
+    def parse(raw: str) -> AssColor | None:
         return _parse_color(raw)
     
     @staticmethod
-    def format(val: Color) -> str:
+    def format(val: AssColor) -> str:
         return f"\\3c{val.to_tag_str()}"
 
 
@@ -113,11 +113,11 @@ class C4Tag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Color | None:
+    def parse(raw: str) -> AssColor | None:
         return _parse_color(raw)
     
     @staticmethod
-    def format(val: Color) -> str:
+    def format(val: AssColor) -> str:
         return f"\\4c{val.to_tag_str()}"
 
 
@@ -136,11 +136,11 @@ class AlphaTag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Alpha | None:
+    def parse(raw: str) -> AssAlpha | None:
         return _parse_alpha(raw)
     
     @staticmethod
-    def format(val: Alpha) -> str:
+    def format(val: AssAlpha) -> str:
         return f"\\alpha&H{val.value:02X}&"
 
 
@@ -155,11 +155,11 @@ class A1Tag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Alpha | None:
+    def parse(raw: str) -> AssAlpha | None:
         return _parse_alpha(raw)
     
     @staticmethod
-    def format(val: Alpha) -> str:
+    def format(val: AssAlpha) -> str:
         return f"\\1a&H{val.value:02X}&"
 
 
@@ -174,11 +174,11 @@ class A2Tag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Alpha | None:
+    def parse(raw: str) -> AssAlpha | None:
         return _parse_alpha(raw)
     
     @staticmethod
-    def format(val: Alpha) -> str:
+    def format(val: AssAlpha) -> str:
         return f"\\2a&H{val.value:02X}&"
 
 
@@ -193,11 +193,11 @@ class A3Tag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Alpha | None:
+    def parse(raw: str) -> AssAlpha | None:
         return _parse_alpha(raw)
     
     @staticmethod
-    def format(val: Alpha) -> str:
+    def format(val: AssAlpha) -> str:
         return f"\\3a&H{val.value:02X}&"
 
 
@@ -212,9 +212,9 @@ class A4Tag:
     exclusives: ClassVar[frozenset[str]] = frozenset()
     
     @staticmethod
-    def parse(raw: str) -> Alpha | None:
+    def parse(raw: str) -> AssAlpha | None:
         return _parse_alpha(raw)
     
     @staticmethod
-    def format(val: Alpha) -> str:
+    def format(val: AssAlpha) -> str:
         return f"\\4a&H{val.value:02X}&"

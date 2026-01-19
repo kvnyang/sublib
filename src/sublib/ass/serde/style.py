@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from sublib.ass.models import AssStyle
-from sublib.ass.types import Color
+from sublib.ass.types import AssColor
 
 
 def parse_style_line(line: str) -> AssStyle | None:
@@ -25,10 +25,10 @@ def parse_style_line(line: str) -> AssStyle | None:
         name=parts[0].strip(),
         fontname=parts[1].strip(),
         fontsize=float(parts[2]),
-        primary_color=Color.from_style_str(parts[3]),
-        secondary_color=Color.from_style_str(parts[4]),
-        outline_color=Color.from_style_str(parts[5]),
-        back_color=Color.from_style_str(parts[6]),
+        primary_color=AssColor.from_style_str(parts[3]),
+        secondary_color=AssColor.from_style_str(parts[4]),
+        outline_color=AssColor.from_style_str(parts[5]),
+        back_color=AssColor.from_style_str(parts[6]),
         bold=parts[7].strip() != '0',
         italic=parts[8].strip() != '0',
         underline=parts[9].strip() != '0',

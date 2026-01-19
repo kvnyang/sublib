@@ -5,7 +5,7 @@ from typing import Literal
 
 
 @dataclass
-class Alignment:
+class AssAlignment:
     """Alignment value (numpad style 1-9).
     
     Attributes:
@@ -17,7 +17,6 @@ class Alignment:
 
 
 @dataclass
-class WrapStyle:
+class AssWrapStyle:
     """Wrap style value (0-3)."""
     style: Literal[0, 1, 2, 3]
-

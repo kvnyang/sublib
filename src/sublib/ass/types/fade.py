@@ -4,14 +4,14 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Fade:
+class AssFade:
     """Value for \\fad(fadein,fadeout) tag."""
     fadein: int
     fadeout: int
 
 
 @dataclass
-class FadeComplex:
+class AssFadeComplex:
     """Value for \\fade(a1,a2,a3,t1,t2,t3,t4) tag."""
     a1: int
     a2: int

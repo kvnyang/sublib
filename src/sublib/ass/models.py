@@ -5,7 +5,7 @@ from typing import Any
 from pathlib import Path
 
 from sublib.ass.ast import AssTextElement
-from sublib.ass.types import Color, Timestamp
+from sublib.ass.types import AssColor, AssTimestamp
 
 
 @dataclass
@@ -17,10 +17,10 @@ class AssStyle:
     name: str
     fontname: str
     fontsize: float
-    primary_color: Color
-    secondary_color: Color
-    outline_color: Color
-    back_color: Color
+    primary_color: AssColor
+    secondary_color: AssColor
+    outline_color: AssColor
+    back_color: AssColor
     bold: bool = False
     italic: bool = False
     underline: bool = False
@@ -53,8 +53,8 @@ class AssEvent:
         event.text_elements -> list[AssTextElement]
     """
     # Timing fields
-    start: Timestamp = field(default_factory=Timestamp)
-    end: Timestamp = field(default_factory=Timestamp)
+    start: AssTimestamp = field(default_factory=AssTimestamp)
+    end: AssTimestamp = field(default_factory=AssTimestamp)
     
     # ASS-specific fields
     text_elements: list[AssTextElement] = field(default_factory=list)
@@ -67,7 +67,7 @@ class AssEvent:
     effect: str = ""
     
     @property
-    def duration(self) -> Timestamp:
+    def duration(self) -> AssTimestamp:
         """Get event duration."""
         return self.end - self.start
     

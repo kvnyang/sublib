@@ -4,14 +4,14 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Position:
+class AssPosition:
     """Value for \\pos(x,y) and \\org(x,y) tags."""
     x: float
     y: float
 
 
 @dataclass
-class Move:
+class AssMove:
     """Value for \\move(x1,y1,x2,y2[,t1,t2]) tag."""
     x1: float
     y1: float

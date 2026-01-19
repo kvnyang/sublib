@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class RectClip:
+class AssRectClip:
     """Rectangle clip value."""
     x1: int
     y1: int
@@ -13,10 +13,10 @@ class RectClip:
 
 
 @dataclass
-class VectorClip:
+class AssVectorClip:
     """Vector drawing clip value."""
     drawing: str
     scale: int = 1
 
 
-ClipValue = RectClip | VectorClip
+AssClipValue = AssRectClip | AssVectorClip

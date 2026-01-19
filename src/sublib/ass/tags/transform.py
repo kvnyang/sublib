@@ -4,7 +4,7 @@ import re
 from typing import Any, ClassVar, Literal
 
 from sublib.ass.tags.base import TagCategory
-from sublib.ass.types import Transform, Karaoke
+from sublib.ass.types import AssTransform, AssKaraoke
 
 
 def _find_matching_paren(text: str, start: int) -> int:
@@ -143,7 +143,7 @@ class TTag:
         return result
     
     @staticmethod
-    def parse(raw: str) -> Transform | None:
+    def parse(raw: str) -> AssTransform | None:
         raw = raw.strip()
         
         t1: int | None = None
@@ -188,10 +188,10 @@ class TTag:
         # Parse the tags string
         parsed_tags = parse_tags_string(tags_str)
         
-        return Transform(tags=parsed_tags, t1=t1, t2=t2, accel=accel)
+        return AssTransform(tags=parsed_tags, t1=t1, t2=t2, accel=accel)
     
     @staticmethod
-    def format(val: Transform) -> str:
+    def format(val: AssTransform) -> str:
         raw_tags = val.to_raw_tags()
         if val.t1 is None and val.t2 is None and val.accel is None:
             return f"\\t({raw_tags})"

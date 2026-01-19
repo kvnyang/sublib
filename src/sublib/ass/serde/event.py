@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from sublib.ass.models import AssEvent
-from sublib.ass.types import Timestamp
+from sublib.ass.types import AssTimestamp
 from .text import AssTextParser, AssTextRenderer
 
 
@@ -35,8 +35,8 @@ def parse_event_line(
     text = parts[9]
     
     return AssEvent(
-        start=Timestamp.from_ass_str(parts[1]),
-        end=Timestamp.from_ass_str(parts[2]),
+        start=AssTimestamp.from_ass_str(parts[1]),
+        end=AssTimestamp.from_ass_str(parts[2]),
         text_elements=text_parser.parse(text, line_number=line_number),
         style=parts[3].strip(),
         layer=int(parts[0]),

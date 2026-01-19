@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Color:
+class AssColor:
     """ASS color value.
     
     ASS files use BGR format internally, but this class stores
@@ -28,14 +28,14 @@ class Color:
     a: int = 0
     
     @classmethod
-    def from_style_str(cls, s: str) -> "Color":
+    def from_style_str(cls, s: str) -> "AssColor":
         """Parse from style string (&HAABBGGRR).
         
         Args:
             s: Style color string, e.g. "&H00FFFFFF" or "&H80000000"
             
         Returns:
-            Color with parsed r, g, b, a
+            AssColor with parsed r, g, b, a
         """
         s = s.strip().lstrip("&H").rstrip("&")
         try:
@@ -49,14 +49,14 @@ class Color:
             return cls(r=0, g=0, b=0, a=0)
     
     @classmethod
-    def from_tag_str(cls, s: str) -> "Color":
+    def from_tag_str(cls, s: str) -> "AssColor":
         """Parse from tag string (&HBBGGRR&).
         
         Args:
             s: Tag color string, e.g. "&HFFFFFF&"
             
         Returns:
-            Color with parsed r, g, b (alpha defaults to 0)
+            AssColor with parsed r, g, b (alpha defaults to 0)
         """
         s = s.strip().lstrip("&H").rstrip("&")
         try:
@@ -81,7 +81,7 @@ class Color:
 
 
 @dataclass
-class Alpha:
+class AssAlpha:
     """ASS alpha value.
     
     0 = fully visible, 255 = fully transparent
