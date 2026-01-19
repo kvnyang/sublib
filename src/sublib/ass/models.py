@@ -1,4 +1,3 @@
-# sublib/ass/models.py
 """ASS file, event, and style models."""
 from __future__ import annotations
 from dataclasses import dataclass, field

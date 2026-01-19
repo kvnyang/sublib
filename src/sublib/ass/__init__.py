@@ -1,4 +1,3 @@
-# sublib/ass/__init__.py
 """ASS (Advanced SubStation Alpha v4+) subtitle format support."""
 
 from sublib.ass.models import AssFile, AssEvent, AssStyle
