@@ -5,11 +5,12 @@ These functions extract structured information from parsed AST.
 from __future__ import annotations
 from typing import Any, NamedTuple
 
-from sublib.ass.ast import (
+from .elements import (
     AssOverrideBlock, AssOverrideTag,
-    AssPlainText, AssSpecialChar, AssTextSegment,
+    AssPlainText, AssSpecialChar,
     AssTextElement,
 )
+from .segment import AssTextSegment
 from sublib.ass.tags import MUTUAL_EXCLUSIVES
 
 

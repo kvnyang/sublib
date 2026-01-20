@@ -3,14 +3,10 @@ from __future__ import annotations
 import re
 from typing import Any, Union
 
-from sublib.ass.ast import (
-    AssTextElement,
-    AssOverrideTag,
-    AssPlainText,
-    AssSpecialChar,
-    SpecialCharType,
-    AssOverrideBlock,
-    AssComment,
+from .elements import (
+    AssOverrideTag, AssComment, AssOverrideBlock,
+    SpecialCharType, AssSpecialChar, AssPlainText,
+    AssTextElement, AssBlockElement
 )
 from sublib.ass.tags import (
     TAGS,

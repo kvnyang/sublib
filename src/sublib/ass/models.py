@@ -7,7 +7,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-from sublib.ass.ast import AssTextElement
+from sublib.ass.text import AssTextElement
 from sublib.ass.types import AssColor, AssTimestamp
 
 
@@ -154,7 +154,7 @@ class AssEvent:
             return None
         
         if text_parser is None:
-            from sublib.ass.serde import AssTextParser
+            from sublib.ass.text import AssTextParser
             text_parser = AssTextParser()
         
         text = parts[9]
@@ -174,7 +174,7 @@ class AssEvent:
 
     def render(self) -> str:
         """Render AssEvent to Dialogue: line."""
-        from sublib.ass.serde import AssTextRenderer
+        from sublib.ass.text import AssTextRenderer
         text = AssTextRenderer().render(self.text_elements)
         return (
             f"Dialogue: {self.layer},{self.start.to_ass_str()},"
@@ -200,7 +200,7 @@ class AssEvent:
             style: Style name
             **kwargs: Other AssEvent fields (layer, name, etc.)
         """
-        from sublib.ass.serde import AssTextParser
+        from sublib.ass.text import AssTextParser
         
         start_ts = AssTimestamp.from_ass_str(start) if isinstance(start, str) else start
         end_ts = AssTimestamp.from_ass_str(end) if isinstance(end, str) else end
@@ -224,7 +224,7 @@ class AssEvent:
         Returns:
             ExtractionResult with event_tags dict and segments list.
         """
-        from sublib.ass.text_transform import extract_all
+        from sublib.ass.text import extract_all
         return extract_all(self.text_elements)
 
     def compose(self, event_tags=None, segments=None) -> None:
@@ -234,13 +234,13 @@ class AssEvent:
             event_tags: Event-level tags dict
             segments: Inline segments
         """
-        from sublib.ass.text_transform import compose_all
+        from sublib.ass.text import compose_all
         self.text_elements = compose_all(event_tags, segments)
 
     @staticmethod
     def compose_elements(event_tags=None, segments=None):
         """Build ASS text elements from tags and segments without updating an event."""
-        from sublib.ass.text_transform import compose_all
+        from sublib.ass.text import compose_all
         return compose_all(event_tags, segments)
 
 
@@ -512,7 +512,7 @@ class AssFile:
     @classmethod
     def loads(cls, content: str) -> "AssFile":
         """Parse ASS content from string."""
-        from sublib.ass.serde import AssTextParser
+        from sublib.ass.text import AssTextParser
         text_parser = AssTextParser()
         
         ass_file = cls()
