@@ -150,19 +150,19 @@ class AssFile:
         from sublib.ass.serde import parse_ass_string
         return parse_ass_string(content)
     
-    def get_info(self, key: str, default: Any = None) -> Any:
+    def get_script_info(self, key: str, default: Any = None) -> Any:
         """Get a value from [Script Info] section."""
         return self.script_info.get(key, default)
         
-    def set_info(self, key: str, value: Any) -> None:
+    def set_script_info(self, key: str, value: Any) -> None:
         """Set a value in [Script Info] section."""
         self.script_info[key] = value
 
-    def get_infos(self) -> dict[str, Any]:
+    def get_script_infos(self) -> dict[str, Any]:
         """Get all properties from [Script Info] section."""
         return self.script_info
 
-    def set_infos(self, info_dict: dict[str, Any]) -> None:
+    def set_script_infos(self, info_dict: dict[str, Any]) -> None:
         """Bulk update properties in [Script Info] section."""
         self.script_info.update(info_dict)
 
