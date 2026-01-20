@@ -13,11 +13,11 @@ class AssEvent:
     
     Represents a Dialogue line from the [Events] section.
     
-    Text extraction/composition:
+    Text extraction/composition (Semantic):
         event.extract_all() -> ExtractionResult(event_tags, segments)
         AssEvent.compose_all(event_tags, segments) -> list[AssTextElement]
     
-    Low-level access:
+    Low-level structure (AST):
         event.text_elements -> list[AssTextElement]
     """
     # Timing fields
@@ -124,6 +124,25 @@ class AssEvent:
         """Get event duration."""
         return self.end - self.start
     
+    @property
+    def text(self) -> str:
+        """Get or set the raw text string (Convenience/String access).
+        
+        This property provides a high-level string view of the event.
+        - Getter: Renders the underlying AST to a string.
+        - Setter: Parses the string into a new AST, replacing content.
+        
+        For precise structural manipulation, use `text_elements` (AST).
+        For semantic content extraction, use `extract()`.
+        """
+        from sublib.ass.text import AssTextRenderer
+        return AssTextRenderer().render(self.text_elements)
+
+    @text.setter
+    def text(self, value: str) -> None:
+        from sublib.ass.text import AssTextParser
+        self.text_elements = AssTextParser().parse(value)
+
     def extract(self):
         """Extract event-level tags and inline segments from text.
         
