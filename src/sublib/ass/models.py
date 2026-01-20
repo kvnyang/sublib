@@ -1,7 +1,7 @@
 """ASS file, event, and style models."""
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Iterable, TYPE_CHECKING
 from pathlib import Path
 
 from sublib.ass.ast import AssTextElement
@@ -167,12 +167,26 @@ class AssFile:
         return self.styles.get(name)
         
     def add_event(self, event: AssEvent) -> None:
-        """Add a dialogue event."""
+        """Add a single dialogue event."""
         self.events.append(event)
 
-    def get_event(self, index: int) -> AssEvent:
-        """Get event by index."""
-        return self.events[index]
+    def add_events(self, events: Iterable[AssEvent]) -> None:
+        """Add multiple dialogue events."""
+        self.events.extend(events)
+
+    def get_events(self, style: str | None = None) -> list[AssEvent]:
+        """Get all events, optionally filtered by style name."""
+        if style is None:
+            return self.events
+        return [e for e in self.events if e.style == style]
+
+    def __iter__(self):
+        """Iterate over dialogue events."""
+        return iter(self.events)
+
+    def __len__(self) -> int:
+        """Get total number of dialogue events."""
+        return len(self.events)
     
     def dumps(self, validate: bool = False) -> str:
         """Render to ASS format string.
