@@ -158,6 +158,14 @@ class AssFile:
         """Set a value in [Script Info] section."""
         self.script_info[key] = value
 
+    def get_infos(self) -> dict[str, Any]:
+        """Get all properties from [Script Info] section."""
+        return self.script_info
+
+    def set_infos(self, info_dict: dict[str, Any]) -> None:
+        """Bulk update properties in [Script Info] section."""
+        self.script_info.update(info_dict)
+
     def set_style(self, style: AssStyle) -> None:
         """Add or update a style definition."""
         self.styles[style.name] = style
@@ -165,6 +173,15 @@ class AssFile:
     def get_style(self, name: str) -> AssStyle | None:
         """Get style by name."""
         return self.styles.get(name)
+
+    def get_styles(self) -> list[AssStyle]:
+        """Get all style definitions."""
+        return list(self.styles.values())
+
+    def set_styles(self, styles: Iterable[AssStyle]) -> None:
+        """Bulk add or update style definitions."""
+        for s in styles:
+            self.set_style(s)
         
     def add_event(self, event: AssEvent) -> None:
         """Add a single dialogue event."""
