@@ -1,0 +1,198 @@
+"""ASS Event models."""
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Any, Iterable
+
+from sublib.ass.text import AssTextElement
+from sublib.ass.types import AssTimestamp
+
+
+@dataclass
+class AssEvent:
+    """ASS dialogue event.
+    
+    Represents a Dialogue line from the [Events] section.
+    
+    Text extraction/composition:
+        event.extract_all() -> ExtractionResult(event_tags, segments)
+        AssEvent.compose_all(event_tags, segments) -> list[AssTextElement]
+    
+    Low-level access:
+        event.text_elements -> list[AssTextElement]
+    """
+    # Timing fields
+    start: AssTimestamp = field(default_factory=AssTimestamp)
+    end: AssTimestamp = field(default_factory=AssTimestamp)
+    
+    # ASS-specific fields
+    text_elements: list[AssTextElement] = field(default_factory=list)
+    style: str = "Default"
+    layer: int = 0
+    name: str = ""
+    margin_l: int = 0
+    margin_r: int = 0
+    margin_v: int = 0
+    effect: str = ""
+
+    @classmethod
+    def from_ass_line(
+        cls,
+        line: str,
+        text_parser: Any | None = None,
+        line_number: int = 0
+    ) -> AssEvent | None:
+        """Parse a Dialogue: line to AssEvent.
+        
+        Args:
+            line: Dialogue line (e.g., "Dialogue: 0,0:00:00.00,...")
+            text_parser: Parser for text field, creates one if not provided
+            line_number: Source line number for error reporting
+            
+        Returns:
+            AssEvent or None if parsing fails
+        """
+        if not line.startswith('Dialogue:'):
+            return None
+        
+        # Split into 10 parts (last part is text, may contain commas)
+        parts = line[9:].split(',', 9)
+        if len(parts) < 10:
+            return None
+        
+        if text_parser is None:
+            from sublib.ass.text import AssTextParser
+            text_parser = AssTextParser()
+        
+        text = parts[9]
+        
+        return cls(
+            start=AssTimestamp.from_ass_str(parts[1]),
+            end=AssTimestamp.from_ass_str(parts[2]),
+            text_elements=text_parser.parse(text, line_number=line_number),
+            style=parts[3].strip(),
+            layer=int(parts[0]),
+            name=parts[4].strip(),
+            margin_l=int(parts[5]),
+            margin_r=int(parts[6]),
+            margin_v=int(parts[7]),
+            effect=parts[8].strip(),
+        )
+
+    def render(self) -> str:
+        """Render AssEvent to Dialogue: line."""
+        from sublib.ass.text import AssTextRenderer
+        text = AssTextRenderer().render(self.text_elements)
+        return (
+            f"Dialogue: {self.layer},{self.start.to_ass_str()},"
+            f"{self.end.to_ass_str()},{self.style},{self.name},"
+            f"{self.margin_l},{self.margin_r},{self.margin_v},{self.effect},{text}"
+        )
+
+    @classmethod
+    def create(
+        cls,
+        text: str,
+        start: str | AssTimestamp = "0:00:00.00",
+        end: str | AssTimestamp = "0:00:05.00",
+        style: str = "Default",
+        **kwargs
+    ) -> AssEvent:
+        """Convenience factory to create an event from raw text.
+        
+        Args:
+            text: Raw ASS text (may contain tags like {\\b1}Hello)
+            start: Start time (string or AssTimestamp)
+            end: End time (string or AssTimestamp)
+            style: Style name
+            **kwargs: Other AssEvent fields (layer, name, etc.)
+        """
+        from sublib.ass.text import AssTextParser
+        
+        start_ts = AssTimestamp.from_ass_str(start) if isinstance(start, str) else start
+        end_ts = AssTimestamp.from_ass_str(end) if isinstance(end, str) else end
+        
+        return cls(
+            start=start_ts,
+            end=end_ts,
+            text_elements=AssTextParser().parse(text),
+            style=style,
+            **kwargs
+        )
+    
+    @property
+    def duration(self) -> AssTimestamp:
+        """Get event duration."""
+        return self.end - self.start
+    
+    def extract(self):
+        """Extract event-level tags and inline segments from text.
+        
+        Returns:
+            ExtractionResult with event_tags dict and segments list.
+        """
+        from sublib.ass.text import extract_all
+        return extract_all(self.text_elements)
+
+    def compose(self, event_tags=None, segments=None) -> None:
+        """Update event text from semantic tags and segments.
+        
+        Args:
+            event_tags: Event-level tags dict
+            segments: Inline segments
+        """
+        from sublib.ass.text import compose_all
+        self.text_elements = compose_all(event_tags, segments)
+
+    @staticmethod
+    def compose_elements(event_tags=None, segments=None):
+        """Build ASS text elements from tags and segments without updating an event."""
+        from sublib.ass.text import compose_all
+        return compose_all(event_tags, segments)
+
+
+class AssEvents:
+    """Intelligent container for [Events] section."""
+    def __init__(self, data: list[AssEvent] | None = None):
+        self._data = data if data is not None else []
+
+    def __getitem__(self, index: int) -> AssEvent:
+        return self._data[index]
+
+    def __setitem__(self, index: int, event: AssEvent) -> None:
+        self._data[index] = event
+
+    def __delitem__(self, index: int) -> None:
+        del self._data[index]
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def append(self, event: AssEvent) -> None:
+        self._data.append(event)
+
+    add = append
+
+    def add_all(self, events: Iterable[AssEvent]) -> None:
+        self._data.extend(events)
+
+    def set_all(self, events: Iterable[AssEvent]) -> None:
+        """Replace all dialogue events."""
+        self._data.clear()
+        self._data.extend(events)
+
+    def add_from_line(self, line: str, text_parser: Any | None = None, line_number: int = 0) -> AssEvent | None:
+        """Parse and add an event from an ASS line."""
+        event = AssEvent.from_ass_line(line, text_parser=text_parser, line_number=line_number)
+        if event:
+            self.append(event)
+        return event
+
+    def filter(self, style: str | None = None) -> list[AssEvent]:
+        """Get events, optionally filtered by style name."""
+        if style is None:
+            return list(self._data)
+        target = style.lower()
+        return [e for e in self._data if e.style.lower() == target]
