@@ -143,13 +143,62 @@ class LrcFile:
     @classmethod
     def loads(cls, content: str) -> LrcFile:
         """Parse LRC content from string."""
-        from sublib.lrc.parser import LrcParser
-        return LrcParser().parse(content)
+        import re
+        TIMESTAMP_REGEX = re.compile(r"\[(\d{2}:\d{2}\.\d{2,3})\]")
+        TAG_REGEX = re.compile(r"\[([a-zA-Z]+):(.+)\]")
+
+        lrc_file = cls()
+        lines = content.splitlines()
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Find all timestamps in the line
+            timestamps = TIMESTAMP_REGEX.findall(line)
+            
+            if timestamps:
+                # Remove all timestamps to get text
+                clean_text = TIMESTAMP_REGEX.sub("", line).strip()
+                
+                for ts_str in timestamps:
+                    try:
+                        ts = LrcTimestamp.from_string(f"[{ts_str}]")
+                        lrc_file.lines.append(LrcLine(timestamp=ts, text=clean_text))
+                    except ValueError:
+                        continue
+            else:
+                # Try parsing as metadata tag
+                tag_match = TAG_REGEX.match(line)
+                if tag_match:
+                    key, value = tag_match.groups()
+                    lrc_file.metadata[key.strip()] = value.strip()
+        
+        # Sort lines by timestamp
+        lrc_file.lines._data.sort(key=lambda x: x.timestamp)
+        return lrc_file
 
     def dumps(self) -> str:
         """Render LRC file to string."""
-        from sublib.lrc.renderer import LrcRenderer
-        return LrcRenderer().render(self)
+        buffer = []
+        preferred_order = ["ti", "ar", "al", "by", "offset"]
+        
+        for key in preferred_order:
+            if key in self.metadata:
+                buffer.append(f"[{key}:{self.metadata[key]}]")
+        
+        for key, value in self.metadata.items():
+            if key not in preferred_order:
+                buffer.append(f"[{key}:{value}]")
+        
+        if buffer:
+            buffer.append("")
+            
+        for line in self.lines:
+            buffer.append(str(line))
+            
+        return "\n".join(buffer)
 
     @classmethod
     def load(cls, path: Path | str) -> LrcFile:

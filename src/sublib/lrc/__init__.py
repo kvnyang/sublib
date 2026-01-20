@@ -3,8 +3,6 @@
 Supports parsing and rendering of LRC files.
 """
 from sublib.lrc.models import LrcFile, LrcLine, LrcTimestamp
-from sublib.lrc.parser import LrcParser
-from sublib.lrc.renderer import LrcRenderer
 from pathlib import Path
 
 
@@ -38,6 +36,4 @@ __all__ = [
     "LrcFile",
     "LrcLine",
     "LrcTimestamp",
-    "LrcParser",
-    "LrcRenderer",
 ]
