@@ -14,8 +14,8 @@ class AssEvent:
     Represents a Dialogue line from the [Events] section.
     
     Text extraction/composition (Semantic):
-        event.extract_all() -> ExtractionResult(event_tags, segments)
-        AssEvent.compose_all(event_tags, segments) -> list[AssTextElement]
+        event.extract_event_tags_and_segments() -> (event_tags, segments)
+        event.build_text_elements(event_tags, segments) -> None
     
     Low-level structure (AST):
         event.text_elements -> list[AssTextElement]
@@ -143,24 +143,24 @@ class AssEvent:
         from sublib.ass.text import AssTextParser
         self.text_elements = AssTextParser().parse(value)
 
-    def extract(self):
+    def extract_event_tags_and_segments(self):
         """Extract event-level tags and inline segments from text.
         
         Returns:
-            ExtractionResult with event_tags dict and segments list.
+            tuple of (event_tags dict, segments list).
         """
-        from sublib.ass.text import extract_all
-        return extract_all(self.text_elements)
+        from sublib.ass.text import extract_event_tags_and_segments
+        return extract_event_tags_and_segments(self.text_elements)
 
-    def compose(self, event_tags=None, segments=None) -> None:
+    def build_text_elements(self, event_tags=None, segments=None) -> None:
         """Update event text from semantic tags and segments.
         
         Args:
             event_tags: Event-level tags dict
             segments: Inline segments
         """
-        from sublib.ass.text import compose_all
-        self.text_elements = compose_all(event_tags, segments)
+        from sublib.ass.text import build_text_elements
+        self.text_elements = build_text_elements(event_tags, segments)
 
 
 

@@ -1,7 +1,7 @@
 """ASS (Advanced SubStation Alpha v4+) subtitle format support."""
 
 from sublib.ass.models import AssFile, AssEvent, AssStyle
-from sublib.ass.text import AssTextParser, AssTextRenderer, ExtractionResult, compose_all
+from sublib.ass.text import AssTextParser, AssTextRenderer, build_text_elements
 from sublib.ass.types import AssColor, AssTimestamp
 from pathlib import Path
 
@@ -26,14 +26,14 @@ def dumps(ass_file: AssFile) -> str:
     return ass_file.dumps()
 
 
-def extract(event: AssEvent):
+def extract_event_tags_and_segments(event: AssEvent):
     """Semantic helper to extract tags and segments from an event."""
-    return event.extract()
+    return event.extract_event_tags_and_segments()
 
 
-def compose(event_tags=None, segments=None) -> list:
+def build_text_elements(event_tags=None, segments=None) -> list:
     """Semantic helper to build ASS text elements."""
-    return compose_all(event_tags, segments)
+    return build_text_elements(event_tags, segments)
 
 
 __all__ = [
@@ -42,8 +42,8 @@ __all__ = [
     "loads",
     "dump",
     "dumps",
-    "extract",
-    "compose",
+    "extract_event_tags_and_segments",
+    "build_text_elements",
     # Models
     "AssFile",
     "AssEvent",
@@ -52,7 +52,7 @@ __all__ = [
     "AssTextParser",
     "AssTextRenderer",
     # Types
-    "ExtractionResult",
+    "AssTextRenderer",
     "AssColor",
     "AssTimestamp",
 ]

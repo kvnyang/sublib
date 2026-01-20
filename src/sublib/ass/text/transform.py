@@ -14,89 +14,68 @@ from .segment import AssTextSegment
 from sublib.ass.tags import MUTUAL_EXCLUSIVES
 
 
-class ExtractionResult(NamedTuple):
-    """Result of extracting tags from ASS text elements."""
-    event_tags: dict[str, Any]
-    """Event-level tags (e.g., pos, an, move) with first-wins/last-wins rules applied."""
-    
-    segments: list[AssTextSegment]
-    """Inline segments with formatting and text content."""
 
-
-def extract_all(elements: list[AssTextElement]) -> ExtractionResult:
-    """Extract both event-level tags and inline segments in one pass.
+def extract_event_tags_and_segments(elements: list[AssTextElement]) -> tuple[dict[str, Any], list[AssTextSegment]]:
+    """Extract event-level tags and inline segments using a Differential Model.
     
-    This is the primary extraction function that combines:
-    - Event-level tag extraction (with first-wins/last-wins and mutual exclusion)
-    - Inline segment extraction (with formatting tags per segment)
-    
-    Args:
-        elements: Parsed AST elements from parser
-        
-    Returns:
-        ExtractionResult with event_tags dict and segments list.
-        
-    Example:
-        result = extract_all(elements)
-        pos = result.event_tags.get("pos")
-        for seg in result.segments:
-            print(seg.content, seg.block_tags)
+    Rules:
+    - Continuous blocks are merged into one set of tags for the next segment.
+    - \r clears all previous tags within the current tag collection scope.
+    - Segments are emitted only when content (text/special chars) is encountered.
+    - Tags are NOT accumulated across segments (Differential).
     """
-    # Event-level tag collection
     event_tags: dict[str, Any] = {}
     seen_first_win: set[str] = set()
     
-    # Segment collection
     segments: list[AssTextSegment] = []
     pending_tags: dict[str, Any] = {}
     current_content: list[AssPlainText | AssSpecialChar] = []
-    
+
     def apply_event_level_rules(tag: AssOverrideTag) -> None:
-        """Apply first-wins/last-wins and mutual exclusion for event-level tags."""
         name = tag.name
+        # Reset clears event-level tags too if it were present here
+        if name == 'r':
+            event_tags.clear()
+            seen_first_win.clear()
+            event_tags[name] = tag.value
+            return
+
         exclusives = MUTUAL_EXCLUSIVES.get(name, set())
-        
-        # If a mutually exclusive first-wins tag exists, skip
         if any(ex in seen_first_win for ex in exclusives):
             return
-        
-        # First-wins: skip if already seen
         if tag.first_wins:
             if name in seen_first_win:
                 return
             seen_first_win.add(name)
-        
-        # Remove mutually exclusive tags (last-wins behavior)
         for excl in exclusives:
             event_tags.pop(excl, None)
-        
         event_tags[name] = tag.value
-    
+
     def apply_inline_rules(tag: AssOverrideTag) -> None:
-        """Apply last-wins and mutual exclusion for inline tags."""
         name = tag.name
+        # Intra-block reset: clear all pending tags
+        if name == 'r':
+            pending_tags.clear()
+            pending_tags[name] = tag.value
+            return
+
         exclusives = MUTUAL_EXCLUSIVES.get(name, set())
-        
-        # Remove mutually exclusive tags
         for excl in exclusives:
             pending_tags.pop(excl, None)
-        
-        # Last-wins: overwrite
         pending_tags[name] = tag.value
-    
-    # Single pass through elements
+
+    # Group continuous blocks and associate with text
     for elem in elements:
         if isinstance(elem, AssOverrideBlock):
-            # New block after content = new segment
+            # If we were collecting content, it means a new block group has started
             if current_content:
                 segments.append(AssTextSegment(
                     block_tags=pending_tags.copy(),
                     content=current_content.copy()
                 ))
-                pending_tags = {}
                 current_content = []
+                pending_tags = {} # Clear for differential behavior
             
-            # Process tags in block
             for item in elem.elements:
                 if isinstance(item, AssOverrideTag):
                     if item.is_event_level:
@@ -104,30 +83,27 @@ def extract_all(elements: list[AssTextElement]) -> ExtractionResult:
                     else:
                         apply_inline_rules(item)
         
-        elif isinstance(elem, AssPlainText):
+        elif isinstance(elem, (AssPlainText, AssSpecialChar)):
             current_content.append(elem)
-        
-        elif isinstance(elem, AssSpecialChar):
-            current_content.append(elem)
-    
-    # Final segment
+
+    # Final segment emission
     if current_content:
         segments.append(AssTextSegment(
             block_tags=pending_tags,
             content=current_content
         ))
     
-    return ExtractionResult(event_tags=event_tags, segments=segments)
+    return event_tags, segments
 
 
-def compose_all(
+def build_text_elements(
     event_tags: dict[str, Any] | None = None,
     segments: list[AssTextSegment] | None = None
 ) -> list[AssTextElement]:
-    """Compose ASS text elements from event tags and segments.
+    """Build ASS text elements from event tags and segments.
     
-    This is the inverse of extract_all(). It builds AssTextElement list
-    that can be rendered to ASS text using AssTextRenderer.
+    This is the inverse of extract_event_tags_and_segments(). It constructs
+    an AssTextElement list ready for rendering.
     
     Args:
         event_tags: Event-level tags (e.g., {"pos": Position(...), "an": 8})
@@ -137,7 +113,7 @@ def compose_all(
         List of AssTextElement (AssOverrideBlock, AssPlainText, AssSpecialChar)
         
     Example:
-        elements = compose_all(
+        elements = build_text_elements(
             event_tags={"pos": Position(100, 200), "an": 8},
             segments=[AssTextSegment(block_tags={"b": True}, content=[...])]
         )

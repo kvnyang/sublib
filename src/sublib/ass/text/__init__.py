@@ -15,7 +15,7 @@ from .elements import (
 )
 from .segment import AssTextSegment
 from .parser import AssTextParser, AssTextRenderer
-from .transform import ExtractionResult, extract_all, compose_all
+from .transform import extract_event_tags_and_segments, build_text_elements
 
 __all__ = [
     # AST Elements
@@ -32,7 +32,6 @@ __all__ = [
     "AssTextParser",
     "AssTextRenderer",
     # Transformations
-    "ExtractionResult",
-    "extract_all",
-    "compose_all",
+    "extract_event_tags_and_segments",
+    "build_text_elements",
 ]
