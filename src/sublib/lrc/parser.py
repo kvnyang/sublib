@@ -2,7 +2,7 @@
 from __future__ import annotations
 import re
 
-from sublib.lyrics.models import LrcFile, LrcLine, LrcTimestamp
+from sublib.lrc.models import LrcFile, LrcLine, LrcTimestamp
 
 
 class LrcParser:

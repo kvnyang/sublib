@@ -65,50 +65,76 @@ class AssEvent:
     margin_r: int = 0
     margin_v: int = 0
     effect: str = ""
+
+    @classmethod
+    def create(
+        cls,
+        text: str,
+        start: str | AssTimestamp = "0:00:00.00",
+        end: str | AssTimestamp = "0:00:05.00",
+        style: str = "Default",
+        **kwargs
+    ) -> AssEvent:
+        """Convenience factory to create an event from raw text.
+        
+        Args:
+            text: Raw ASS text (may contain tags like {\\b1}Hello)
+            start: Start time (string or AssTimestamp)
+            end: End time (string or AssTimestamp)
+            style: Style name
+            **kwargs: Other AssEvent fields (layer, name, etc.)
+        """
+        from sublib.ass.serde import AssTextParser
+        
+        start_ts = AssTimestamp.from_ass_str(start) if isinstance(start, str) else start
+        end_ts = AssTimestamp.from_ass_str(end) if isinstance(end, str) else end
+        
+        return cls(
+            start=start_ts,
+            end=end_ts,
+            text_elements=AssTextParser().parse(text),
+            style=style,
+            **kwargs
+        )
     
     @property
     def duration(self) -> AssTimestamp:
         """Get event duration."""
         return self.end - self.start
     
-    def extract_all(self):
+    def extract(self):
         """Extract event-level tags and inline segments from text.
         
         Returns:
             ExtractionResult with event_tags dict and segments list.
-            
-        Example:
-            result = event.extract_all()
-            pos = result.event_tags.get("pos")
-            for seg in result.segments:
-                print(seg.content, seg.block_tags)
         """
         from sublib.ass.text_transform import extract_all
         return extract_all(self.text_elements)
-    
-    @staticmethod
-    def compose_all(event_tags=None, segments=None):
-        """Compose ASS text elements from event tags and segments.
-        
-        This is the inverse of extract_all(). It builds AssTextElement list
-        that can be assigned to event.text_elements.
+
+    def compose(self, event_tags=None, segments=None) -> None:
+        """Update event text from semantic tags and segments.
         
         Args:
-            event_tags: Event-level tags dict (e.g., {"pos": Position(...), "an": 8})
-            segments: Inline segments with formatting and text content
-            
-        Returns:
-            List of AssTextElement (AssOverrideBlock, AssPlainText, AssSpecialChar)
-            
-        Example:
-            elements = AssEvent.compose_all(
-                event_tags={"pos": Position(100, 200)},
-                segments=[AssTextSegment(block_tags={"b": True}, content=[...])]
-            )
-            event.text_elements = elements
+            event_tags: Event-level tags dict
+            segments: Inline segments
         """
         from sublib.ass.text_transform import compose_all
+        self.text_elements = compose_all(event_tags, segments)
+
+    @staticmethod
+    def compose_elements(event_tags=None, segments=None):
+        """Build ASS text elements from tags and segments without updating an event."""
+        from sublib.ass.text_transform import compose_all
         return compose_all(event_tags, segments)
+
+    def extract_all(self):
+        """Deprecated: Use extract() instead."""
+        return self.extract()
+
+    @staticmethod
+    def compose_all(event_tags=None, segments=None):
+        """Deprecated: Use compose_elements() or event.compose() instead."""
+        return AssEvent.compose_elements(event_tags, segments)
 
 
 @dataclass
@@ -129,18 +155,21 @@ class AssFile:
     
     @classmethod
     def from_string(cls, content: str) -> "AssFile":
-        """Parse ASS content from string.
-        
-        Validation warnings are logged at WARNING level.
-        """
-        import logging
+        """Parse ASS content from string."""
         from sublib.ass.serde import parse_ass_string
+        return parse_ass_string(content)
+    
+    def add_style(self, style: AssStyle) -> None:
+        """Add or update a style definition."""
+        self.styles[style.name] = style
         
-        ass_file = parse_ass_string(content)
-        # Log validation warnings
-        for warning in ass_file._validate_styles():
-            logging.getLogger(__name__).warning(warning)
-        return ass_file
+    def get_style(self, name: str) -> AssStyle | None:
+        """Get style by name."""
+        return self.styles.get(name)
+        
+    def add_event(self, event: AssEvent) -> None:
+        """Add a dialogue event."""
+        self.events.append(event)
     
     def to_string(self, validate: bool = False) -> str:
         """Render to ASS format string.

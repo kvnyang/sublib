@@ -65,3 +65,44 @@ class LrcFile:
     """Represents a full LRC file."""
     metadata: dict[str, str] = field(default_factory=dict)
     lines: list[LrcLine] = field(default_factory=list)
+
+    @classmethod
+    def from_string(cls, content: str) -> LrcFile:
+        """Parse LRC content from string."""
+        from sublib.lrc.parser import LrcParser
+        return LrcParser().parse(content)
+
+    def to_string(self) -> str:
+        """Render LRC file to string."""
+        from sublib.lrc.renderer import LrcRenderer
+        return LrcRenderer().render(self)
+
+    @classmethod
+    def load(cls, path: Path | str) -> LrcFile:
+        """Load LRC file from path."""
+        from sublib.io import read_text_file
+        content = read_text_file(path, encoding='utf-8-sig')
+        return cls.from_string(content)
+
+    def save(self, path: Path | str) -> None:
+        """Save to file."""
+        from sublib.io import write_text_file
+        content = self.to_string()
+        write_text_file(path, content, encoding='utf-8-sig')
+
+    def add_line(self, timestamp: str | timedelta | LrcTimestamp, text: str) -> None:
+        """Add a lyrics line.
+        
+        Args:
+            timestamp: Time as [mm:ss.xx] string, timedelta, or LrcTimestamp object.
+            text: Lyrics text content.
+        """
+        if isinstance(timestamp, str):
+            ts = LrcTimestamp.from_string(timestamp if timestamp.startswith("[") else f"[{timestamp}]")
+        elif isinstance(timestamp, timedelta):
+            ts = LrcTimestamp.from_timedelta(timestamp)
+        else:
+            ts = timestamp
+            
+        self.lines.append(LrcLine(timestamp=ts, text=text))
+        self.lines.sort(key=lambda x: x.timestamp)

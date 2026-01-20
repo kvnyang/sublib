@@ -1,7 +1,7 @@
 """LRC lyrics renderer."""
 from __future__ import annotations
 
-from sublib.lyrics.models import LrcFile
+from sublib.lrc.models import LrcFile
 
 
 class LrcRenderer:
