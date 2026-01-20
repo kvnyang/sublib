@@ -5,9 +5,7 @@ from typing import Any
 
 from sublib.ass.models import AssFile
 from .text import AssTextParser
-from .style import parse_style_line, render_style_line
-from .event import parse_event_line, render_event_line
-from .script_info import parse_script_info_line, render_script_info_line
+from .script_info import parse_script_info_line
 
 logger = logging.getLogger(__name__)
 
@@ -47,17 +45,11 @@ def parse_ass_string(content: str) -> AssFile:
         
         elif current_section in ('v4 styles', 'v4+ styles'):
             if line.startswith('Style:'):
-                style = parse_style_line(line)
-                if style:
-                    if style.name in ass_file.styles:
-                        logger.warning(f"Duplicate style name: {style.name}")
-                    ass_file.styles[style.name] = style
+                ass_file.styles.add_from_line(line)
         
         elif current_section == 'events':
             if line.startswith('Dialogue:'):
-                event = parse_event_line(line, text_parser, line_number)
-                if event:
-                    ass_file.events.append(event)
+                ass_file.events.add_from_line(line, text_parser, line_number)
     
     return ass_file
 
@@ -75,6 +67,7 @@ def render_ass_string(ass_file: AssFile) -> str:
     
     # Script Info
     lines.append('[Script Info]')
+    from .script_info import render_script_info_line
     for key, value in ass_file.script_info.items():
         lines.append(render_script_info_line(key, value))
     lines.append('')
@@ -85,14 +78,14 @@ def render_ass_string(ass_file: AssFile) -> str:
                  'OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
                  'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, '
                  'Alignment, MarginL, MarginR, MarginV, Encoding')
-    for style in ass_file.styles.values():
-        lines.append(render_style_line(style))
+    for style in ass_file.styles:
+        lines.append(style.render())
     lines.append('')
     
     # Events
     lines.append('[Events]')
     lines.append('Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text')
     for event in ass_file.events:
-        lines.append(render_event_line(event))
+        lines.append(event.render())
     
     return '\n'.join(lines)

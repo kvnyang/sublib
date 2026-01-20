@@ -41,6 +41,65 @@ class AssStyle:
     margin_v: int = 10
     encoding: int = 1
 
+    @classmethod
+    def from_ass_line(cls, line: str) -> AssStyle | None:
+        """Parse a Style: line to AssStyle.
+        
+        Args:
+            line: Style line (e.g., "Style: Default,Arial,20,...")
+            
+        Returns:
+            AssStyle or None if parsing fails
+        """
+        if not line.startswith('Style:'):
+            return None
+        
+        parts = line[6:].split(',')
+        if len(parts) < 23:
+            return None
+        
+        return cls(
+            name=parts[0].strip(),
+            fontname=parts[1].strip(),
+            fontsize=float(parts[2]),
+            primary_color=AssColor.from_style_str(parts[3]),
+            secondary_color=AssColor.from_style_str(parts[4]),
+            outline_color=AssColor.from_style_str(parts[5]),
+            back_color=AssColor.from_style_str(parts[6]),
+            bold=parts[7].strip() != '0',
+            italic=parts[8].strip() != '0',
+            underline=parts[9].strip() != '0',
+            strikeout=parts[10].strip() != '0',
+            scale_x=float(parts[11]),
+            scale_y=float(parts[12]),
+            spacing=float(parts[13]),
+            angle=float(parts[14]),
+            border_style=int(parts[15]),
+            outline=float(parts[16]),
+            shadow=float(parts[17]),
+            alignment=int(parts[18]),
+            margin_l=int(parts[19]),
+            margin_r=int(parts[20]),
+            margin_v=int(parts[21]),
+            encoding=int(parts[22]),
+        )
+
+    def render(self) -> str:
+        """Render AssStyle to Style: line."""
+        from sublib.ass.tags.base import _format_float
+        return (
+            f"Style: {self.name},{self.fontname},{_format_float(self.fontsize)},"
+            f"{self.primary_color.to_style_str()},"
+            f"{self.secondary_color.to_style_str()},"
+            f"{self.outline_color.to_style_str()},"
+            f"{self.back_color.to_style_str()},"
+            f"{int(self.bold)},{int(self.italic)},{int(self.underline)},{int(self.strikeout)},"
+            f"{_format_float(self.scale_x)},{_format_float(self.scale_y)},"
+            f"{_format_float(self.spacing)},{_format_float(self.angle)},"
+            f"{self.border_style},{_format_float(self.outline)},{_format_float(self.shadow)},"
+            f"{self.alignment},{self.margin_l},{self.margin_r},{self.margin_v},{self.encoding}"
+        )
+
 
 @dataclass
 class AssEvent:
@@ -68,6 +127,60 @@ class AssEvent:
     margin_r: int = 0
     margin_v: int = 0
     effect: str = ""
+
+    @classmethod
+    def from_ass_line(
+        cls,
+        line: str,
+        text_parser: Any | None = None,
+        line_number: int = 0
+    ) -> AssEvent | None:
+        """Parse a Dialogue: line to AssEvent.
+        
+        Args:
+            line: Dialogue line (e.g., "Dialogue: 0,0:00:00.00,...")
+            text_parser: Parser for text field, creates one if not provided
+            line_number: Source line number for error reporting
+            
+        Returns:
+            AssEvent or None if parsing fails
+        """
+        if not line.startswith('Dialogue:'):
+            return None
+        
+        # Split into 10 parts (last part is text, may contain commas)
+        parts = line[9:].split(',', 9)
+        if len(parts) < 10:
+            return None
+        
+        if text_parser is None:
+            from sublib.ass.serde import AssTextParser
+            text_parser = AssTextParser()
+        
+        text = parts[9]
+        
+        return cls(
+            start=AssTimestamp.from_ass_str(parts[1]),
+            end=AssTimestamp.from_ass_str(parts[2]),
+            text_elements=text_parser.parse(text, line_number=line_number),
+            style=parts[3].strip(),
+            layer=int(parts[0]),
+            name=parts[4].strip(),
+            margin_l=int(parts[5]),
+            margin_r=int(parts[6]),
+            margin_v=int(parts[7]),
+            effect=parts[8].strip(),
+        )
+
+    def render(self) -> str:
+        """Render AssEvent to Dialogue: line."""
+        from sublib.ass.serde import AssTextRenderer
+        text = AssTextRenderer().render(self.text_elements)
+        return (
+            f"Dialogue: {self.layer},{self.start.to_ass_str()},"
+            f"{self.end.to_ass_str()},{self.style},{self.name},"
+            f"{self.margin_l},{self.margin_r},{self.margin_v},{self.effect},{text}"
+        )
 
     @classmethod
     def create(
@@ -289,6 +402,13 @@ class AssStylesView:
         for s in styles:
             self.set(s)
 
+    def add_from_line(self, line: str) -> AssStyle | None:
+        """Parse and add a style from an ASS line."""
+        style = AssStyle.from_ass_line(line)
+        if style:
+            self.set(style)
+        return style
+
     def add_all(self, styles: Iterable[AssStyle]) -> None:
         """Merge/Update style definitions."""
         for s in styles:
@@ -336,6 +456,13 @@ class AssEventsView:
         """Replace all dialogue events."""
         self._data.clear()
         self._data.extend(events)
+
+    def add_from_line(self, line: str, text_parser: Any | None = None, line_number: int = 0) -> AssEvent | None:
+        """Parse and add an event from an ASS line."""
+        event = AssEvent.from_ass_line(line, text_parser=text_parser, line_number=line_number)
+        if event:
+            self.append(event)
+        return event
 
     def filter(self, style: str | None = None) -> list[AssEvent]:
         """Get events, optionally filtered by style name."""
