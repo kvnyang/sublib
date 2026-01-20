@@ -110,8 +110,22 @@ class LrcLines:
     def __iter__(self):
         return iter(self._data)
 
-    def add(self, timestamp: str | timedelta | LrcTimestamp, text: str) -> None:
-        """Add a lyrics line."""
+    def append(self, line_or_timestamp: LrcLine | str | timedelta | LrcTimestamp, text: str | None = None) -> None:
+        """Append a lyrics line.
+        
+        Can be called with:
+        - append(line: LrcLine)
+        - append(timestamp, text)
+        """
+        if isinstance(line_or_timestamp, LrcLine):
+            self._data.append(line_or_timestamp)
+            return
+
+        # Argument unpacking mode
+        timestamp = line_or_timestamp
+        if text is None:
+            raise ValueError("Text must be provided when appending by timestamp")
+
         if isinstance(timestamp, str):
             ts = LrcTimestamp.from_string(timestamp)
         elif isinstance(timestamp, timedelta):
@@ -119,10 +133,6 @@ class LrcLines:
         else:
             ts = timestamp
         self._data.append(LrcLine(ts, text))
-
-    def append(self, line: LrcLine) -> None:
-        """Append a pre-constructed LrcLine."""
-        self._data.append(line)
 
     def sort(self, **kwargs):
         self._data.sort(**kwargs)
@@ -213,10 +223,6 @@ class LrcFile:
         content = self.dumps()
         write_text_file(path, content, encoding='utf-8-sig')
 
-    @property
-    def add_line(self):
-        """Legacy helper for addition."""
-        return self.lines.add
 
     def __iter__(self):
         return iter(self.lines)

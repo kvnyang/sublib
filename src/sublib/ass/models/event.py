@@ -173,8 +173,6 @@ class AssEvents:
     def append(self, event: AssEvent) -> None:
         self._data.append(event)
 
-    add = append
-
     def add_all(self, events: Iterable[AssEvent]) -> None:
         self._data.extend(events)
 
