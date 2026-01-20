@@ -166,10 +166,6 @@ class AssFile:
         """Replace all properties in [Script Info] section."""
         self.script_info = dict(info_dict)
 
-    def add_script_infos(self, info_dict: dict[str, Any]) -> None:
-        """Merge/Update properties in [Script Info] section."""
-        self.script_info.update(info_dict)
-
     def set_style(self, style: AssStyle) -> None:
         """Add or update a style definition."""
         self.styles[style.name] = style
@@ -186,11 +182,6 @@ class AssFile:
         """Replace all style definitions."""
         self.styles = {s.name: s for s in styles}
 
-    def add_styles(self, styles: Iterable[AssStyle]) -> None:
-        """Merge/Update style definitions."""
-        for s in styles:
-            self.set_style(s)
-        
     def add_event(self, event: AssEvent) -> None:
         """Add a single dialogue event."""
         self.events.append(event)
@@ -198,10 +189,6 @@ class AssFile:
     def set_events(self, events: Iterable[AssEvent]) -> None:
         """Replace all dialogue events."""
         self.events = list(events)
-
-    def add_events(self, events: Iterable[AssEvent]) -> None:
-        """Append multiple dialogue events."""
-        self.events.extend(events)
 
     def get_events(self, style: str | None = None) -> list[AssEvent]:
         """Get all events, optionally filtered by style name."""
