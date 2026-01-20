@@ -162,11 +162,6 @@ class AssEvent:
         from sublib.ass.text import compose_all
         self.text_elements = compose_all(event_tags, segments)
 
-    @staticmethod
-    def compose_elements(event_tags=None, segments=None):
-        """Build ASS text elements from tags and segments without updating an event."""
-        from sublib.ass.text import compose_all
-        return compose_all(event_tags, segments)
 
 
 class AssEvents:
