@@ -150,6 +150,14 @@ class AssFile:
         from sublib.ass.serde import parse_ass_string
         return parse_ass_string(content)
     
+    def get_info(self, key: str, default: Any = None) -> Any:
+        """Get a value from [Script Info] section."""
+        return self.script_info.get(key, default)
+        
+    def set_info(self, key: str, value: Any) -> None:
+        """Set a value in [Script Info] section."""
+        self.script_info[key] = value
+
     def add_style(self, style: AssStyle) -> None:
         """Add or update a style definition."""
         self.styles[style.name] = style
