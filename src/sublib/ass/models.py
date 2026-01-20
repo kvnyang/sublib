@@ -244,7 +244,7 @@ class AssEvent:
         return compose_all(event_tags, segments)
 
 
-class AssScriptInfoView:
+class AssScriptInfo:
     """Intelligent container for [Script Info] section with automatic type conversion and validation."""
     
     KNOWN_FIELDS = {
@@ -302,7 +302,7 @@ class AssScriptInfoView:
         if canonical in self._data:
             return self._data[canonical]
             
-        raise AttributeError(f"'AssScriptInfoView' object has no attribute '{name}'")
+        raise AttributeError(f"'AssScriptInfo' object has no attribute '{name}'")
 
     def __delitem__(self, key: str) -> None:
         del self._data[self._normalize_key(key)]
@@ -346,7 +346,7 @@ class AssScriptInfoView:
         return dict(self._data)
 
 
-class AssStylesView:
+class AssStyles:
     """Intelligent container for [V4+ Styles] section."""
     def __init__(self, data: dict[str, AssStyle] | None = None):
         self._data = data if data is not None else {}
@@ -424,7 +424,7 @@ class AssStylesView:
         return self._data.items()
 
 
-class AssEventsView:
+class AssEvents:
     """Intelligent container for [Events] section."""
     def __init__(self, data: list[AssEvent] | None = None):
         self._data = data if data is not None else []
@@ -479,17 +479,17 @@ class AssFile:
     Represents a complete .ass file with styles and events.
     The script_info, styles, and events fields are intelligent containers.
     """
-    script_info: AssScriptInfoView = field(default_factory=AssScriptInfoView)
-    styles: AssStylesView = field(default_factory=AssStylesView)
-    events: AssEventsView = field(default_factory=AssEventsView)
+    script_info: AssScriptInfo = field(default_factory=AssScriptInfo)
+    styles: AssStyles = field(default_factory=AssStyles)
+    events: AssEvents = field(default_factory=AssEvents)
 
     def __post_init__(self):
         if isinstance(self.script_info, dict):
-            self.script_info = AssScriptInfoView(self.script_info)
+            self.script_info = AssScriptInfo(self.script_info)
         if isinstance(self.styles, dict):
-            self.styles = AssStylesView(self.styles)
+            self.styles = AssStyles(self.styles)
         if isinstance(self.events, list):
-            self.events = AssEventsView(self.events)
+            self.events = AssEvents(self.events)
 
     @classmethod
     def loads(cls, content: str) -> "AssFile":

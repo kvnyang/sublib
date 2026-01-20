@@ -60,7 +60,7 @@ class LrcLine:
         return f"{self.timestamp}{self.text}"
 
 
-class LrcMetadataView:
+class LrcMetadata:
     """Intelligent container for LRC metadata."""
     def __init__(self, data: dict[str, str] | None = None):
         self._data = data if data is not None else {}
@@ -96,7 +96,7 @@ class LrcMetadataView:
         return self._data.items()
 
 
-class LrcLinesView:
+class LrcLines:
     """Intelligent container for LRC lines."""
     def __init__(self, data: list[LrcLine] | None = None):
         self._data = data if data is not None else []
@@ -131,14 +131,14 @@ class LrcLinesView:
 @dataclass
 class LrcFile:
     """Represents a full LRC file with metadata and lines."""
-    metadata: LrcMetadataView = field(default_factory=LrcMetadataView)
-    lines: LrcLinesView = field(default_factory=LrcLinesView)
+    metadata: LrcMetadata = field(default_factory=LrcMetadata)
+    lines: LrcLines = field(default_factory=LrcLines)
 
     def __post_init__(self):
         if isinstance(self.metadata, dict):
-            self.metadata = LrcMetadataView(self.metadata)
+            self.metadata = LrcMetadata(self.metadata)
         if isinstance(self.lines, list):
-            self.lines = LrcLinesView(self.lines)
+            self.lines = LrcLines(self.lines)
 
     @classmethod
     def loads(cls, content: str) -> LrcFile:
