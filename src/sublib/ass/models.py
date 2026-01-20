@@ -186,7 +186,7 @@ class AssFile:
         content = read_text_file(path, encoding='utf-8-sig')
         return cls.loads(content)
     
-    def save(self, path: Path | str, validate: bool = False) -> None:
+    def dump(self, path: Path | str, validate: bool = False) -> None:
         """Save to file.
         
         Args:

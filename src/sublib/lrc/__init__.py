@@ -20,7 +20,7 @@ def loads(content: str) -> LrcFile:
 
 def dump(lrc_file: LrcFile, path: str | Path) -> None:
     """Save an LRC file to path."""
-    lrc_file.save(path)
+    lrc_file.dump(path)
 
 
 def dumps(lrc_file: LrcFile) -> str:

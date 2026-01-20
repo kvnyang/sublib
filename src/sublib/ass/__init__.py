@@ -19,7 +19,7 @@ def loads(content: str) -> AssFile:
 
 def dump(ass_file: AssFile, path: str | Path) -> None:
     """Save an ASS file to path."""
-    ass_file.save(path)
+    ass_file.dump(path)
 
 
 def dumps(ass_file: AssFile) -> str:

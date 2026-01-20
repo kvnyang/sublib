@@ -84,7 +84,7 @@ class LrcFile:
         content = read_text_file(path, encoding='utf-8-sig')
         return cls.loads(content)
 
-    def save(self, path: Path | str) -> None:
+    def dump(self, path: Path | str) -> None:
         """Save to file."""
         from sublib.io import write_text_file
         content = self.dumps()
