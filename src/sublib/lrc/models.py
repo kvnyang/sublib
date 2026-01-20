@@ -67,12 +67,12 @@ class LrcFile:
     lines: list[LrcLine] = field(default_factory=list)
 
     @classmethod
-    def from_string(cls, content: str) -> LrcFile:
+    def loads(cls, content: str) -> LrcFile:
         """Parse LRC content from string."""
         from sublib.lrc.parser import LrcParser
         return LrcParser().parse(content)
 
-    def to_string(self) -> str:
+    def dumps(self) -> str:
         """Render LRC file to string."""
         from sublib.lrc.renderer import LrcRenderer
         return LrcRenderer().render(self)
@@ -82,12 +82,12 @@ class LrcFile:
         """Load LRC file from path."""
         from sublib.io import read_text_file
         content = read_text_file(path, encoding='utf-8-sig')
-        return cls.from_string(content)
+        return cls.loads(content)
 
     def save(self, path: Path | str) -> None:
         """Save to file."""
         from sublib.io import write_text_file
-        content = self.to_string()
+        content = self.dumps()
         write_text_file(path, content, encoding='utf-8-sig')
 
     def add_line(self, timestamp: str | timedelta | LrcTimestamp, text: str) -> None:

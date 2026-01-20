@@ -14,7 +14,7 @@ def load(path: str | Path) -> AssFile:
 
 def loads(content: str) -> AssFile:
     """Parse ASS content from string."""
-    return AssFile.from_string(content)
+    return AssFile.loads(content)
 
 
 def dump(ass_file: AssFile, path: str | Path) -> None:
@@ -24,7 +24,7 @@ def dump(ass_file: AssFile, path: str | Path) -> None:
 
 def dumps(ass_file: AssFile) -> str:
     """Render ASS file to string."""
-    return ass_file.to_string()
+    return ass_file.dumps()
 
 
 def extract(event: AssEvent):

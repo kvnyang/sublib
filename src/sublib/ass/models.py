@@ -127,15 +127,6 @@ class AssEvent:
         from sublib.ass.text_transform import compose_all
         return compose_all(event_tags, segments)
 
-    def extract_all(self):
-        """Deprecated: Use extract() instead."""
-        return self.extract()
-
-    @staticmethod
-    def compose_all(event_tags=None, segments=None):
-        """Deprecated: Use compose_elements() or event.compose() instead."""
-        return AssEvent.compose_elements(event_tags, segments)
-
 
 @dataclass
 class AssFile:
@@ -154,7 +145,7 @@ class AssFile:
     events: list[AssEvent] = field(default_factory=list)
     
     @classmethod
-    def from_string(cls, content: str) -> "AssFile":
+    def loads(cls, content: str) -> "AssFile":
         """Parse ASS content from string."""
         from sublib.ass.serde import parse_ass_string
         return parse_ass_string(content)
@@ -171,7 +162,7 @@ class AssFile:
         """Add a dialogue event."""
         self.events.append(event)
     
-    def to_string(self, validate: bool = False) -> str:
+    def dumps(self, validate: bool = False) -> str:
         """Render to ASS format string.
         
         Args:
@@ -193,7 +184,7 @@ class AssFile:
         """
         from sublib.io import read_text_file
         content = read_text_file(path, encoding='utf-8-sig')
-        return cls.from_string(content)
+        return cls.loads(content)
     
     def save(self, path: Path | str, validate: bool = False) -> None:
         """Save to file.
@@ -203,7 +194,7 @@ class AssFile:
             validate: If True, raise ValueError for undefined style references
         """
         from sublib.io import write_text_file
-        content = self.to_string(validate=validate)
+        content = self.dumps(validate=validate)
         write_text_file(path, content, encoding='utf-8-sig')
     
     def _validate_styles(self) -> list[str]:

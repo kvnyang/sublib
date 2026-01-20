@@ -15,7 +15,7 @@ def load(path: str | Path) -> LrcFile:
 
 def loads(content: str) -> LrcFile:
     """Parse LRC content from string."""
-    return LrcFile.from_string(content)
+    return LrcFile.loads(content)
 
 
 def dump(lrc_file: LrcFile, path: str | Path) -> None:
@@ -25,7 +25,7 @@ def dump(lrc_file: LrcFile, path: str | Path) -> None:
 
 def dumps(lrc_file: LrcFile) -> str:
     """Render LRC file to string."""
-    return lrc_file.to_string()
+    return lrc_file.dumps()
 
 
 __all__ = [
