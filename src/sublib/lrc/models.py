@@ -60,11 +60,89 @@ class LrcLine:
         return f"{self.timestamp}{self.text}"
 
 
+class LrcMetadataView:
+    """Dict-like view for LRC metadata."""
+    def __init__(self, data: dict[str, str]):
+        self._data = data
+
+    def __getitem__(self, key: str) -> str:
+        return self._data[key]
+
+    def __setitem__(self, key: str, value: str) -> None:
+        self._data[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._data[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._data
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def get(self, key: str, default: str | None = None) -> str | None:
+        return self._data.get(key, default)
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return self._data.values()
+
+    def items(self):
+        return self._data.items()
+
+
+class LrcLinesView:
+    """List-like view for LRC lines."""
+    def __init__(self, data: list[LrcLine]):
+        self._data = data
+
+    def __getitem__(self, index: int) -> LrcLine:
+        return self._data[index]
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def add(self, timestamp: str | timedelta | LrcTimestamp, text: str) -> None:
+        """Add a lyrics line."""
+        if isinstance(timestamp, str):
+            ts = LrcTimestamp.from_string(timestamp)
+        elif isinstance(timestamp, timedelta):
+            ts = LrcTimestamp.from_timedelta(timestamp)
+        else:
+            ts = timestamp
+        self._data.append(LrcLine(ts, text))
+
+    def append(self, line: LrcLine) -> None:
+        """Append a pre-constructed LrcLine."""
+        self._data.append(line)
+
+    def sort(self, **kwargs):
+        self._data.sort(**kwargs)
+
+
 @dataclass
 class LrcFile:
     """Represents a full LRC file."""
-    metadata: dict[str, str] = field(default_factory=dict)
-    lines: list[LrcLine] = field(default_factory=list)
+    _metadata: dict[str, str] = field(default_factory=dict)
+    _lines: list[LrcLine] = field(default_factory=list)
+
+    @property
+    def metadata(self) -> LrcMetadataView:
+        """View into LRC metadata."""
+        return LrcMetadataView(self._metadata)
+
+    @property
+    def lines(self) -> LrcLinesView:
+        """View into LRC lines."""
+        return LrcLinesView(self._lines)
 
     @classmethod
     def loads(cls, content: str) -> LrcFile:
@@ -90,19 +168,12 @@ class LrcFile:
         content = self.dumps()
         write_text_file(path, content, encoding='utf-8-sig')
 
-    def add_line(self, timestamp: str | timedelta | LrcTimestamp, text: str) -> None:
-        """Add a lyrics line.
-        
-        Args:
-            timestamp: Time as [mm:ss.xx] string, timedelta, or LrcTimestamp object.
-            text: Lyrics text content.
-        """
-        if isinstance(timestamp, str):
-            ts = LrcTimestamp.from_string(timestamp if timestamp.startswith("[") else f"[{timestamp}]")
-        elif isinstance(timestamp, timedelta):
-            ts = LrcTimestamp.from_timedelta(timestamp)
-        else:
-            ts = timestamp
-            
-        self.lines.append(LrcLine(timestamp=ts, text=text))
-        self.lines.sort(key=lambda x: x.timestamp)
+    @property
+    def add_line(self):
+        return self.lines.add
+
+    def __iter__(self):
+        return iter(self._lines)
+
+    def __len__(self) -> int:
+        return len(self._lines)

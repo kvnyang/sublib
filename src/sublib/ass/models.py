@@ -128,6 +128,149 @@ class AssEvent:
         return compose_all(event_tags, segments)
 
 
+class AssScriptInfoView:
+    """Dict-like view for [Script Info] section."""
+    def __init__(self, data: dict[str, Any]):
+        self._data = data
+
+    def __getitem__(self, key: str) -> Any:
+        return self._data[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._data[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._data[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._data
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._data.get(key, default)
+
+    def set(self, key: str, value: Any) -> None:
+        self._data[key] = value
+
+    def set_all(self, info_dict: dict[str, Any]) -> None:
+        """Replace all properties."""
+        self._data.clear()
+        self._data.update(info_dict)
+
+    def add_all(self, info_dict: dict[str, Any]) -> None:
+        """Merge/Update properties."""
+        self._data.update(info_dict)
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return self._data.values()
+
+    def items(self):
+        return self._data.items()
+
+    def to_dict(self) -> dict[str, Any]:
+        return dict(self._data)
+
+
+class AssStylesView:
+    """Dict-like view for [V4+ Styles] section."""
+    def __init__(self, data: dict[str, AssStyle]):
+        self._data = data
+
+    def __getitem__(self, name: str) -> AssStyle:
+        return self._data[name]
+
+    def __setitem__(self, name: str, style: AssStyle) -> None:
+        if name != style.name:
+            raise ValueError(f"Style name mismatch: {name} != {style.name}")
+        self._data[name] = style
+
+    def __delitem__(self, name: str) -> None:
+        del self._data[name]
+
+    def __contains__(self, name: str) -> bool:
+        return name in self._data
+
+    def __iter__(self):
+        return iter(self._data.values())
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def get(self, name: str) -> AssStyle | None:
+        return self._data.get(name)
+
+    def set(self, style: AssStyle) -> None:
+        self._data[style.name] = style
+
+    def set_all(self, styles: Iterable[AssStyle]) -> None:
+        """Replace all style definitions."""
+        self._data.clear()
+        for s in styles:
+            self.set(s)
+
+    def add_all(self, styles: Iterable[AssStyle]) -> None:
+        """Merge/Update style definitions."""
+        for s in styles:
+            self.set(s)
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return self._data.values()
+
+    def items(self):
+        return self._data.items()
+
+
+class AssEventsView:
+    """List-like view for [Events] section."""
+    def __init__(self, data: list[AssEvent]):
+        self._data = data
+
+    def __getitem__(self, index: int) -> AssEvent:
+        return self._data[index]
+
+    def __setitem__(self, index: int, event: AssEvent) -> None:
+        self._data[index] = event
+
+    def __delitem__(self, index: int) -> None:
+        del self._data[index]
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def append(self, event: AssEvent) -> None:
+        self._data.append(event)
+
+    add = append
+
+    def add_all(self, events: Iterable[AssEvent]) -> None:
+        self._data.extend(events)
+
+    def set_all(self, events: Iterable[AssEvent]) -> None:
+        """Replace all dialogue events."""
+        self._data.clear()
+        self._data.extend(events)
+
+    def filter(self, style: str | None = None) -> list[AssEvent]:
+        """Get events, optionally filtered by style name."""
+        if style is None:
+            return list(self._data)
+        return [e for e in self._data if e.style == style]
+
+
 @dataclass
 class AssFile:
     """ASS subtitle file.
@@ -135,74 +278,44 @@ class AssFile:
     Represents a complete .ass file with styles and events.
     Validation warnings are logged during parsing.
     """
-    # Script Info: key -> typed value (ordered dict, preserves insertion order)
-    script_info: dict[str, Any] = field(default_factory=dict)
+    # Internal storage
+    _script_info: dict[str, Any] = field(default_factory=dict)
+    _styles: dict[str, AssStyle] = field(default_factory=dict)
+    _events: list[AssEvent] = field(default_factory=list)
     
-    # Styles by name
-    styles: dict[str, AssStyle] = field(default_factory=dict)
+    @property
+    def script_info(self) -> AssScriptInfoView:
+        """View into [Script Info] section."""
+        return AssScriptInfoView(self._script_info)
     
-    # Dialogue events
-    events: list[AssEvent] = field(default_factory=list)
+    @property
+    def styles(self) -> AssStylesView:
+        """View into [V4+ Styles] section."""
+        return AssStylesView(self._styles)
     
+    @property
+    def events(self) -> AssEventsView:
+        """View into [Events] section."""
+        return AssEventsView(self._events)
+
     @classmethod
     def loads(cls, content: str) -> "AssFile":
         """Parse ASS content from string."""
         from sublib.ass.serde import parse_ass_string
         return parse_ass_string(content)
     
-    def get_script_info(self, key: str, default: Any = None) -> Any:
-        """Get a value from [Script Info] section."""
-        return self.script_info.get(key, default)
-        
-    def set_script_info(self, key: str, value: Any) -> None:
-        """Set a value in [Script Info] section."""
-        self.script_info[key] = value
-
-    def get_script_infos(self) -> dict[str, Any]:
-        """Get all properties from [Script Info] section."""
-        return self.script_info
-
-    def set_script_infos(self, info_dict: dict[str, Any]) -> None:
-        """Replace all properties in [Script Info] section."""
-        self.script_info = dict(info_dict)
-
-    def set_style(self, style: AssStyle) -> None:
-        """Add or update a style definition."""
-        self.styles[style.name] = style
-        
-    def get_style(self, name: str) -> AssStyle | None:
-        """Get style by name."""
-        return self.styles.get(name)
-
-    def get_styles(self) -> list[AssStyle]:
-        """Get all style definitions."""
-        return list(self.styles.values())
-
-    def set_styles(self, styles: Iterable[AssStyle]) -> None:
-        """Replace all style definitions."""
-        self.styles = {s.name: s for s in styles}
-
-    def add_event(self, event: AssEvent) -> None:
-        """Add a single dialogue event."""
-        self.events.append(event)
-
-    def set_events(self, events: Iterable[AssEvent]) -> None:
-        """Replace all dialogue events."""
-        self.events = list(events)
-
-    def get_events(self, style: str | None = None) -> list[AssEvent]:
-        """Get all events, optionally filtered by style name."""
-        if style is None:
-            return self.events
-        return [e for e in self.events if e.style == style]
+    @property
+    def script_info_keys(self) -> list[str]:
+        """Get list of defined script info keys."""
+        return list(self._script_info.keys())
 
     def __iter__(self):
         """Iterate over dialogue events."""
-        return iter(self.events)
+        return iter(self._events)
 
     def __len__(self) -> int:
         """Get total number of dialogue events."""
-        return len(self.events)
+        return len(self._events)
     
     def dumps(self, validate: bool = False) -> str:
         """Render to ASS format string.
@@ -246,7 +359,7 @@ class AssFile:
             List of error messages (empty = valid)
         """
         errors = []
-        defined_styles = set(self.styles.keys())
+        defined_styles = set(self._styles.keys())
         
         for i, event in enumerate(self.events):
             if event.style not in defined_styles:
