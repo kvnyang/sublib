@@ -158,7 +158,7 @@ class AssFile:
         """Set a value in [Script Info] section."""
         self.script_info[key] = value
 
-    def add_style(self, style: AssStyle) -> None:
+    def set_style(self, style: AssStyle) -> None:
         """Add or update a style definition."""
         self.styles[style.name] = style
         
@@ -169,6 +169,10 @@ class AssFile:
     def add_event(self, event: AssEvent) -> None:
         """Add a dialogue event."""
         self.events.append(event)
+
+    def get_event(self, index: int) -> AssEvent:
+        """Get event by index."""
+        return self.events[index]
     
     def dumps(self, validate: bool = False) -> str:
         """Render to ASS format string.
