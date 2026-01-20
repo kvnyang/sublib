@@ -61,9 +61,9 @@ class LrcLine:
 
 
 class LrcMetadataView:
-    """Dict-like view for LRC metadata."""
-    def __init__(self, data: dict[str, str]):
-        self._data = data
+    """Intelligent container for LRC metadata."""
+    def __init__(self, data: dict[str, str] | None = None):
+        self._data = data if data is not None else {}
 
     def __getitem__(self, key: str) -> str:
         return self._data[key]
@@ -97,9 +97,9 @@ class LrcMetadataView:
 
 
 class LrcLinesView:
-    """List-like view for LRC lines."""
-    def __init__(self, data: list[LrcLine]):
-        self._data = data
+    """Intelligent container for LRC lines."""
+    def __init__(self, data: list[LrcLine] | None = None):
+        self._data = data if data is not None else []
 
     def __getitem__(self, index: int) -> LrcLine:
         return self._data[index]
@@ -130,19 +130,15 @@ class LrcLinesView:
 
 @dataclass
 class LrcFile:
-    """Represents a full LRC file."""
-    _metadata: dict[str, str] = field(default_factory=dict)
-    _lines: list[LrcLine] = field(default_factory=list)
+    """Represents a full LRC file with metadata and lines."""
+    metadata: LrcMetadataView = field(default_factory=LrcMetadataView)
+    lines: LrcLinesView = field(default_factory=LrcLinesView)
 
-    @property
-    def metadata(self) -> LrcMetadataView:
-        """View into LRC metadata."""
-        return LrcMetadataView(self._metadata)
-
-    @property
-    def lines(self) -> LrcLinesView:
-        """View into LRC lines."""
-        return LrcLinesView(self._lines)
+    def __post_init__(self):
+        if isinstance(self.metadata, dict):
+            self.metadata = LrcMetadataView(self.metadata)
+        if isinstance(self.lines, list):
+            self.lines = LrcLinesView(self.lines)
 
     @classmethod
     def loads(cls, content: str) -> LrcFile:
@@ -170,10 +166,11 @@ class LrcFile:
 
     @property
     def add_line(self):
+        """Legacy helper for addition."""
         return self.lines.add
 
     def __iter__(self):
-        return iter(self._lines)
+        return iter(self.lines)
 
     def __len__(self) -> int:
-        return len(self._lines)
+        return len(self.lines)

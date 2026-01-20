@@ -1,8 +1,11 @@
 """ASS file, event, and style models."""
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Iterable, TYPE_CHECKING
+from typing import Any, Iterable, TYPE_CHECKING, Mapping
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from sublib.ass.ast import AssTextElement
 from sublib.ass.types import AssColor, AssTimestamp
@@ -129,21 +132,70 @@ class AssEvent:
 
 
 class AssScriptInfoView:
-    """Dict-like view for [Script Info] section."""
-    def __init__(self, data: dict[str, Any]):
-        self._data = data
+    """Intelligent container for [Script Info] section with automatic type conversion and validation."""
+    
+    KNOWN_FIELDS = {
+        "ScriptType": "str",
+        "Title": "str",
+        "PlayResX": "int",
+        "PlayResY": "int",
+        "WrapStyle": "int",
+        "ScaledBorderAndShadow": "bool",
+        "Collisions": "str",
+        "YCbCr Matrix": "str",
+        "Timer": "float",
+    }
+    
+    _CANONICAL_KEYS = {k.lower(): k for k in KNOWN_FIELDS}
+
+    def __init__(self, data: dict[str, Any] | None = None):
+        self._data = data if data is not None else {}
+
+    def _normalize_key(self, key: str) -> str:
+        return self._CANONICAL_KEYS.get(key.lower(), key)
 
     def __getitem__(self, key: str) -> Any:
-        return self._data[key]
+        return self._data[self._normalize_key(key)]
 
     def __setitem__(self, key: str, value: Any) -> None:
-        self._data[key] = value
+        canonical_key = self._normalize_key(key)
+        
+        # Automatic parsing if value is string (from parser)
+        if isinstance(value, str):
+            field_type = self.KNOWN_FIELDS.get(canonical_key)
+            if field_type:
+                value = self._parse_typed_value(canonical_key, value, field_type)
+        
+        self._data[canonical_key] = value
+
+    def _parse_typed_value(self, key: str, value: str, field_type: str) -> Any:
+        try:
+            if field_type == "int":
+                return int(value)
+            elif field_type == "float":
+                return float(value)
+            elif field_type == "bool":
+                return value.lower() in ("yes", "1", "true")
+        except ValueError:
+            logger.warning(f"Invalid value for {key}: {value} (expected {field_type})")
+        return value
+
+    def __getattr__(self, name: str) -> Any:
+        # Allow access like file.script_info.Title
+        if name.startswith('_'): # Don't interfere with internal attributes
+            raise AttributeError(name)
+            
+        canonical = self._normalize_key(name)
+        if canonical in self._data:
+            return self._data[canonical]
+            
+        raise AttributeError(f"'AssScriptInfoView' object has no attribute '{name}'")
 
     def __delitem__(self, key: str) -> None:
-        del self._data[key]
+        del self._data[self._normalize_key(key)]
 
     def __contains__(self, key: str) -> bool:
-        return key in self._data
+        return self._normalize_key(key) in self._data
 
     def __iter__(self):
         return iter(self._data)
@@ -152,19 +204,21 @@ class AssScriptInfoView:
         return len(self._data)
 
     def get(self, key: str, default: Any = None) -> Any:
-        return self._data.get(key, default)
+        return self._data.get(self._normalize_key(key), default)
 
     def set(self, key: str, value: Any) -> None:
-        self._data[key] = value
+        self[key] = value
 
     def set_all(self, info_dict: dict[str, Any]) -> None:
         """Replace all properties."""
         self._data.clear()
-        self._data.update(info_dict)
+        for k, v in info_dict.items():
+            self[k] = v
 
     def add_all(self, info_dict: dict[str, Any]) -> None:
         """Merge/Update properties."""
-        self._data.update(info_dict)
+        for k, v in info_dict.items():
+            self[k] = v
 
     def keys(self):
         return self._data.keys()
@@ -180,23 +234,41 @@ class AssScriptInfoView:
 
 
 class AssStylesView:
-    """Dict-like view for [V4+ Styles] section."""
-    def __init__(self, data: dict[str, AssStyle]):
-        self._data = data
+    """Intelligent container for [V4+ Styles] section."""
+    def __init__(self, data: dict[str, AssStyle] | None = None):
+        self._data = data if data is not None else {}
+
+    def _get_canonical_name(self, name: str) -> str:
+        # Try exact match first
+        if name in self._data:
+            return name
+        # Case-insensitive lookup
+        lower_name = name.lower()
+        for k in self._data:
+            if k.lower() == lower_name:
+                return k
+        return name
 
     def __getitem__(self, name: str) -> AssStyle:
-        return self._data[name]
+        canonical = self._get_canonical_name(name)
+        if canonical not in self._data:
+            raise KeyError(name)
+        return self._data[canonical]
 
     def __setitem__(self, name: str, style: AssStyle) -> None:
         if name != style.name:
-            raise ValueError(f"Style name mismatch: {name} != {style.name}")
-        self._data[name] = style
+            # If name is a case-insensitive match for style.name, it's okay but style.name is the source of truth
+            if name.lower() != style.name.lower():
+                raise ValueError(f"Style name mismatch: {name} != {style.name}")
+        self._data[style.name] = style
 
     def __delitem__(self, name: str) -> None:
-        del self._data[name]
+        canonical = self._get_canonical_name(name)
+        del self._data[canonical]
 
     def __contains__(self, name: str) -> bool:
-        return name in self._data
+        lower_name = name.lower()
+        return any(k.lower() == lower_name for k in self._data)
 
     def __iter__(self):
         return iter(self._data.values())
@@ -205,7 +277,8 @@ class AssStylesView:
         return len(self._data)
 
     def get(self, name: str) -> AssStyle | None:
-        return self._data.get(name)
+        canonical = self._get_canonical_name(name)
+        return self._data.get(canonical)
 
     def set(self, style: AssStyle) -> None:
         self._data[style.name] = style
@@ -232,9 +305,9 @@ class AssStylesView:
 
 
 class AssEventsView:
-    """List-like view for [Events] section."""
-    def __init__(self, data: list[AssEvent]):
-        self._data = data
+    """Intelligent container for [Events] section."""
+    def __init__(self, data: list[AssEvent] | None = None):
+        self._data = data if data is not None else []
 
     def __getitem__(self, index: int) -> AssEvent:
         return self._data[index]
@@ -268,7 +341,8 @@ class AssEventsView:
         """Get events, optionally filtered by style name."""
         if style is None:
             return list(self._data)
-        return [e for e in self._data if e.style == style]
+        target = style.lower()
+        return [e for e in self._data if e.style.lower() == target]
 
 
 @dataclass
@@ -276,27 +350,19 @@ class AssFile:
     """ASS subtitle file.
     
     Represents a complete .ass file with styles and events.
-    Validation warnings are logged during parsing.
+    The script_info, styles, and events fields are intelligent containers.
     """
-    # Internal storage
-    _script_info: dict[str, Any] = field(default_factory=dict)
-    _styles: dict[str, AssStyle] = field(default_factory=dict)
-    _events: list[AssEvent] = field(default_factory=list)
-    
-    @property
-    def script_info(self) -> AssScriptInfoView:
-        """View into [Script Info] section."""
-        return AssScriptInfoView(self._script_info)
-    
-    @property
-    def styles(self) -> AssStylesView:
-        """View into [V4+ Styles] section."""
-        return AssStylesView(self._styles)
-    
-    @property
-    def events(self) -> AssEventsView:
-        """View into [Events] section."""
-        return AssEventsView(self._events)
+    script_info: AssScriptInfoView = field(default_factory=AssScriptInfoView)
+    styles: AssStylesView = field(default_factory=AssStylesView)
+    events: AssEventsView = field(default_factory=AssEventsView)
+
+    def __post_init__(self):
+        if isinstance(self.script_info, dict):
+            self.script_info = AssScriptInfoView(self.script_info)
+        if isinstance(self.styles, dict):
+            self.styles = AssStylesView(self.styles)
+        if isinstance(self.events, list):
+            self.events = AssEventsView(self.events)
 
     @classmethod
     def loads(cls, content: str) -> "AssFile":
@@ -307,15 +373,15 @@ class AssFile:
     @property
     def script_info_keys(self) -> list[str]:
         """Get list of defined script info keys."""
-        return list(self._script_info.keys())
+        return list(self.script_info.keys())
 
     def __iter__(self):
         """Iterate over dialogue events."""
-        return iter(self._events)
+        return iter(self.events)
 
     def __len__(self) -> int:
         """Get total number of dialogue events."""
-        return len(self._events)
+        return len(self.events)
     
     def dumps(self, validate: bool = False) -> str:
         """Render to ASS format string.
@@ -359,16 +425,17 @@ class AssFile:
             List of error messages (empty = valid)
         """
         errors = []
-        defined_styles = set(self._styles.keys())
+        # Case-insensitive set for quick lookup
+        defined_styles = {s.name.lower() for s in self.styles}
         
         for i, event in enumerate(self.events):
-            if event.style not in defined_styles:
+            if event.style.lower() not in defined_styles:
                 errors.append(f"Event {i+1}: style '{event.style}' not defined")
             
-            result = event.extract_all()
+            result = event.extract()
             for seg in result.segments:
                 r_style = seg.block_tags.get("r")
-                if r_style and r_style not in defined_styles:
+                if r_style and r_style.lower() not in defined_styles:
                     errors.append(f"Event {i+1}: \\r style '{r_style}' not defined")
         
         return errors
