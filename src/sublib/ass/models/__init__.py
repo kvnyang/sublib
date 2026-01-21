@@ -1,14 +1,14 @@
-"""ASS data models."""
-from .info import AssScriptInfo
-from .style import AssStyle, AssStyles
-from .event import AssEvent, AssEvents
+"""Public API for ASS models."""
 from .file import AssFile
+from .style import AssStyle
+from .info import AssScriptInfo
+from .event import AssEvent, AssEvents
+
 
 __all__ = [
-    "AssScriptInfo",
-    "AssStyle",
-    "AssStyles",
-    "AssEvent",
-    "AssEvents",
-    "AssFile",
+    'AssFile',
+    'AssStyle',
+    'AssScriptInfo',
+    'AssEvent',
+    'AssEvents',
 ]

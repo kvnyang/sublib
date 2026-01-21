@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from sublib.ass.text import AssTextElement
+from sublib.ass.models.text.elements import AssTextElement
 from sublib.ass.types import AssTimestamp
 
 
@@ -91,32 +91,57 @@ class AssEvent:
     @classmethod
     def create(
         cls,
-        text: str,
-        start: str | AssTimestamp = "0:00:00.00",
-        end: str | AssTimestamp = "0:00:05.00",
+        text: str | list[AssTextElement],
+        start: str | AssTimestamp | int,
+        end: str | AssTimestamp | int,
         style: str = "Default",
-        **kwargs
+        layer: int = 0,
+        name: str = "",
+        margin_l: int = 0,
+        margin_r: int = 0,
+        margin_v: int = 0,
+        effect: str = ""
     ) -> AssEvent:
-        """Convenience factory to create an event from raw text.
+        """Robust factory to create an event with explicit ASS fields.
+        
+        Mandatory args: text, start, end.
         
         Args:
-            text: Raw ASS text (may contain tags like {\\b1}Hello)
-            start: Start time (string or AssTimestamp)
-            end: End time (string or AssTimestamp)
-            style: Style name
-            **kwargs: Other AssEvent fields (layer, name, etc.)
+            text: Raw ASS text (parsed) or pre-built AssTextElement list
+            start: Start time (string, AssTimestamp, or integer ms)
+            end: End time (string, AssTimestamp, or integer ms)
+            style: Style name (defaults to "Default")
+            layer: Layer level (0-based)
+            name: Actor/Speaker name field
+            margin_l/r/v: Margin overrides
+            effect: Transition/Karaoke effect field
         """
-        from sublib.ass.text import AssTextParser
-        
-        start_ts = AssTimestamp.from_ass_str(start) if isinstance(start, str) else start
-        end_ts = AssTimestamp.from_ass_str(end) if isinstance(end, str) else end
+        # Handle Timing
+        def _to_timestamp(val: Any) -> AssTimestamp:
+            if isinstance(val, AssTimestamp):
+                return val
+            if isinstance(val, int):
+                return AssTimestamp.from_ms(val)
+            return AssTimestamp.from_ass_str(str(val))
+
+        # Handle Text
+        if isinstance(text, str):
+            from sublib.ass.text import AssTextParser
+            elements = AssTextParser().parse(text)
+        else:
+            elements = text
         
         return cls(
-            start=start_ts,
-            end=end_ts,
-            text_elements=AssTextParser().parse(text),
+            start=_to_timestamp(start),
+            end=_to_timestamp(end),
+            text_elements=elements,
             style=style,
-            **kwargs
+            layer=layer,
+            name=name,
+            margin_l=margin_l,
+            margin_r=margin_r,
+            margin_v=margin_v,
+            effect=effect,
         )
     
     @property

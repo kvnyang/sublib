@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .elements import AssPlainText, AssSpecialChar
+    from sublib.ass.models.text.elements import AssPlainText, AssSpecialChar
 
 
 @dataclass
@@ -30,7 +30,7 @@ class AssTextSegment:
         Convenience method for simple use cases.
         Special chars rendered as escape sequences (\\N, \\n, \\h).
         """
-        from .elements import AssPlainText, AssSpecialChar
+        from sublib.ass.models.text.elements import AssPlainText, AssSpecialChar
         
         result = []
         for item in self.content:
