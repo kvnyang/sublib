@@ -33,6 +33,7 @@ class AssEvent:
     margin_r: int = 0
     margin_v: int = 0
     effect: str = ""
+    event_type: str = "Dialogue"
 
     @classmethod
     def from_ass_line(
@@ -51,11 +52,15 @@ class AssEvent:
         Returns:
             AssEvent or None if parsing fails
         """
-        if not line.startswith('Dialogue:'):
+        if line.startswith('Dialogue:'):
+            header = 'Dialogue:'
+        elif line.startswith('Comment:'):
+            header = 'Comment:'
+        else:
             return None
         
         # Split into 10 parts (last part is text, may contain commas)
-        parts = line[9:].split(',', 9)
+        parts = line[len(header):].split(',', 9)
         if len(parts) < 10:
             return None
         
@@ -76,14 +81,15 @@ class AssEvent:
             margin_r=int(parts[6]),
             margin_v=int(parts[7]),
             effect=parts[8].strip(),
+            event_type=header[:-1],
         )
 
     def render(self) -> str:
-        """Render AssEvent to Dialogue: line."""
+        """Render event to ASS line (Dialogue: or Comment:)."""
         from sublib.ass.text import AssTextRenderer
         text = AssTextRenderer().render(self.text_elements)
         return (
-            f"Dialogue: {self.layer},{self.start.to_ass_str()},"
+            f"{self.event_type}: {self.layer},{self.start.to_ass_str()},"
             f"{self.end.to_ass_str()},{self.style},{self.name},"
             f"{self.margin_l},{self.margin_r},{self.margin_v},{self.effect},{text}"
         )
@@ -100,7 +106,8 @@ class AssEvent:
         margin_l: int = 0,
         margin_r: int = 0,
         margin_v: int = 0,
-        effect: str = ""
+        effect: str = "",
+        event_type: str = "Dialogue"
     ) -> AssEvent:
         """Robust factory to create an event with explicit ASS fields.
         
@@ -142,6 +149,7 @@ class AssEvent:
             margin_r=margin_r,
             margin_v=margin_v,
             effect=effect,
+            event_type=event_type,
         )
     
     @property
