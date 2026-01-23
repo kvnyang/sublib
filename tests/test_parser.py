@@ -2,10 +2,10 @@
 """Tests for AssTextParser."""
 import pytest
 
-from sublib.ass.serde import AssTextParser
+from sublib.ass.text import AssTextParser
 from sublib.exceptions import SubtitleParseError
 from sublib.ass.types import AssPosition
-from sublib.ass.ast import AssOverrideTag, AssPlainText, AssSpecialChar, AssOverrideBlock, AssComment
+from sublib.ass.models.text.elements import AssOverrideTag, AssPlainText, AssSpecialChar, AssOverrideBlock, AssComment
 
 
 class TestAssTextParser:

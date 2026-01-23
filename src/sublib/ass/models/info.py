@@ -25,6 +25,20 @@ class AssScriptInfo:
 
     def __init__(self, data: dict[str, Any] | None = None):
         self._data = data if data is not None else {}
+        self._header_comments: list[str] = []
+    
+    @property
+    def header_comments(self) -> list[str]:
+        """Comments from [Script Info] section (without leading semicolon)."""
+        return self._header_comments
+    
+    def add_comment(self, comment: str) -> None:
+        """Add a comment line (without leading semicolon)."""
+        self._header_comments.append(comment)
+    
+    def set_comments(self, comments: list[str]) -> None:
+        """Replace all comments."""
+        self._header_comments = list(comments)
 
     def _normalize_key(self, key: str) -> str:
         return self._CANONICAL_KEYS.get(key.lower(), key)

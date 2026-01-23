@@ -134,14 +134,14 @@ Extract structured data from event text:
 
 ```python
 # Extract event tags and segments
-result = event.extract_all()
+event_tags, segments = event.extract_event_tags_and_segments()
 
 # Access event-level tags (pos, an, move, etc.)
-pos = result.event_tags.get("pos")
-alignment = result.event_tags.get("an")
+pos = event_tags.get("pos")
+alignment = event_tags.get("an")
 
 # Access inline segments with formatting
-for seg in result.segments:
+for seg in segments:
     print(seg.get_text())  # Plain text
     print(seg.block_tags)  # {"b": True, "i": False, ...}
 ```
@@ -149,8 +149,9 @@ for seg in result.segments:
 Compose text elements from structured data:
 
 ```python
-from sublib.ass import AssEvent
-from sublib.ass.ast import AssTextSegment, AssPlainText
+from sublib.ass.text import build_text_elements
+from sublib.ass.models.text.segment import AssTextSegment
+from sublib.ass.models.text.elements import AssPlainText
 
 # Build segments
 segments = [
@@ -165,7 +166,7 @@ segments = [
 ]
 
 # Compose into text elements
-elements = AssEvent.compose_all(
+elements = build_text_elements(
     event_tags={"pos": Position(100, 200), "an": 8},
     segments=segments
 )
@@ -176,9 +177,42 @@ event.text_elements = elements
 
 ---
 
-## 5. References
+## 5. Project Structure
+
+```
+sublib/
+├── ass/                    # ASS v4+ implementation
+│   ├── models/             # Data models
+│   │   ├── file.py         # AssFile
+│   │   ├── event.py        # AssEvent
+│   │   ├── style.py        # AssStyle
+│   │   ├── info.py         # AssScriptInfo
+│   │   └── text/           # Text element types
+│   │       ├── elements.py # AssOverrideBlock, AssPlainText, etc.
+│   │       └── segment.py  # AssTextSegment
+│   ├── text/               # Text parsing/rendering
+│   │   ├── parser.py       # AssTextParser
+│   │   ├── renderer.py     # AssTextRenderer
+│   │   └── transform.py    # extract/build utilities
+│   ├── tags/               # Override tag definitions
+│   │   ├── registry.py     # Tag registry
+│   │   ├── position.py     # \pos, \move, \org
+│   │   ├── font.py         # \fn, \fs, \b, \i, etc.
+│   │   ├── color.py        # \c, \1c, \2c, etc.
+│   │   └── ...
+│   └── types/              # Value types
+│       ├── color.py        # AssColor
+│       ├── timestamp.py    # AssTimestamp
+│       └── position.py     # Position
+├── lrc/                    # LRC format support
+└── exceptions.py           # Shared exceptions
+```
+
+---
+
+## 6. References
 
 - **Implementation**: `src/sublib/ass/`
 - **Tag Definitions**: `src/sublib/ass/tags/`
-- **Text Transform**: `src/sublib/ass/text_transform.py`
+- **Text Transform**: `src/sublib/ass/text/transform.py`
 
