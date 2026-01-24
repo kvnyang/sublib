@@ -73,6 +73,12 @@ class AssFile:
         struct_parser = StructuralParser()
         raw_doc = struct_parser.parse(content)
         
+        # Mandatory: Halt if Layer 1 found fatal structural errors
+        errors = [d for d in struct_parser.diagnostics if d.level == DiagnosticLevel.ERROR]
+        if errors:
+            from sublib.ass.diagnostics import AssStructuralError
+            raise AssStructuralError(f"Fatal structural errors found in ASS file ({len(errors)})", errors)
+
         ass_file = cls()
         ass_file.diagnostics.extend(struct_parser.diagnostics)
         

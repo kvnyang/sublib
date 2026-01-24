@@ -22,3 +22,10 @@ class Diagnostic:
     def __str__(self) -> str:
         line_info = f"Line {self.line_number}: " if self.line_number > 0 else ""
         return f"[{self.level.name}] {line_info}{self.message}"
+
+
+class AssStructuralError(Exception):
+    """Raised when Layer 1 (Structural Parser) encounters fatal errors."""
+    def __init__(self, message: str, diagnostics: list[Diagnostic]):
+        super().__init__(message)
+        self.diagnostics = diagnostics
