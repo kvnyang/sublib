@@ -59,13 +59,13 @@ class FormatSpec:
     text_index: int = -1
     
     def __post_init__(self):
-        # Build index map for known fields only (case-insensitive lookup)
-        # Store lowercase keys for unified internal access
-        known_lower = {f.lower(): f for f in KNOWN_EVENT_FIELDS}
+        # Build index map for known fields only (case-insensitive and ignore internal spaces)
+        # Store canonical names from KNOWN_EVENT_FIELDS for consistent access
+        known_collapsed = {f.lower().replace(" ", ""): f for f in KNOWN_EVENT_FIELDS}
         for i, f in enumerate(self.fields):
-            f_lower = f.lower()
-            if f_lower in known_lower:
-                canonical = known_lower[f_lower]
+            f_collapsed = f.lower().replace(" ", "")
+            if f_collapsed in known_collapsed:
+                canonical = known_collapsed[f_collapsed]
                 self.field_indices[canonical] = i
         self.text_index = len(self.fields) - 1
     
@@ -87,7 +87,7 @@ class FormatSpec:
         if not fields:
             raise ValueError("Empty Format line")
         
-        if fields[-1].lower() != 'text':
+        if fields[-1].lower().replace(" ", "") != 'text':
             raise ValueError(f"Text must be last field, got '{fields[-1]}'")
         
         return cls(fields=fields)
@@ -127,7 +127,7 @@ def parse_descriptor_line(line: str) -> tuple[str, str] | None:
 
 
 def is_descriptor_allowed(section: str, descriptor: str) -> bool:
-    """Check if a descriptor is allowed in a section (case-insensitive).
+    """Check if a descriptor is allowed in a section (case-insensitive & ignore spaces).
     
     Args:
         section: Section name (lowercase, e.g., 'events')
@@ -140,8 +140,8 @@ def is_descriptor_allowed(section: str, descriptor: str) -> bool:
     if allowed is None:
         return True  # Script Info allows any key
     
-    descriptor_lower = descriptor.lower()
-    return any(descriptor_lower == a.lower() for a in allowed)
+    descriptor_collapsed = descriptor.lower().replace(" ", "")
+    return any(descriptor_collapsed == a.lower().replace(" ", "") for a in allowed)
 
 
 def get_default_format_for_script_type(script_type: str | None) -> FormatSpec:

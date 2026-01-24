@@ -21,7 +21,7 @@ class AssScriptInfo:
         "Timer": "float",
     }
     
-    _CANONICAL_KEYS = {k.lower(): k for k in KNOWN_FIELDS}
+    _CANONICAL_KEYS = {k.lower().replace(" ", ""): k for k in KNOWN_FIELDS}
 
     def __init__(self, data: dict[str, Any] | None = None):
         self._data = data if data is not None else {}
@@ -41,7 +41,8 @@ class AssScriptInfo:
         self._header_comments = list(comments)
 
     def _normalize_key(self, key: str) -> str:
-        return self._CANONICAL_KEYS.get(key.lower(), key)
+        collapsed = key.lower().replace(" ", "")
+        return self._CANONICAL_KEYS.get(collapsed, key)
 
     @staticmethod
     def parse_line(line: str) -> tuple[str, str] | None:

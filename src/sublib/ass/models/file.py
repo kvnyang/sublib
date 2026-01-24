@@ -127,7 +127,7 @@ class AssFile:
                 continue
             
             descriptor, descriptor_content = parsed
-            descriptor_lower = descriptor.lower()
+            descriptor_collapsed = descriptor.lower().replace(" ", "")
             
             # Check if descriptor is allowed in this section
             if current_section and not is_descriptor_allowed(current_section, descriptor):
@@ -144,13 +144,13 @@ class AssFile:
                 ass_file.script_info[descriptor] = descriptor_content.strip()
             
             elif current_section in ('v4 styles', 'v4+ styles'):
-                if descriptor_lower == 'format':
+                if descriptor_collapsed == 'format':
                     pass  # Styles use fixed format, ignore Format line content
-                elif descriptor_lower == 'style':
+                elif descriptor_collapsed == 'style':
                     ass_file.styles.add_from_line(raw_line)
             
             elif current_section == 'events':
-                if descriptor_lower == 'format':
+                if descriptor_collapsed == 'format':
                     try:
                         current_format = FormatSpec.parse(descriptor_content)
                         # Check consistency with ScriptType
@@ -162,7 +162,7 @@ class AssFile:
                         add_warning(ParseWarningType.INVALID_FORMAT, line_number,
                                    f"Invalid Format: {e}")
                         current_format = None
-                elif any(descriptor_lower == et.lower() for et in EVENT_TYPES):
+                elif any(descriptor_collapsed == et.lower().replace(" ", "") for et in EVENT_TYPES):
                     if current_format is None:
                         script_type = ass_file.script_info.get('ScriptType')
                         current_format = get_default_format_for_script_type(script_type)
