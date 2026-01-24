@@ -15,6 +15,16 @@ logger = logging.getLogger(__name__)
 CORE_SECTIONS = {'script info', 'v4 styles', 'v4+ styles', 'events'}
 STYLE_SECTIONS = {'v4 styles', 'v4+ styles'}
 
+# Semantic rank for ordering (Liberal during parsing, normalized on Dumps)
+SECTION_RANKS = {
+    'script info': 0,
+    'v4 styles': 1,
+    'v4+ styles': 1,
+    'events': 2,
+    'fonts': 3,
+    'graphics': 3,
+}
+
 # Section -> allowed descriptors (None means any key:value is allowed)
 # Only applies to core sections that follow Descriptor: Value format
 SECTION_DESCRIPTORS: dict[str, set[str] | None] = {

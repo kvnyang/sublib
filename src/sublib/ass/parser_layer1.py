@@ -1,11 +1,12 @@
 """Layer 1 Structural Parser for ASS files."""
 from __future__ import annotations
-import re
 from typing import Optional
 
 from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
 from sublib.ass.models.raw import RawDocument, RawSection, RawRecord
-from sublib.ass.descriptors import parse_descriptor_line, CORE_SECTIONS, STYLE_SECTIONS
+from sublib.ass.descriptors import (
+    parse_descriptor_line, CORE_SECTIONS, STYLE_SECTIONS, SECTION_RANKS
+)
 
 
 class StructuralParser:
@@ -197,20 +198,10 @@ class StructuralParser:
         for m in missing:
             self.add_diagnostic(DiagnosticLevel.WARNING, f"Missing core section: [{m.upper()}]", 0, "MISSING_SECTION")
         
-        # 2. Strict Order for Core Sections
-        # Order should be: Script Info -> Styles -> Events -> Fonts -> Graphics -> Custom
-        core_rank = {
-            'script info': 0,
-            'v4 styles': 1,
-            'v4+ styles': 1,
-            'events': 2,
-            'fonts': 3,
-            'graphics': 4
-        }
-        
+        # 2. Strict Order for Core Sections (Liberal for Fonts/Graphics)
         current_max_rank = -1
         for s in doc.sections:
-            rank = core_rank.get(s.name, 99) # Custom sections get high rank
+            rank = SECTION_RANKS.get(s.name, 99) # Custom sections get high rank
             if rank < current_max_rank:
                  self.add_diagnostic(
                     DiagnosticLevel.WARNING,
