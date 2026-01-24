@@ -1,11 +1,11 @@
 """ASS File model."""
 from __future__ import annotations
 from dataclasses import dataclass, field
-from enum import Enum
 import logging
 from pathlib import Path
-from typing import NamedTuple
 
+from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+from sublib.ass.parser_layer1 import StructuralParser
 from .info import AssScriptInfo
 from .style import AssStyles
 from .event import AssEvents
@@ -13,25 +13,9 @@ from .event import AssEvents
 logger = logging.getLogger(__name__)
 
 
-class ParseWarningType(Enum):
-    """Types of parse warnings."""
-    MALFORMED_LINE = 'malformed_line'           # Line has no descriptor
-    INVALID_DESCRIPTOR = 'invalid_descriptor'   # Descriptor not allowed in section
-    DUPLICATE_KEY = 'duplicate_key'             # Duplicate Script Info key
-    MISSING_FORMAT = 'missing_format'           # Event before Format line
-    INVALID_FORMAT = 'invalid_format'           # Format line parsing error
-    FORMAT_SCRIPTTYPE_MISMATCH = 'format_scripttype_mismatch'  # Format vs ScriptType inconsistency
-    MISSING_SCRIPTTYPE = 'missing_scripttype'   # No ScriptType declaration
-    DUPLICATE_FORMAT_FIELD = 'duplicate_format_field'  # Duplicate field in Format line
-    MALFORMED_EVENT = 'malformed_event'         # Event line with insufficient fields
-    DUPLICATE_SECTION = 'duplicate_section'     # Section header appears more than once
-
-
-class ParseWarning(NamedTuple):
-    """A parse warning with context."""
-    type: ParseWarningType
-    line_number: int
-    message: str
+# Keep for backward compatibility if needed, but prefer sublib.ass.diagnostics.Diagnostic
+ParseWarning = Diagnostic
+ParseWarningType = DiagnosticLevel
 
 
 @dataclass
@@ -50,7 +34,12 @@ class AssFile:
     script_info: AssScriptInfo = field(default_factory=AssScriptInfo)
     styles: AssStyles = field(default_factory=AssStyles)
     events: AssEvents = field(default_factory=AssEvents)
-    parse_warnings: list[ParseWarning] = field(default_factory=list)
+    diagnostics: list[Diagnostic] = field(default_factory=list)
+
+    @property
+    def parse_warnings(self) -> list[Diagnostic]:
+        """Alias for diagnostics to maintain compatibility."""
+        return self.diagnostics
 
     def __post_init__(self):
         if isinstance(self.script_info, dict):
@@ -62,137 +51,75 @@ class AssFile:
     
     @property
     def has_warnings(self) -> bool:
-        """Check if any parse warnings were collected."""
-        return len(self.parse_warnings) > 0
+        """Check if any parse warnings or errors were collected."""
+        return len(self.diagnostics) > 0
     
     @property
-    def warnings_by_type(self) -> dict[ParseWarningType, list[ParseWarning]]:
-        """Get parse warnings grouped by type."""
-        result: dict[ParseWarningType, list[ParseWarning]] = {}
-        for w in self.parse_warnings:
-            result.setdefault(w.type, []).append(w)
-        return result
+    def errors(self) -> list[Diagnostic]:
+        """Get diagnostic messages with ERROR level."""
+        return [d for d in self.diagnostics if d.level == DiagnosticLevel.ERROR]
+
+    @property
+    def warnings(self) -> list[Diagnostic]:
+        """Get diagnostic messages with WARNING level."""
+        return [d for d in self.diagnostics if d.level == DiagnosticLevel.WARNING]
+
+    @property
+    def infos(self) -> list[Diagnostic]:
+        """Get diagnostic messages with INFO level."""
+        return [d for d in self.diagnostics if d.level == DiagnosticLevel.INFO]
 
     @classmethod
     def loads(cls, content: str) -> "AssFile":
-        """Parse ASS content from string.
+        """Parse ASS content from string using 3-layered architecture.
         
-        Uses unified descriptor-based parsing with section-specific routing.
-        Follows Postel's Law: be liberal in what you accept.
-        
-        Parse warnings are collected in ass_file.parse_warnings for inspection.
+        Layer 1: Structural Parser (Structure/Sections)
+        Layer 2: Semantic Parser (Typing/Logic)
+        Layer 3: Content Parser (AST/Tags)
         """
-        from sublib.ass.text import AssTextParser
-        from sublib.ass.descriptors import (
-            parse_descriptor_line, is_descriptor_allowed,
-            EVENT_TYPES, FormatSpec,
-            get_default_format_for_script_type, check_format_scripttype_consistency
-        )
+        # --- Layer 1: Structural Parsing ---
+        struct_parser = StructuralParser()
+        raw_doc = struct_parser.parse(content)
         
-        def add_warning(wtype: ParseWarningType, line_num: int, msg: str):
-            """Helper to add warning and log it."""
-            ass_file.parse_warnings.append(ParseWarning(wtype, line_num, msg))
-            logger.warning(f"Line {line_num}: {msg}")
-        
-        text_parser = AssTextParser()
         ass_file = cls()
+        ass_file.diagnostics.extend(struct_parser.diagnostics)
         
-        current_section: str | None = None
-        current_format: FormatSpec | None = None
-        seen_sections: set[str] = set()
+        # --- Layer 2: Semantic Parsing (Dispatch to models) ---
         
-        for line_number, raw_line in enumerate(content.splitlines(), 1):
-            line = raw_line.strip()
-            
-            if not line:
-                continue
-            
-            # Section header
-            if line.startswith('[') and line.endswith(']'):
-                current_section = line[1:-1].strip().lower()
-                if current_section in seen_sections:
-                    add_warning(ParseWarningType.DUPLICATE_SECTION, line_number,
-                               f"Section [{current_section}] appears more than once")
-                seen_sections.add(current_section)
-                current_format = None  # Reset format for new section
-                continue
-            
-            # Handle comments (both modern ';' and legacy '!:')
-            if line.startswith(';'):
-                if current_section == 'script info':
-                    ass_file.script_info.add_comment(line[1:].lstrip())
-                continue
-            if line.startswith('!:'):
-                if current_section == 'script info':
-                    ass_file.script_info.add_comment(line[2:].lstrip())
-                continue
-            
-            # Parse descriptor line
-            parsed = parse_descriptor_line(line)
-            if not parsed:
-                add_warning(ParseWarningType.MALFORMED_LINE, line_number, 
-                           f"Malformed line (no descriptor): {line[:50]}")
-                continue
-            
-            descriptor, descriptor_content = parsed
-            descriptor_collapsed = descriptor.lower().replace(" ", "")
-            
-            # Check if descriptor is allowed in this section
-            if current_section and not is_descriptor_allowed(current_section, descriptor):
-                add_warning(ParseWarningType.INVALID_DESCRIPTOR, line_number,
-                           f"'{descriptor}' not allowed in [{current_section}]")
-                continue
-            
-            # Route to section-specific handler
-            if current_section == 'script info':
-                # Script Info: any key allowed
-                if descriptor in ass_file.script_info:
-                    add_warning(ParseWarningType.DUPLICATE_KEY, line_number,
-                               f"Duplicate key '{descriptor}'")
-                ass_file.script_info[descriptor] = descriptor_content.strip()
-            
-            elif current_section in ('v4 styles', 'v4+ styles'):
-                if descriptor_collapsed == 'format':
-                    pass  # Styles use fixed format, ignore Format line content
-                elif descriptor_collapsed == 'style':
-                    ass_file.styles.add_from_line(raw_line)
-            
-            elif current_section == 'events':
-                if descriptor_collapsed == 'format':
-                    try:
-                        current_format = FormatSpec.parse(descriptor_content)
-                        # Check for duplicate fields in Format line
-                        for dup in current_format.duplicate_fields:
-                            add_warning(ParseWarningType.DUPLICATE_FORMAT_FIELD, line_number,
-                                       f"Duplicate field '{dup}' in Format line")
-                        
-                        # Check consistency with ScriptType
-                        script_type = ass_file.script_info.get('ScriptType')
-                        mismatch_msg = check_format_scripttype_consistency(current_format, script_type)
-                        if mismatch_msg:
-                            add_warning(ParseWarningType.FORMAT_SCRIPTTYPE_MISMATCH, line_number, mismatch_msg)
-                    except ValueError as e:
-                        add_warning(ParseWarningType.INVALID_FORMAT, line_number,
-                                   f"Invalid Format: {e}")
-                        current_format = None
-                elif any(descriptor_collapsed == et.lower().replace(" ", "") for et in EVENT_TYPES):
-                    if current_format is None:
-                        script_type = ass_file.script_info.get('ScriptType')
-                        current_format = get_default_format_for_script_type(script_type)
-                        add_warning(ParseWarningType.MISSING_FORMAT, line_number,
-                                   f"Event before Format line, using default for {script_type or 'v4.00+'}")
-                    
-                    event = ass_file.events.add_from_line(raw_line, text_parser, line_number, format_spec=current_format)
-                    if event is None:
-                        # Parsing failed, check if it's because of comma count
-                        expected = len(current_format.fields) if current_format else 10
-                        add_warning(ParseWarningType.MALFORMED_EVENT, line_number,
-                                   f"Failed to parse event line (expected {expected} fields)")
-        
+        # 1. [Script Info]
+        raw_info = raw_doc.get_section('script info')
+        if raw_info:
+            ass_file.script_info = AssScriptInfo.from_raw(raw_info)
+            ass_file.diagnostics.extend(ass_file.script_info.diagnostics)
+        else:
+            ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "Missing [Script Info] section", 0, "MISSING_SECTION"))
+
+        script_type = ass_file.script_info.get('ScriptType')
+
+        # 2. [Styles]
+        raw_styles = raw_doc.get_section('v4+ styles') or raw_doc.get_section('v4 styles')
+        if raw_styles:
+            ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type)
+            ass_file.diagnostics.extend(ass_file.styles.diagnostics)
+        else:
+             ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "Missing Styles section", 0, "MISSING_SECTION"))
+
+        # 3. [Events]
+        raw_events = raw_doc.get_section('events')
+        if raw_events:
+            ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type)
+            ass_file.diagnostics.extend(ass_file.events.diagnostics)
+        else:
+            ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "Missing [Events] section", 0, "MISSING_SECTION"))
+
+        # 4. Custom/Other Sections
+        # We can store these in atransparent way if needed
+        # For now, we fulfill the core requirements.
+
         # Post-parse validation: check for missing ScriptType
         if 'ScriptType' not in ass_file.script_info:
-            add_warning(ParseWarningType.MISSING_SCRIPTTYPE, 0,
-                       "No ScriptType declaration, assuming v4.00+")
+            ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, 
+                       "No ScriptType declaration, assuming v4.00+", 0, "MISSING_SCRIPTTYPE"))
         
         return ass_file
 

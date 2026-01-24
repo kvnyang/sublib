@@ -1,6 +1,7 @@
 """ASS (Advanced SubStation Alpha v4+) subtitle format support."""
 
 from sublib.ass.models import AssFile, AssEvent, AssStyle, AssScriptInfo
+from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
 from sublib.ass.text import AssTextParser, AssTextRenderer, build_text_elements
 from sublib.ass.types import AssColor, AssTimestamp
 from pathlib import Path
@@ -31,11 +32,6 @@ def extract_event_tags_and_segments(event: AssEvent):
     return event.extract_event_tags_and_segments()
 
 
-def build_text_elements(event_tags=None, segments=None) -> list:
-    """Semantic helper to build ASS text elements."""
-    return build_text_elements(event_tags, segments)
-
-
 __all__ = [
     # Facade
     "load",
@@ -48,11 +44,13 @@ __all__ = [
     "AssFile",
     "AssEvent",
     "AssStyle",
+    "AssScriptInfo",
+    "Diagnostic",
+    "DiagnosticLevel",
     # Serde
     "AssTextParser",
     "AssTextRenderer",
     # Types
-    "AssTextRenderer",
     "AssColor",
     "AssTimestamp",
 ]

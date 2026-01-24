@@ -9,14 +9,14 @@ from sublib.ass.types import AssColor
 class AssStyle:
     """ASS style definition.
     
-    Represents a style from the [V4+ Styles] section.
+    Represents a style from the [V4+ Styles] or [V4 Styles] section.
     """
     name: str
     fontname: str
     fontsize: float
     primary_color: AssColor
     secondary_color: AssColor
-    outline_color: AssColor
+    outline_color: AssColor  # Maps to TertiaryColour in v4
     back_color: AssColor
     bold: bool = False
     italic: bool = False
@@ -36,47 +36,53 @@ class AssStyle:
     encoding: int = 1
 
     @classmethod
+    def from_dict(cls, data: dict[str, str]) -> AssStyle:
+        """Create AssStyle from a dictionary of raw strings (mapped by Format)."""
+        # Mapping for v4 compatibility
+        def get_field(names: list[str], default: str = "") -> str:
+            for n in names:
+                if n in data: return data[n]
+            return default
+
+        return cls(
+            name=get_field(['Name']).strip(),
+            fontname=get_field(['Fontname']).strip(),
+            fontsize=float(get_field(['Fontsize'], '0')),
+            primary_color=AssColor.from_style_str(get_field(['PrimaryColour'])),
+            secondary_color=AssColor.from_style_str(get_field(['SecondaryColour'])),
+            outline_color=AssColor.from_style_str(get_field(['OutlineColour', 'TertiaryColour'])),
+            back_color=AssColor.from_style_str(get_field(['BackColour'])),
+            bold=get_field(['Bold'], '0').strip() != '0',
+            italic=get_field(['Italic'], '0').strip() != '0',
+            underline=get_field(['Underline'], '0').strip() != '0',
+            strikeout=get_field(['StrikeOut'], '0').strip() != '0',
+            scale_x=float(get_field(['ScaleX'], '100')),
+            scale_y=float(get_field(['ScaleY'], '100')),
+            spacing=float(get_field(['Spacing'], '0')),
+            angle=float(get_field(['Angle'], '0')),
+            border_style=int(get_field(['BorderStyle'], '1')),
+            outline=float(get_field(['Outline'], '2')),
+            shadow=float(get_field(['Shadow'], '0')),
+            alignment=int(get_field(['Alignment'], '2')),
+            margin_l=int(get_field(['MarginL', 'MarginLeft'], '10')),
+            margin_r=int(get_field(['MarginR', 'MarginRight'], '10')),
+            margin_v=int(get_field(['MarginV', 'MarginVertical'], '10')),
+            encoding=int(get_field(['Encoding'], '1')),
+        )
+
+    @classmethod
     def from_ass_line(cls, line: str) -> AssStyle | None:
-        """Parse a Style: line to AssStyle.
-        
-        Args:
-            line: Style line (e.g., "Style: Default,Arial,20,...")
-            
-        Returns:
-            AssStyle or None if parsing fails
-        """
+        """Legacy parser (now using fixed v4+ format)."""
         if not line.startswith('Style:'):
             return None
-        
-        parts = line[6:].split(',')
-        if len(parts) < 23:
+        parts = [p.strip() for p in line[6:].split(',')]
+        if len(parts) < 10: # Min v4
             return None
-        
-        return cls(
-            name=parts[0].strip(),
-            fontname=parts[1].strip(),
-            fontsize=float(parts[2]),
-            primary_color=AssColor.from_style_str(parts[3]),
-            secondary_color=AssColor.from_style_str(parts[4]),
-            outline_color=AssColor.from_style_str(parts[5]),
-            back_color=AssColor.from_style_str(parts[6]),
-            bold=parts[7].strip() != '0',
-            italic=parts[8].strip() != '0',
-            underline=parts[9].strip() != '0',
-            strikeout=parts[10].strip() != '0',
-            scale_x=float(parts[11]),
-            scale_y=float(parts[12]),
-            spacing=float(parts[13]),
-            angle=float(parts[14]),
-            border_style=int(parts[15]),
-            outline=float(parts[16]),
-            shadow=float(parts[17]),
-            alignment=int(parts[18]),
-            margin_l=int(parts[19]),
-            margin_r=int(parts[20]),
-            margin_v=int(parts[21]),
-            encoding=int(parts[22]),
-        )
+        # Mocking a full dict for from_dict
+        # This is strictly legacy/temporary until everything uses the Format-based flow
+        fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+        data = {fields[i]: parts[i] for i in range(min(len(parts), len(fields)))}
+        return cls.from_dict(data)
 
     def render(self) -> str:
         """Render AssStyle to Style: line."""
@@ -99,12 +105,70 @@ class AssStyles:
     """Intelligent container for [V4+ Styles] section."""
     def __init__(self, data: dict[str, AssStyle] | None = None):
         self._data = data if data is not None else {}
+        self._custom_records: list[RawRecord] = []
+        self._diagnostics: list[Diagnostic] = []
+
+    @classmethod
+    def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssStyles:
+        """Layer 2: Semantic ingestion from a RawSection."""
+        from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+        styles = cls()
+        
+        if not raw.format_fields:
+            # StructParser should have caught this, but safety first
+            styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Styles section", raw.line_number, "MISSING_FORMAT"))
+            return styles
+
+        # 1. Minimum field verification
+        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
+        expected_min = 10 if is_v4 else 23
+        if len(raw.format_fields) < expected_min:
+             styles._diagnostics.append(Diagnostic(
+                DiagnosticLevel.WARNING,
+                f"Styles section has fewer fields ({len(raw.format_fields)}) than standard ({expected_min}) for {script_type or 'v4.00+'}",
+                raw.format_line_number or raw.line_number, "INCOMPLETE_FORMAT"
+            ))
+
+        # 2. Ingest records
+        for record in raw.records:
+            if record.descriptor.lower() == 'style':
+                try:
+                    # Map fields using format
+                    record_data = {}
+                    for i, field_name in enumerate(raw.format_fields):
+                        # Split the value by commas (limited to Format length)
+                        # Actually RAW data already has values in records in StructuralParser? 
+                        # No, records have the WHOLE value string.
+                        pass
+                    
+                    # Wait, StructuralParser just strip() values. 
+                    # We need to split the value string by commas based on Format.
+                    parts = [p.strip() for p in record.value.split(',', len(raw.format_fields)-1)]
+                    record_dict = {name: val for name, val in zip(raw.format_fields, parts)}
+                    
+                    style = AssStyle.from_dict(record_dict)
+                    styles.set(style)
+                except Exception as e:
+                     styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse Style: {e}", record.line_number, "STYLE_PARSE_ERROR"))
+            else:
+                styles._custom_records.append(record)
+
+        if not styles._data:
+            styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "No Style definitions found", raw.line_number, "EMPTY_STYLES"))
+
+        return styles
+
+    @property
+    def diagnostics(self) -> list[Diagnostic]:
+        return self._diagnostics
+
+    @property
+    def custom_records(self) -> list[RawRecord]:
+        return self._custom_records
 
     def _get_canonical_name(self, name: str) -> str:
-        # Try exact match first
         if name in self._data:
             return name
-        # Case-insensitive lookup
         lower_name = name.lower()
         for k in self._data:
             if k.lower() == lower_name:
@@ -118,10 +182,8 @@ class AssStyles:
         return self._data[canonical]
 
     def __setitem__(self, name: str, style: AssStyle) -> None:
-        if name != style.name:
-            # If name is a case-insensitive match for style.name, it's okay but style.name is the source of truth
-            if name.lower() != style.name.lower():
-                raise ValueError(f"Style name mismatch: {name} != {style.name}")
+        if name.lower() != style.name.lower():
+            raise ValueError(f"Style name mismatch: {name} != {style.name}")
         self._data[style.name] = style
 
     def __delitem__(self, name: str) -> None:
@@ -146,22 +208,15 @@ class AssStyles:
         self._data[style.name] = style
 
     def set_all(self, styles: Iterable[AssStyle]) -> None:
-        """Replace all style definitions."""
         self._data.clear()
         for s in styles:
             self.set(s)
 
     def add_from_line(self, line: str) -> AssStyle | None:
-        """Parse and add a style from an ASS line."""
         style = AssStyle.from_ass_line(line)
         if style:
             self.set(style)
         return style
-
-    def add_all(self, styles: Iterable[AssStyle]) -> None:
-        """Merge/Update style definitions."""
-        for s in styles:
-            self.set(s)
 
     def keys(self):
         return self._data.keys()
@@ -171,3 +226,4 @@ class AssStyles:
 
     def items(self):
         return self._data.items()
+
