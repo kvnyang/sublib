@@ -108,7 +108,7 @@ class StructuralParser:
             descriptor_norm = descriptor.lower()
             
             # Special case: Format line for Styles/Events
-            if descriptor_norm == 'format' and current_section.name in CORE_SECTIONS:
+            if descriptor_norm == 'format' and current_section.name in (STYLE_SECTIONS | {'events'}):
                 self._handle_format_line(current_section, descriptor_content, line_number)
                 continue
 

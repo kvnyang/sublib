@@ -103,6 +103,8 @@ The `extract_event_tags_and_segments` and `build_text_elements` operations act o
 
 `AssFile.loads()`
 1.  **Executes Layer 1**: Spits out a `RawDocument` (untyped sections and records).
+    *   `Format:` lines are treated as structural headers in `[Styles]` and `[Events]`.
+    *   `Format:` lines in `[Script Info]` or custom sections are treated as standard data records.
 2.  **Applies Layer 2**: Iterates through `RawDocument`, converting fields and populating `AssFile` models (`AssScriptInfo`, `AssStyles`, `AssEvents`).
 3.  **Triggers Layer 3**: For each Event, the `Text` string is passed to `AssTextParser` (either immediately or lazily).
 
