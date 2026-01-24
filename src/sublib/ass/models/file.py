@@ -34,6 +34,7 @@ class AssFile:
     script_info: AssScriptInfo = field(default_factory=AssScriptInfo)
     styles: AssStyles = field(default_factory=AssStyles)
     events: AssEvents = field(default_factory=AssEvents)
+    extra_sections: list[RawSection] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
 
     @property
@@ -112,9 +113,11 @@ class AssFile:
         else:
             ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "Missing [Events] section", 0, "MISSING_SECTION"))
 
-        # 4. Custom/Other Sections
-        # We can store these in atransparent way if needed
-        # For now, we fulfill the core requirements.
+        # 4. Custom/Other Sections (Fonts, Graphics, etc.)
+        core_sections = {'script info', 'v4 styles', 'v4+ styles', 'events'}
+        for section in raw_doc.sections:
+            if section.name not in core_sections:
+                ass_file.extra_sections.append(section)
 
         # Post-parse validation: check for missing ScriptType
         if 'ScriptType' not in ass_file.script_info:
@@ -146,11 +149,24 @@ class AssFile:
         lines.append('')
         
         # 2. Styles
-        lines.append('[V4+ Styles]')
-        lines.append('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, '
-                     'OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
-                     'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, '
-                     'Alignment, MarginL, MarginR, MarginV, Encoding')
+        # Determine appropriate section name
+        style_section = "[V4+ Styles]"
+        script_type = self.script_info.get('ScriptType', 'v4.00+')
+        if "v4" in script_type.lower() and "+" not in script_type:
+             style_section = "[V4 Styles]"
+             
+        lines.append(style_section)
+        # TODO: Dynamic format based on styles present? For now sticks to standard
+        if style_section == "[V4 Styles]":
+            lines.append('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, '
+                         'TertiaryColour, BackColour, Bold, Italic, BorderStyle, '
+                         'Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding')
+        else:
+            lines.append('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, '
+                         'OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
+                         'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, '
+                         'Alignment, MarginL, MarginR, MarginV, Encoding')
+        
         for style in self.styles:
             lines.append(style.render())
         lines.append('')
@@ -160,6 +176,12 @@ class AssFile:
         lines.append('Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text')
         for event in self.events:
             lines.append(event.render())
+        
+        # 4. Extra Sections (Fonts, Graphics, etc.)
+        for section in self.extra_sections:
+            lines.append('')
+            lines.append(f'[{section.original_name}]')
+            lines.extend(section.raw_lines)
         
         return '\n'.join(lines)
 

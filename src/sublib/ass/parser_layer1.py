@@ -73,17 +73,25 @@ class StructuralParser:
                     line_number=line_number
                 )
                 doc.sections.append(current_section)
-                
-                # Validation: Script Info placement
-                if section_name_norm == 'script info' and non_empty_line_count > 1:
-                    # Check if previous lines were only comments
-                    pass # TODO: more strict check for "first non-comment line"
-                
                 continue
 
-            # 3. Comments
+            if not current_section:
+                self.add_diagnostic(
+                    DiagnosticLevel.WARNING,
+                    f"Content outside of section: {line[:50]}",
+                    line_number, "ORPHAN_CONTENT"
+                )
+                continue
+
+            # NEW: If this is a raw passthrough section (e.g., [Fonts], [Graphics], or Custom)
+            # We treat EVERYTHING as raw lines.
+            if current_section.name not in self.CORE_SECTIONS and current_section.name not in self.STYLE_SECTIONS:
+                current_section.raw_lines.append(raw_line)
+                continue
+
+            # 3. Comments (Only for CORE/STYLE sections now)
             if line.startswith(';') or line.startswith('!:'):
-                if current_section and current_section.name == 'script info':
+                if current_section.name == 'script info':
                     # Value extraction for comments
                     comment_val = line[1:] if line.startswith(';') else line[2:]
                     current_section.comments.append(comment_val.lstrip())
@@ -102,14 +110,6 @@ class StructuralParser:
             descriptor, descriptor_content = parsed
             descriptor_norm = descriptor.lower()
             
-            if not current_section:
-                self.add_diagnostic(
-                    DiagnosticLevel.WARNING,
-                    f"Content outside of section: {line[:50]}",
-                    line_number, "ORPHAN_CONTENT"
-                )
-                continue
-
             # Special case: Format line for Styles/Events
             if descriptor_norm == 'format' and current_section.name in (self.CORE_SECTIONS | self.STYLE_SECTIONS):
                 self._handle_format_line(current_section, descriptor_content, line_number)

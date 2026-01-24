@@ -78,6 +78,10 @@ The primary goal is to convert raw strings from Layer 1 into typed objects and a
 *   Missing mandatory fields -> **Warning**.
 *   Unknown descriptors (beyond standard set like `Dialogue`, `Comment`, `Style`) are kept as raw string records.
 
+### 4. Fonts, Graphics & Custom Sections
+
+*   These sections are passed through transparently to the caller as raw line lists. No semantic parsing or type conversion is performed.
+
 ---
 
 ## Layer 3: Content Parser (AST & Transformations)

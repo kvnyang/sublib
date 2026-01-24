@@ -18,6 +18,7 @@ class RawSection:
     original_name: str
     comments: list[str] = field(default_factory=list)
     records: list[RawRecord] = field(default_factory=list)
+    raw_lines: list[str] = field(default_factory=list)
     line_number: int = 0
     
     # For Format-based sections (Styles, Events)
