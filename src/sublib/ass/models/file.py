@@ -22,6 +22,9 @@ class ParseWarningType(Enum):
     INVALID_FORMAT = 'invalid_format'           # Format line parsing error
     FORMAT_SCRIPTTYPE_MISMATCH = 'format_scripttype_mismatch'  # Format vs ScriptType inconsistency
     MISSING_SCRIPTTYPE = 'missing_scripttype'   # No ScriptType declaration
+    DUPLICATE_FORMAT_FIELD = 'duplicate_format_field'  # Duplicate field in Format line
+    MALFORMED_EVENT = 'malformed_event'         # Event line with insufficient fields
+    DUPLICATE_SECTION = 'duplicate_section'     # Section header appears more than once
 
 
 class ParseWarning(NamedTuple):
@@ -96,6 +99,7 @@ class AssFile:
         
         current_section: str | None = None
         current_format: FormatSpec | None = None
+        seen_sections: set[str] = set()
         
         for line_number, raw_line in enumerate(content.splitlines(), 1):
             line = raw_line.strip()
@@ -106,6 +110,10 @@ class AssFile:
             # Section header
             if line.startswith('[') and line.endswith(']'):
                 current_section = line[1:-1].strip().lower()
+                if current_section in seen_sections:
+                    add_warning(ParseWarningType.DUPLICATE_SECTION, line_number,
+                               f"Section [{current_section}] appears more than once")
+                seen_sections.add(current_section)
                 current_format = None  # Reset format for new section
                 continue
             
@@ -153,6 +161,11 @@ class AssFile:
                 if descriptor_collapsed == 'format':
                     try:
                         current_format = FormatSpec.parse(descriptor_content)
+                        # Check for duplicate fields in Format line
+                        for dup in current_format.duplicate_fields:
+                            add_warning(ParseWarningType.DUPLICATE_FORMAT_FIELD, line_number,
+                                       f"Duplicate field '{dup}' in Format line")
+                        
                         # Check consistency with ScriptType
                         script_type = ass_file.script_info.get('ScriptType')
                         mismatch_msg = check_format_scripttype_consistency(current_format, script_type)
@@ -168,7 +181,13 @@ class AssFile:
                         current_format = get_default_format_for_script_type(script_type)
                         add_warning(ParseWarningType.MISSING_FORMAT, line_number,
                                    f"Event before Format line, using default for {script_type or 'v4.00+'}")
-                    ass_file.events.add_from_line(raw_line, text_parser, line_number, format_spec=current_format)
+                    
+                    event = ass_file.events.add_from_line(raw_line, text_parser, line_number, format_spec=current_format)
+                    if event is None:
+                        # Parsing failed, check if it's because of comma count
+                        expected = len(current_format.fields) if current_format else 10
+                        add_warning(ParseWarningType.MALFORMED_EVENT, line_number,
+                                   f"Failed to parse event line (expected {expected} fields)")
         
         # Post-parse validation: check for missing ScriptType
         if 'ScriptType' not in ass_file.script_info:

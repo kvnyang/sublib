@@ -57,15 +57,23 @@ class FormatSpec:
     fields: tuple[str, ...]
     field_indices: dict[str, int] = field(default_factory=dict)
     text_index: int = -1
+    duplicate_fields: list[str] = field(default_factory=list)
     
     def __post_init__(self):
         # Build index map for known fields only (case-insensitive and ignore internal spaces)
         # Store canonical names from KNOWN_EVENT_FIELDS for consistent access
         known_collapsed = {f.lower().replace(" ", ""): f for f in KNOWN_EVENT_FIELDS}
+        seen_fields: set[str] = set()
+        
         for i, f in enumerate(self.fields):
             f_collapsed = f.lower().replace(" ", "")
+            if f_collapsed in seen_fields:
+                self.duplicate_fields.append(f)
+            seen_fields.add(f_collapsed)
+            
             if f_collapsed in known_collapsed:
                 canonical = known_collapsed[f_collapsed]
+                # Last wins (dictionary behavior)
                 self.field_indices[canonical] = i
         self.text_index = len(self.fields) - 1
     
