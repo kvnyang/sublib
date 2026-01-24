@@ -5,14 +5,11 @@ from typing import Optional
 
 from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
 from sublib.ass.models.raw import RawDocument, RawSection, RawRecord
-from sublib.ass.descriptors import parse_descriptor_line
+from sublib.ass.descriptors import parse_descriptor_line, CORE_SECTIONS, STYLE_SECTIONS
 
 
 class StructuralParser:
     """Layer 1 parser: Scans the document structure and basic line types."""
-
-    CORE_SECTIONS = {'script info', 'v4 styles', 'v4+ styles', 'events'}
-    STYLE_SECTIONS = {'v4 styles', 'v4+ styles'}
 
     def __init__(self):
         self.diagnostics: list[Diagnostic] = []
@@ -85,7 +82,7 @@ class StructuralParser:
 
             # NEW: If this is a raw passthrough section (e.g., [Fonts], [Graphics], or Custom)
             # We treat EVERYTHING as raw lines.
-            if current_section.name not in self.CORE_SECTIONS and current_section.name not in self.STYLE_SECTIONS:
+            if current_section.name not in CORE_SECTIONS and current_section.name not in STYLE_SECTIONS:
                 current_section.raw_lines.append(raw_line)
                 continue
 
@@ -111,7 +108,7 @@ class StructuralParser:
             descriptor_norm = descriptor.lower()
             
             # Special case: Format line for Styles/Events
-            if descriptor_norm == 'format' and current_section.name in (self.CORE_SECTIONS | self.STYLE_SECTIONS):
+            if descriptor_norm == 'format' and current_section.name in (CORE_SECTIONS | STYLE_SECTIONS):
                 self._handle_format_line(current_section, descriptor_content, line_number)
                 continue
 
@@ -123,7 +120,7 @@ class StructuralParser:
             )
             
             # Validation: Missing Format line for Styles/Events
-            if current_section.name in (self.STYLE_SECTIONS | {'events'}) and not current_section.format_fields:
+            if current_section.name in (STYLE_SECTIONS | {'events'}) and not current_section.format_fields:
                 self.add_diagnostic(
                     DiagnosticLevel.ERROR,
                     f"Data line before Format line in [{current_section.original_name}]",
@@ -131,7 +128,7 @@ class StructuralParser:
                 )
             
             # Validation: Comma count for Styles/Events
-            if current_section.name in (self.STYLE_SECTIONS | {'events'}) and current_section.format_fields:
+            if current_section.name in (STYLE_SECTIONS | {'events'}) and current_section.format_fields:
                 # Note: We don't perform deep comma count validation in Layer 1 for ALL sections, 
                 # but we can check if it looks plausible if we have the format.
                 expected_commas = len(current_section.format_fields) - 1

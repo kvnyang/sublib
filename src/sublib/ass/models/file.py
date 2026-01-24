@@ -13,10 +13,6 @@ from .event import AssEvents
 logger = logging.getLogger(__name__)
 
 
-# Keep for backward compatibility if needed, but prefer sublib.ass.diagnostics.Diagnostic
-ParseWarning = Diagnostic
-ParseWarningType = DiagnosticLevel
-
 
 @dataclass
 class AssFile:
@@ -29,18 +25,13 @@ class AssFile:
         script_info: Script metadata and comments
         styles: Style definitions
         events: Dialogue and other events
-        parse_warnings: Warnings collected during parsing (by category)
+        diagnostics: Structured diagnostics (Error, Warning, Info)
     """
     script_info: AssScriptInfo = field(default_factory=AssScriptInfo)
     styles: AssStyles = field(default_factory=AssStyles)
     events: AssEvents = field(default_factory=AssEvents)
     extra_sections: list[RawSection] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
-
-    @property
-    def parse_warnings(self) -> list[Diagnostic]:
-        """Alias for diagnostics to maintain compatibility."""
-        return self.diagnostics
 
     def __post_init__(self):
         if isinstance(self.script_info, dict):

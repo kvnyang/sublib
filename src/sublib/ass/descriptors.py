@@ -11,14 +11,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# Section classification for parsing
+CORE_SECTIONS = {'script info', 'v4 styles', 'v4+ styles', 'events'}
+STYLE_SECTIONS = {'v4 styles', 'v4+ styles'}
+
 # Section -> allowed descriptors (None means any key:value is allowed)
+# Only applies to core sections that follow Descriptor: Value format
 SECTION_DESCRIPTORS: dict[str, set[str] | None] = {
     'script info': None,  # Script Info allows any key:value
     'v4 styles': {'Format', 'Style'},
     'v4+ styles': {'Format', 'Style'},
     'events': {'Format', 'Dialogue', 'Comment', 'Picture', 'Sound', 'Movie', 'Command'},
-    'fonts': {'fontname'},
-    'graphics': {'filename'},
 }
 
 # Event type descriptors

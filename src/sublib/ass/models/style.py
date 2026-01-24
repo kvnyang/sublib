@@ -70,19 +70,6 @@ class AssStyle:
             encoding=int(get_field(['Encoding'], '1')),
         )
 
-    @classmethod
-    def from_ass_line(cls, line: str) -> AssStyle | None:
-        """Legacy parser (now using fixed v4+ format)."""
-        if not line.startswith('Style:'):
-            return None
-        parts = [p.strip() for p in line[6:].split(',')]
-        if len(parts) < 10: # Min v4
-            return None
-        # Mocking a full dict for from_dict
-        # This is strictly legacy/temporary until everything uses the Format-based flow
-        fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
-        data = {fields[i]: parts[i] for i in range(min(len(parts), len(fields)))}
-        return cls.from_dict(data)
 
     def render(self) -> str:
         """Render AssStyle to Style: line."""
@@ -212,11 +199,6 @@ class AssStyles:
         for s in styles:
             self.set(s)
 
-    def add_from_line(self, line: str) -> AssStyle | None:
-        style = AssStyle.from_ass_line(line)
-        if style:
-            self.set(style)
-        return style
 
     def keys(self):
         return self._data.keys()

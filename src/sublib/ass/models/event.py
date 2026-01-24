@@ -68,43 +68,6 @@ class AssEvent:
             _line_number=line_number
         )
 
-    @classmethod
-    def from_ass_line(
-        cls,
-        line: str,
-        text_parser: Any | None = None,
-        line_number: int = 0,
-        format_spec: Any | None = None
-    ) -> AssEvent | None:
-        """Legacy parser (now using from_dict internally)."""
-        if ':' not in line:
-            return None
-        
-        prefix_part, _, content = line.partition(':')
-        descriptor = prefix_part.strip().lower()
-        
-        event_type = None
-        for et in ('Dialogue', 'Comment', 'Picture', 'Sound', 'Movie', 'Command'):
-            if descriptor == et.lower():
-                event_type = et
-                break
-        
-        if not event_type:
-            return None
-        
-        # Split using Format or default
-        fields = format_spec.fields if format_spec else ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
-        parts = [p.strip() for p in content.split(',', len(fields)-1)]
-        record_dict = {name: val for name, val in zip(fields, parts)}
-        
-        ev = cls.from_dict(record_dict, event_type=event_type, line_number=line_number)
-        
-        # Trigger immediate parse if parser provided (Layer 2 behavior)
-        if text_parser:
-             ev._text_elements = text_parser.parse(ev._raw_text, line_number=line_number)
-             ev._raw_text = None
-             
-        return ev
 
     def render(self) -> str:
         """Render event to ASS line (Dialogue: or Comment:)."""
@@ -264,11 +227,6 @@ class AssEvents:
         self._data.clear()
         self._data.extend(events)
 
-    def add_from_line(self, line, text_parser=None, line_number=0, format_spec=None):
-        event = AssEvent.from_ass_line(line, text_parser, line_number, format_spec)
-        if event:
-            self.append(event)
-        return event
 
     def filter(self, style: str | None = None) -> list[AssEvent]:
         if style is None: return list(self._data)
