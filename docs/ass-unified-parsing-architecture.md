@@ -18,15 +18,14 @@ This document defines the 3-layered parsing architecture for the `sublib` ASS pa
 
 The primary goal is to split the raw text into structured but untyped sections.
 
-### 1. Section Constraints
+### 1. Section Constraints & Ordering
 
 | Level | Condition | Behavior |
 | :--- | :--- | :--- |
 | **Error** | Duplicate section headers (e.g., two `[Events]`) | Halt/Reject |
 | **Error** | Ambiguous versioning (both `[V4+ Styles]` and `[V4 Styles]` present) | Halt/Reject |
 | **Warning** | Missing or out-of-order core sections (`Script Info`, `Styles`, `Events`) | Continue |
-| **Warning** | `Script Info` is not the first non-empty/non-comment line | Continue |
-| **Warning** | Optional/Custom sections appear before core sections | Continue |
+| **Info** | Normalization of output order: `Script Info` -> `Styles` -> `Events` -> `Fonts` -> `Graphics` -> Others. | Normalized on Dumps |
 
 ### 2. Line-Level Parsing (Core Sections)
 

@@ -169,7 +169,12 @@ class AssFile:
             lines.append(event.render())
         
         # 4. Extra Sections (Fonts, Graphics, etc.)
-        for section in self.extra_sections:
+        # Sort to ensure standard order: Fonts -> Graphics -> Others (stable sort)
+        sorted_extras = sorted(
+            self.extra_sections,
+            key=lambda s: 0 if s.name == 'fonts' else 1 if s.name == 'graphics' else 2
+        )
+        for section in sorted_extras:
             lines.append('')
             lines.append(f'[{section.original_name}]')
             lines.extend(section.raw_lines)
