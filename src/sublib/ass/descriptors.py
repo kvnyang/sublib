@@ -59,10 +59,14 @@ class FormatSpec:
     text_index: int = -1
     
     def __post_init__(self):
-        # Build index map for known fields only
+        # Build index map for known fields only (case-insensitive lookup)
+        # Store lowercase keys for unified internal access
+        known_lower = {f.lower(): f for f in KNOWN_EVENT_FIELDS}
         for i, f in enumerate(self.fields):
-            if f in KNOWN_EVENT_FIELDS:
-                self.field_indices[f] = i
+            f_lower = f.lower()
+            if f_lower in known_lower:
+                canonical = known_lower[f_lower]
+                self.field_indices[canonical] = i
         self.text_index = len(self.fields) - 1
     
     @classmethod
@@ -83,7 +87,7 @@ class FormatSpec:
         if not fields:
             raise ValueError("Empty Format line")
         
-        if fields[-1] != 'Text':
+        if fields[-1].lower() != 'text':
             raise ValueError(f"Text must be last field, got '{fields[-1]}'")
         
         return cls(fields=fields)
@@ -123,7 +127,7 @@ def parse_descriptor_line(line: str) -> tuple[str, str] | None:
 
 
 def is_descriptor_allowed(section: str, descriptor: str) -> bool:
-    """Check if a descriptor is allowed in a section.
+    """Check if a descriptor is allowed in a section (case-insensitive).
     
     Args:
         section: Section name (lowercase, e.g., 'events')
@@ -135,7 +139,9 @@ def is_descriptor_allowed(section: str, descriptor: str) -> bool:
     allowed = SECTION_DESCRIPTORS.get(section)
     if allowed is None:
         return True  # Script Info allows any key
-    return descriptor in allowed
+    
+    descriptor_lower = descriptor.lower()
+    return any(descriptor_lower == a.lower() for a in allowed)
 
 
 def get_default_format_for_script_type(script_type: str | None) -> FormatSpec:

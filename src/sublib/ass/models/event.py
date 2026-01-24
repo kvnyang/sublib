@@ -40,48 +40,84 @@ class AssEvent:
         cls,
         line: str,
         text_parser: Any | None = None,
-        line_number: int = 0
+        line_number: int = 0,
+        format_spec: Any | None = None
     ) -> AssEvent | None:
-        """Parse a Dialogue: line to AssEvent.
+        """Parse an event line to AssEvent.
         
         Args:
-            line: Dialogue line (e.g., "Dialogue: 0,0:00:00.00,...")
+            line: Event line (e.g., "Dialogue: 0,0:00:00.00,...")
             text_parser: Parser for text field, creates one if not provided
             line_number: Source line number for error reporting
+            format_spec: FormatSpec for dynamic field mapping (optional)
             
         Returns:
             AssEvent or None if parsing fails
         """
-        if line.startswith('Dialogue:'):
-            header = 'Dialogue:'
-        elif line.startswith('Comment:'):
-            header = 'Comment:'
-        else:
+        # Determine event type using robust split
+        if ':' not in line:
             return None
         
-        # Split into 10 parts (last part is text, may contain commas)
-        parts = line[len(header):].split(',', 9)
-        if len(parts) < 10:
+        prefix_part, _, content = line.partition(':')
+        descriptor = prefix_part.strip().lower()
+        
+        # Match against known event types
+        event_type = None
+        for et in ('Dialogue', 'Comment', 'Picture', 'Sound', 'Movie', 'Command'):
+            if descriptor == et.lower():
+                event_type = et
+                break
+        
+        if not event_type:
             return None
+        
+        if format_spec is None:
+            # Default: assume standard 10-field format
+            parts = content.split(',', 9)
+            if len(parts) < 10:
+                return None
+            field_map = {
+                'Layer': parts[0], 'Start': parts[1], 'End': parts[2],
+                'Style': parts[3], 'Name': parts[4], 'MarginL': parts[5],
+                'MarginR': parts[6], 'MarginV': parts[7], 'Effect': parts[8],
+                'Text': parts[9]
+            }
+        else:
+            # Dynamic: use FormatSpec field indices
+            num_fields = len(format_spec.fields)
+            parts = content.split(',', num_fields - 1)
+            if len(parts) < num_fields:
+                return None
+            field_map = {}
+            for field_name, idx in format_spec.field_indices.items():
+                if idx < len(parts):
+                    field_map[field_name] = parts[idx]
+            # Text is always the last field
+            field_map['Text'] = parts[-1] if parts else ''
         
         if text_parser is None:
             from sublib.ass.text import AssTextParser
             text_parser = AssTextParser()
         
-        text = parts[9]
+        # Extract with defaults for missing fields
+        def get_int(key: str, default: int = 0) -> int:
+            try:
+                return int(field_map.get(key, default))
+            except (ValueError, TypeError):
+                return default
         
         return cls(
-            start=AssTimestamp.from_ass_str(parts[1]),
-            end=AssTimestamp.from_ass_str(parts[2]),
-            text_elements=text_parser.parse(text, line_number=line_number),
-            style=parts[3].strip(),
-            layer=int(parts[0]),
-            name=parts[4].strip(),
-            margin_l=int(parts[5]),
-            margin_r=int(parts[6]),
-            margin_v=int(parts[7]),
-            effect=parts[8].strip(),
-            event_type=header[:-1],
+            start=AssTimestamp.from_ass_str(field_map.get('Start', '0:00:00.00')),
+            end=AssTimestamp.from_ass_str(field_map.get('End', '0:00:00.00')),
+            text_elements=text_parser.parse(field_map.get('Text', ''), line_number=line_number),
+            style=field_map.get('Style', 'Default').strip(),
+            layer=get_int('Layer') if 'Layer' in field_map else get_int('Marked'),
+            name=field_map.get('Name', '').strip(),
+            margin_l=get_int('MarginL'),
+            margin_r=get_int('MarginR'),
+            margin_v=get_int('MarginV'),
+            effect=field_map.get('Effect', '').strip(),
+            event_type=event_type,
         )
 
     def render(self) -> str:
@@ -228,9 +264,20 @@ class AssEvents:
         self._data.clear()
         self._data.extend(events)
 
-    def add_from_line(self, line: str, text_parser: Any | None = None, line_number: int = 0) -> AssEvent | None:
+    def add_from_line(
+        self, 
+        line: str, 
+        text_parser: Any | None = None, 
+        line_number: int = 0,
+        format_spec: Any | None = None
+    ) -> AssEvent | None:
         """Parse and add an event from an ASS line."""
-        event = AssEvent.from_ass_line(line, text_parser=text_parser, line_number=line_number)
+        event = AssEvent.from_ass_line(
+            line, 
+            text_parser=text_parser, 
+            line_number=line_number,
+            format_spec=format_spec
+        )
         if event:
             self.append(event)
         return event

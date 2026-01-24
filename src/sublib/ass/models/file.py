@@ -105,7 +105,7 @@ class AssFile:
             
             # Section header
             if line.startswith('[') and line.endswith(']'):
-                current_section = line[1:-1].lower()
+                current_section = line[1:-1].strip().lower()
                 current_format = None  # Reset format for new section
                 continue
             
@@ -127,6 +127,7 @@ class AssFile:
                 continue
             
             descriptor, descriptor_content = parsed
+            descriptor_lower = descriptor.lower()
             
             # Check if descriptor is allowed in this section
             if current_section and not is_descriptor_allowed(current_section, descriptor):
@@ -143,13 +144,13 @@ class AssFile:
                 ass_file.script_info[descriptor] = descriptor_content.strip()
             
             elif current_section in ('v4 styles', 'v4+ styles'):
-                if descriptor == 'Format':
+                if descriptor_lower == 'format':
                     pass  # Styles use fixed format, ignore Format line content
-                elif descriptor == 'Style':
+                elif descriptor_lower == 'style':
                     ass_file.styles.add_from_line(raw_line)
             
             elif current_section == 'events':
-                if descriptor == 'Format':
+                if descriptor_lower == 'format':
                     try:
                         current_format = FormatSpec.parse(descriptor_content)
                         # Check consistency with ScriptType
@@ -161,13 +162,13 @@ class AssFile:
                         add_warning(ParseWarningType.INVALID_FORMAT, line_number,
                                    f"Invalid Format: {e}")
                         current_format = None
-                elif descriptor in EVENT_TYPES:
+                elif any(descriptor_lower == et.lower() for et in EVENT_TYPES):
                     if current_format is None:
                         script_type = ass_file.script_info.get('ScriptType')
                         current_format = get_default_format_for_script_type(script_type)
                         add_warning(ParseWarningType.MISSING_FORMAT, line_number,
                                    f"Event before Format line, using default for {script_type or 'v4.00+'}")
-                    ass_file.events.add_from_line(raw_line, text_parser, line_number)
+                    ass_file.events.add_from_line(raw_line, text_parser, line_number, format_spec=current_format)
         
         # Post-parse validation: check for missing ScriptType
         if 'ScriptType' not in ass_file.script_info:
