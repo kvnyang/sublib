@@ -49,6 +49,7 @@ Applies to `Script Info`, `Styles`, and `Events`:
         *   Exactly one `Format` line per section (**Error** if missing or multiple).
         *   `Format` line must precede all data lines (**Error**).
         *   Duplicate field names in `Format` (**Error**).
+        *   Empty fields within `Format` line, e.g., `Format: Name, , Text` (**Error**).
         *   `Events` `Format` must end with `Text` (**Error**).
     *   **Data Storage**:
         *   Storage: `list[dict[str, str]]`.

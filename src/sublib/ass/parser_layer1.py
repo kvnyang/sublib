@@ -159,9 +159,9 @@ class StructuralParser:
 
         fields = [f.strip() for f in content.split(',')]
         
-        # Validation: Empty fields
-        if not fields or (len(fields) == 1 and not fields[0]):
-            self.add_diagnostic(DiagnosticLevel.ERROR, "Empty Format line", line_number, "EMPTY_FORMAT")
+        # Validation: Empty fields (checks if any field is empty, e.g., 'Format: Start, , Text')
+        if not fields or any(not f for f in fields):
+            self.add_diagnostic(DiagnosticLevel.ERROR, "Format line contains empty fields", line_number, "EMPTY_FORMAT_FIELD")
             return
 
         # Validation: Duplicate Fields
