@@ -29,17 +29,17 @@ class StructuralParser:
         non_empty_line_count = 0
         
         for line_number, raw_line in enumerate(content.splitlines(), 1):
-            line = raw_line.strip()
+            stripped = raw_line.strip()
             
             # 1. Skip strictly empty lines
-            if not line:
+            if not stripped:
                 continue
             
             non_empty_line_count += 1
             
             # 2. Section Headers
-            if line.startswith('[') and line.endswith(']'):
-                section_name_raw = line[1:-1].strip()
+            if stripped.startswith('[') and stripped.endswith(']'):
+                section_name_raw = stripped[1:-1].strip()
                 section_name_norm = section_name_raw.lower()
                 
                 # Validation: Duplicate Section
@@ -75,31 +75,31 @@ class StructuralParser:
             if not current_section:
                 self.add_diagnostic(
                     DiagnosticLevel.WARNING,
-                    f"Content outside of section: {line[:50]}",
+                    f"Content outside of section: {stripped[:50]}",
                     line_number, "ORPHAN_CONTENT"
                 )
                 continue
 
             # NEW: If this is a raw passthrough section (e.g., [Fonts], [Graphics], or Custom)
             # We treat EVERYTHING as raw lines.
-            if current_section.name not in CORE_SECTIONS and current_section.name not in STYLE_SECTIONS:
+            if current_section.name not in CORE_SECTIONS:
                 current_section.raw_lines.append(raw_line)
                 continue
 
             # 3. Comments (Only for CORE/STYLE sections now)
-            if line.startswith(';') or line.startswith('!:'):
+            if stripped.startswith(';') or stripped.startswith('!:'):
                 if current_section.name == 'script info':
                     # Value extraction for comments
-                    comment_val = line[1:] if line.startswith(';') else line[2:]
+                    comment_val = stripped[1:] if stripped.startswith(';') else stripped[2:]
                     current_section.comments.append(comment_val.lstrip())
                 continue
 
-            # 4. Descriptor: Value Lines
-            parsed = parse_descriptor_line(line)
+            # 4. Descriptor: Value Lines (Use raw_line to preserve trailing spaces via lstrip in helper)
+            parsed = parse_descriptor_line(raw_line)
             if not parsed:
                 self.add_diagnostic(
                     DiagnosticLevel.WARNING,
-                    f"Malformed line (no descriptor): {line[:50]}",
+                    f"Malformed line (no descriptor): {stripped[:50]}",
                     line_number, "MALFORMED_LINE"
                 )
                 continue
@@ -108,14 +108,14 @@ class StructuralParser:
             descriptor_norm = descriptor.lower()
             
             # Special case: Format line for Styles/Events
-            if descriptor_norm == 'format' and current_section.name in (CORE_SECTIONS | STYLE_SECTIONS):
+            if descriptor_norm == 'format' and current_section.name in CORE_SECTIONS:
                 self._handle_format_line(current_section, descriptor_content, line_number)
                 continue
 
             # Standard records
             record = RawRecord(
                 descriptor=descriptor, 
-                value=descriptor_content.strip(), 
+                value=descriptor_content, 
                 line_number=line_number
             )
             

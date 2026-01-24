@@ -134,7 +134,7 @@ def parse_descriptor_line(line: str) -> tuple[str, str] | None:
     if ':' not in line:
         return None
     descriptor, _, content = line.partition(':')
-    return descriptor.strip(), content
+    return descriptor.strip(), content.lstrip()
 
 
 def is_descriptor_allowed(section: str, descriptor: str) -> bool:
