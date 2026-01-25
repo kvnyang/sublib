@@ -204,18 +204,20 @@ class AssFile:
         for comment in self.styles.get_comments():
             lines.append(f'; {comment}')
             
-        # Determine format fields
+        # Determine format fields for Styles
         if style_format is None:
-             # Minimalist: Only explicitly defined fields
-             out_fields = self.styles.get_explicit_format(script_type=script_type)
+             if self.styles._raw_format_fields:
+                  # Round-trip Fidelity: Use exactly what was in the file
+                  out_fields = self.styles._raw_format_fields
+             else:
+                  # Minimalist Generation: Only explicitly defined fields
+                  out_fields = self.styles.get_explicit_format(script_type=script_type)
         elif style_format is not self._NOT_SET:
              out_fields = style_format
-        elif self.styles._raw_format_fields:
-             out_fields = self.styles._raw_format_fields
         else:
-            # Standard Default based on ScriptType
+            # Standard Default based on ScriptType (Default View)
             if "v4" in script_type.lower() and "+" not in script_type:
-                out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+                out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
             else:
                 out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
             
@@ -236,16 +238,18 @@ class AssFile:
         for comment in self.events.get_comments():
             lines.append(f'; {comment}')
             
-        # Determine format fields
+        # Determine format fields for Events
         if event_format is None:
-             # Minimalist: Only explicitly defined fields
-             out_fields = self.events.get_explicit_format(script_type=script_type)
+             if self.events._raw_format_fields:
+                  # Round-trip Fidelity: Use exactly what was in the file
+                  out_fields = self.events._raw_format_fields
+             else:
+                  # Minimalist Generation: Only explicitly defined fields
+                  out_fields = self.events.get_explicit_format(script_type=script_type)
         elif event_format is not self._NOT_SET:
              out_fields = event_format
-        elif self.events._raw_format_fields:
-             out_fields = self.events._raw_format_fields
         else:
-            # Standard Default based on ScriptType
+            # Standard Default based on ScriptType (Default View)
             if "v4" in script_type.lower() and "+" not in script_type:
                 out_fields = ['Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
             else:
