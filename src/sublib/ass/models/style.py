@@ -8,6 +8,34 @@ from sublib.ass.types import AssColor
 from sublib.ass.naming import normalize_key, get_canonical_name
 
 
+# Mapping of Python property names to normalized ASS field names
+STYLE_FIELD_MAP = {
+    'name': 'name',
+    'fontname': 'fontname',
+    'fontsize': 'fontsize',
+    'primary_color': 'primarycolour',
+    'secondary_color': 'secondarycolour',
+    'outline_color': 'outlinecolour',
+    'back_color': 'backcolour',
+    'bold': 'bold',
+    'italic': 'italic',
+    'underline': 'underline',
+    'strikeout': 'strikeout',
+    'scale_x': 'scalex',
+    'scale_y': 'scaley',
+    'spacing': 'spacing',
+    'angle': 'angle',
+    'border_style': 'borderstyle',
+    'outline': 'outline',
+    'shadow': 'shadow',
+    'alignment': 'alignment',
+    'margin_l': 'marginl',
+    'margin_r': 'marginr',
+    'margin_v': 'marginv',
+    'encoding': 'encoding'
+}
+
+
 @dataclass
 class AssStyle:
     """ASS style definition.
@@ -64,7 +92,7 @@ class AssStyle:
             if k not in known_standard:
                 extra[k] = v
 
-        explicit = {k for k, v in data.items() if v.strip()}
+        explicit = {normalize_key(k) for k, v in data.items() if v.strip()}
 
         return cls(
             name=get_field(['name']).strip(),
@@ -93,6 +121,19 @@ class AssStyle:
             extra_fields=extra,
             _explicit_fields=explicit
         )
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        # Track manual property changes in _explicit_fields
+        # We only track if _explicit_fields already exists (not during early __init__)
+        # and if the field is one of the mapped ones.
+        if name in STYLE_FIELD_MAP:
+             try:
+                 expl = self.__dict__.get('_explicit_fields')
+                 if expl is not None:
+                     expl.add(STYLE_FIELD_MAP[name])
+             except Exception:
+                 pass
+        super().__setattr__(name, value)
 
 
     def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
@@ -179,12 +220,25 @@ class AssStyles:
         self._raw_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssStyles:
-        """Layer 2: Semantic ingestion from a RawSection."""
+    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = None) -> AssStyles:
+        """Layer 2: Semantic ingestion from a RawSection.
+        
+        Args:
+            raw: The RawSection containing data.
+            script_type: Optional ScriptType hint.
+            style_format: Optional format override to filter which fields are ingested as explicit.
+        """
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         styles = cls()
         styles._section_comments = list(raw.comments)
-        styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
+        
+        # Determine active format fields for this ingestion
+        if style_format:
+             styles._raw_format_fields = style_format
+             parsing_fields = [normalize_key(f) for f in style_format]
+        else:
+             styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
+             parsing_fields = raw.format_fields
         
         if not raw.format_fields:
             # StructParser should have caught this, but safety first
@@ -194,7 +248,10 @@ class AssStyles:
         # 1. Mandatory field verification
         is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
         
-        # User defined mandatory sets
+        # Determine actual file format for parsing records
+        file_format_fields = raw.format_fields # Normalized keys from Layer 1
+        
+        # User defined mandatory sets for validation
         V4_MANDATORY = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 
                         'tertiarycolour', 'backcolour', 'bold', 'italic', 'borderstyle'}
         V4PLUS_MANDATORY = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 
@@ -204,7 +261,8 @@ class AssStyles:
                             'marginr', 'marginv', 'encoding'}
         
         required = V4_MANDATORY if is_v4 else V4PLUS_MANDATORY
-        missing = required - set(raw.format_fields)
+        # We check against parsing_fields (the effective format for this session)
+        missing = required - set(parsing_fields)
         if missing:
              styles._diagnostics.append(Diagnostic(
                 DiagnosticLevel.WARNING,
@@ -213,13 +271,23 @@ class AssStyles:
             ))
 
         # 2. Ingest records
+        # If style_format was provided, we want to filter the ingestion
+        filter_set = set(parsing_fields) if style_format else None
+        
         for record in raw.records:
             if record.descriptor == 'style':
                 try:
-                    parts = [p.strip() for p in record.value.split(',', len(raw.format_fields)-1)]
-                    record_dict = {name: val for name, val in zip(raw.format_fields, parts)}
+                    # Always split based on the FILE'S actual structure
+                    parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
+                    full_dict = {name: val for name, val in zip(file_format_fields, parts)}
                     
-                    style = AssStyle.from_dict(record_dict)
+                    if filter_set:
+                        # Only keep fields requested in the override/filter
+                        ingest_dict = {k: v for k, v in full_dict.items() if k in filter_set}
+                    else:
+                        ingest_dict = full_dict
+                        
+                    style = AssStyle.from_dict(ingest_dict)
                     
                     # Warn on duplicate style names (Last-one-wins)
                     if style.name in styles:
@@ -284,6 +352,36 @@ class AssStyles:
     def __contains__(self, name: str) -> bool:
         lower_name = name.lower()
         return any(k.lower() == lower_name for k in self._data)
+
+    def get_explicit_format(self, script_type: str | None = None) -> list[str]:
+        """Get the union of all explicit fields across all styles in standard order."""
+        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
+        
+        # Standard Order
+        if is_v4:
+            standard = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
+        else:
+            standard = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+        
+        all_explicit = set()
+        for style in self._data.values():
+            all_explicit.update(style._explicit_fields)
+            
+        # Name is always mandatory
+        all_explicit.add('name')
+        
+        # Result in standard order
+        result = []
+        for f in standard:
+            if normalize_key(f) in all_explicit:
+                result.append(f)
+        
+        # Any remaining explicit fields that are NOT in standard set (custom fields)
+        standard_normalized = {normalize_key(f) for f in standard}
+        for field_key in sorted(all_explicit - standard_normalized):
+             result.append(field_key)
+             
+        return result
 
     def __iter__(self):
         return iter(self._data.values())

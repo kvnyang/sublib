@@ -62,10 +62,17 @@ class AssFile:
         """Get diagnostic messages with INFO level."""
         return [d for d in self.diagnostics if d.level == DiagnosticLevel.INFO]
 
+    _NOT_SET = object()
+
     @classmethod
-    def loads(cls, content: str) -> "AssFile":
+    def loads(cls, content: str, style_format: list[str] | None = None, event_format: list[str] | None = None) -> "AssFile":
         """Parse ASS content from string using 3-layered architecture.
         
+        Args:
+            content: The ASS string to parse.
+            style_format: Optional format override (filters ingested fields).
+            event_format: Optional format override (filters ingested fields).
+            
         Layer 1: Structural Parser (Structure/Sections)
         Layer 2: Semantic Parser (Typing/Logic)
         Layer 3: Content Parser (AST/Tags)
@@ -125,7 +132,7 @@ class AssFile:
                     raw_styles.line_number, "VERSION_SECTION_MISMATCH"
                 ))
 
-            ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type)
+            ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type, style_format=style_format)
             ass_file.diagnostics.extend(ass_file.styles.diagnostics)
         else:
             # StructuralParser already warned if Styles are missing
@@ -134,7 +141,7 @@ class AssFile:
         # 3. [Events]
         raw_events = raw_doc.get_section('events')
         if raw_events:
-            ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type)
+            ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type, event_format=event_format)
             ass_file.diagnostics.extend(ass_file.events.diagnostics)
         else:
             # StructuralParser already warned if Events are missing
@@ -148,12 +155,12 @@ class AssFile:
 
         return ass_file
 
-    def dumps(self, style_format: list[str] | None = None, event_format: list[str] | None = None, auto_fill: bool = False) -> str:
+    def dumps(self, style_format: list[str] | None | Any = _NOT_SET, event_format: list[str] | None | Any = _NOT_SET, auto_fill: bool = False) -> str:
         """Serialize the model back to an ASS string.
         
         Args:
-            style_format: Optional list of field names for the Styles section.
-            event_format: Optional list of field names for the Events section.
+            style_format: Optional format override. If explicitly None, minimalist output is used.
+            event_format: Optional format override. If explicitly None, minimalist output is used.
             auto_fill: If True, fills missing semantic fields with defaults. Default False.
         """
         lines = []
@@ -198,10 +205,13 @@ class AssFile:
             lines.append(f'; {comment}')
             
         # Determine format fields
-        if style_format:
-            out_fields = style_format
+        if style_format is None:
+             # Minimalist: Only explicitly defined fields
+             out_fields = self.styles.get_explicit_format(script_type=script_type)
+        elif style_format is not self._NOT_SET:
+             out_fields = style_format
         elif self.styles._raw_format_fields:
-            out_fields = self.styles._raw_format_fields
+             out_fields = self.styles._raw_format_fields
         else:
             # Standard Default based on ScriptType
             if "v4" in script_type.lower() and "+" not in script_type:
@@ -227,10 +237,13 @@ class AssFile:
             lines.append(f'; {comment}')
             
         # Determine format fields
-        if event_format:
-            out_fields = event_format
+        if event_format is None:
+             # Minimalist: Only explicitly defined fields
+             out_fields = self.events.get_explicit_format(script_type=script_type)
+        elif event_format is not self._NOT_SET:
+             out_fields = event_format
         elif self.events._raw_format_fields:
-            out_fields = self.events._raw_format_fields
+             out_fields = self.events._raw_format_fields
         else:
             # Standard Default based on ScriptType
             if "v4" in script_type.lower() and "+" not in script_type:

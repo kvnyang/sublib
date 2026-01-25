@@ -12,6 +12,20 @@ from sublib.ass.models.text.elements import AssTextElement
 from sublib.ass.types import AssTimestamp
 
 
+# Mapping of Python property names to normalized ASS field names
+EVENT_FIELD_MAP = {
+    'layer': 'layer',
+    'start': 'start',
+    'end': 'end',
+    'style': 'style',
+    'name': 'name',
+    'margin_l': 'marginl',
+    'margin_r': 'marginr',
+    'margin_v': 'marginv',
+    'effect': 'effect',
+}
+
+
 @dataclass
 class AssEvent:
     """ASS dialogue event.
@@ -73,7 +87,7 @@ class AssEvent:
             if k not in known_standard:
                 extra[k] = v
 
-        explicit = {k for k, v in data.items() if v.strip()}
+        explicit = {normalize_key(k) for k, v in data.items() if v.strip()}
 
         return cls(
             start=AssTimestamp.from_ass_str(data.get('start', '0:00:00.00')),
@@ -91,6 +105,17 @@ class AssEvent:
             extra_fields=extra,
             _explicit_fields=explicit
         )
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        # Track manual property changes in _explicit_fields
+        if name in EVENT_FIELD_MAP:
+             try:
+                 expl = self.__dict__.get('_explicit_fields')
+                 if expl is not None:
+                     expl.add(EVENT_FIELD_MAP[name])
+             except Exception:
+                 pass
+        super().__setattr__(name, value)
 
 
     def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
@@ -221,12 +246,25 @@ class AssEvents:
         self._raw_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssEvents:
-        """Layer 2: Semantic ingestion from a RawSection."""
+    def from_raw(cls, raw: RawSection, script_type: str | None = None, event_format: list[str] | None = None) -> AssEvents:
+        """Layer 2: Semantic ingestion from a RawSection.
+        
+        Args:
+            raw: The RawSection containing data.
+            script_type: Optional ScriptType hint.
+            event_format: Optional format override to filter which fields are ingested as explicit.
+        """
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         events = cls()
         events._section_comments = list(raw.comments)
-        events._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
+        
+        # Determine active format fields for this ingestion
+        if event_format:
+             events._raw_format_fields = event_format
+             parsing_fields = [normalize_key(f) for f in event_format]
+        else:
+             events._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
+             parsing_fields = raw.format_fields
         
         if not raw.format_fields:
             events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Events section", raw.line_number, "MISSING_FORMAT"))
@@ -235,12 +273,16 @@ class AssEvents:
         # 1. Mandatory field verification
         is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
         
-        # User defined mandatory sets
+        # Determine actual file format for parsing records
+        file_format_fields = raw.format_fields # Normalized keys from Layer 1
+        
+        # User defined mandatory sets for validation
         V4_MANDATORY = {'start', 'end', 'style', 'text'}
         V4PLUS_MANDATORY = {'layer', 'start', 'end', 'style', 'text'}
         
         required = V4_MANDATORY if is_v4 else V4PLUS_MANDATORY
-        missing = required - set(raw.format_fields)
+        # We check against parsing_fields (the effective format for this session)
+        missing = required - set(parsing_fields)
         if missing:
              events._diagnostics.append(Diagnostic(
                 DiagnosticLevel.WARNING,
@@ -249,21 +291,31 @@ class AssEvents:
             ))
 
         # 2. Ingest records
+        # If event_format was provided, we want to filter the ingestion
+        filter_set = set(parsing_fields) if event_format else None
+        
         # known_descriptors as standardized from Layer 1
         known_descriptors = {'dialogue', 'comment', 'picture', 'sound', 'movie', 'command'}
         for record in raw.records:
-            if record.descriptor in known_descriptors:
-                try:
-                    parts = [p.strip() for p in record.value.split(',', len(raw.format_fields)-1)]
-                    record_dict = {name: val for name, val in zip(raw.format_fields, parts)}
-                    
-                    event = AssEvent.from_dict(record_dict, event_type=record.descriptor, line_number=record.line_number)
+            try:
+                # Always split based on the FILE'S actual structure
+                parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
+                full_dict = {name: val for name, val in zip(file_format_fields, parts)}
+                
+                if filter_set:
+                    # Only keep fields requested in the override/filter
+                    ingest_dict = {k: v for k, v in full_dict.items() if k in filter_set}
+                else:
+                    ingest_dict = full_dict
+                
+                if record.descriptor in known_descriptors:
+                    event = AssEvent.from_dict(ingest_dict, event_type=record.descriptor, line_number=record.line_number)
                     events.append(event)
-                except Exception as e:
-                     events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "EVENT_PARSE_ERROR"))
-            else:
-                # Custom record preservation: Store raw descriptor for restoration
-                events._custom_records.append(record)
+                else:
+                    # Custom record preservation: Store raw descriptor for restoration
+                    events._custom_records.append(record)
+            except Exception as e:
+                events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "EVENT_PARSE_ERROR"))
 
         if not events._data:
             events._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "No Events found", raw.line_number, "EMPTY_EVENTS"))
@@ -312,3 +364,33 @@ class AssEvents:
         if style is None: return list(self._data)
         target = style.lower()
         return [e for e in self._data if e.style.lower() == target]
+
+    def get_explicit_format(self, script_type: str | None = None) -> list[str]:
+        """Get the union of all explicit fields across all events in standard order."""
+        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
+        
+        # Standard Order
+        if is_v4:
+            standard = ['Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+        else:
+            standard = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+            
+        all_explicit = set()
+        for event in self._data:
+            all_explicit.update(event._explicit_fields)
+            
+        # Text is always mandatory
+        all_explicit.add('text')
+        
+        # Result in standard order
+        result = []
+        for f in standard:
+            if normalize_key(f) in all_explicit:
+                result.append(f)
+                
+        # Any remaining explicit fields that are NOT in standard set (custom fields)
+        standard_normalized = {normalize_key(f) for f in standard}
+        for field_key in sorted(all_explicit - standard_normalized):
+             result.append(field_key)
+             
+        return result
