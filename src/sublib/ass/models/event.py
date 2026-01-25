@@ -218,18 +218,19 @@ class AssEvents:
             events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Events section", raw.line_number, "MISSING_FORMAT"))
             return events
 
-        # 1. Minimum field verification
+        # 1. Mandatory field verification
         is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        # v4: start, end, style, text (4)
-        # v4+: layer, start, end, style, text (5)
-        required = {'start', 'end', 'style', 'text'}
-        if not is_v4: required.add('layer')
         
+        # User defined mandatory sets
+        V4_MANDATORY = {'start', 'end', 'style', 'text'}
+        V4PLUS_MANDATORY = {'layer', 'start', 'end', 'style', 'text'}
+        
+        required = V4_MANDATORY if is_v4 else V4PLUS_MANDATORY
         missing = required - set(raw.format_fields)
         if missing:
              events._diagnostics.append(Diagnostic(
                 DiagnosticLevel.WARNING,
-                f"Events section missing mandatory fields: {', '.join(missing)}",
+                f"Events section missing standard fields: {', '.join(sorted(missing))}",
                 raw.format_line_number or raw.line_number, "INCOMPLETE_FORMAT"
             ))
 

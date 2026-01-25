@@ -178,20 +178,20 @@ class StructuralParser:
                 )
             seen_fields.add(f)
 
-        # Validation: Text must be last for Events
-        if section.name.lower() == 'events' and std_fields[-1].lower() != 'text':
-             self.add_diagnostic(
-                DiagnosticLevel.ERROR,
-                "Format line in [Events] must end with 'Text'",
-                line_number, "FORMAT_TEXT_NOT_LAST"
-            )
-
         # Validation: Name must be present for Styles (Structural requirement for indexing)
         if section.name.lower() in ('v4 styles', 'v4+ styles') and 'name' not in std_fields:
              self.add_diagnostic(
                 DiagnosticLevel.ERROR,
                 f"Format line in [{section.original_name}] must include 'Name'",
                 line_number, "FORMAT_NAME_MISSING"
+            )
+
+        # Validation: Text must be last for Events
+        if section.name.lower() == 'events' and std_fields[-1].lower() != 'text':
+             self.add_diagnostic(
+                DiagnosticLevel.ERROR,
+                "Format line in [Events] must end with 'Text'",
+                line_number, "FORMAT_TEXT_NOT_LAST"
             )
 
         section.format_fields = std_fields
