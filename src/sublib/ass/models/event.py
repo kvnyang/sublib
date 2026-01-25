@@ -155,10 +155,11 @@ class AssEvent:
                 is_explicit = key in self._explicit_fields or key == 'text'
                 
                 if is_explicit or auto_fill:
-                    if key in vals:
-                        field_values.append(vals[key])
-                    elif key in extra_vals:
+                    # Priority: extra_vals (preserved raw data) > vals (properties)
+                    if key in extra_vals:
                         field_values.append(extra_vals[key])
+                    elif key in vals:
+                        field_values.append(vals[key])
                     else:
                         field_values.append("") # Unknown field
                 else:
@@ -291,8 +292,9 @@ class AssEvents:
             ))
 
         # 2. Ingest records
-        # If event_format was provided, we want to filter the ingestion
-        filter_set = set(parsing_fields) if event_format else None
+        # If event_format was provided, we use it to define which fields are "Standard"
+        # but we still ingest EVERYTHING from the file's physical line.
+        standard_keys = set(parsing_fields) if event_format else None
         
         # known_descriptors as standardized from Layer 1
         known_descriptors = {'dialogue', 'comment', 'picture', 'sound', 'movie', 'command'}
@@ -302,18 +304,32 @@ class AssEvents:
                 parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
                 full_dict = {name: val for name, val in zip(file_format_fields, parts)}
                 
-                if filter_set:
-                    # Only keep fields requested in the override/filter
-                    ingest_dict = {k: v for k, v in full_dict.items() if k in filter_set}
+                if standard_keys:
+                    # Separate fields into "Standard" and "Extra"
+                    ingest_dict = {}
+                    extra_for_record = {}
+                    for k, v in full_dict.items():
+                        if k in standard_keys:
+                            ingest_dict[k] = v
+                        else:
+                            if v: # Only preserve non-empty extra fields
+                                extra_for_record[k] = v
+                    
+                    if record.descriptor in known_descriptors:
+                        event = AssEvent.from_dict(ingest_dict, event_type=record.descriptor, line_number=record.line_number)
+                        # Store identified extras
+                        event.extra_fields.update(extra_for_record)
+                        # Sync explicit fields to include those Extras
+                        event._explicit_fields.update({normalize_key(k) for k, v in extra_for_record.items() if v})
+                        events.append(event)
+                    else:
+                        events._custom_records.append(record)
                 else:
-                    ingest_dict = full_dict
-                
-                if record.descriptor in known_descriptors:
-                    event = AssEvent.from_dict(ingest_dict, event_type=record.descriptor, line_number=record.line_number)
-                    events.append(event)
-                else:
-                    # Custom record preservation: Store raw descriptor for restoration
-                    events._custom_records.append(record)
+                    if record.descriptor in known_descriptors:
+                        event = AssEvent.from_dict(full_dict, event_type=record.descriptor, line_number=record.line_number)
+                        events.append(event)
+                    else:
+                        events._custom_records.append(record)
             except Exception as e:
                 events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "EVENT_PARSE_ERROR"))
 
