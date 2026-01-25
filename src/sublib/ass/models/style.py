@@ -272,36 +272,14 @@ class AssStyles:
             ))
 
         # 2. Ingest records
-        # If style_format was provided, we use it to define which fields are "Standard"
-        # but we still ingest EVERYTHING from the file's physical line.
-        standard_keys = set(parsing_fields) if style_format else None
-        
         for record in raw.records:
             if record.descriptor == 'style':
                 try:
-                    # Always split based on the FILE'S actual structure
+                    # Always split based on the FILE'S actual structure to ensure type accuracy
                     parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
-                    full_dict = {name: val for name, val in zip(file_format_fields, parts)}
+                    record_dict = {name: val for name, val in zip(file_format_fields, parts)}
                     
-                    if standard_keys:
-                        # Separate fields into "Standard" (to be applied to properties)
-                        # and "Extra" (to be preserved)
-                        ingest_dict = {}
-                        extra_for_record = {}
-                        for k, v in full_dict.items():
-                            if k in standard_keys:
-                                ingest_dict[k] = v
-                            else:
-                                if v: # Only preserve non-empty extra fields
-                                    extra_for_record[k] = v
-                        
-                        style = AssStyle.from_dict(ingest_dict)
-                        # Merge identified extras into the style's extra_fields
-                        style.extra_fields.update(extra_for_record)
-                        # Sync explicit fields to include those Extras
-                        style._explicit_fields.update({normalize_key(k) for k, v in extra_for_record.items() if v})
-                    else:
-                        style = AssStyle.from_dict(full_dict)
+                    style = AssStyle.from_dict(record_dict)
                     
                     # Warn on duplicate style names (Last-one-wins)
                     if style.name in styles:

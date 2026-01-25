@@ -292,44 +292,19 @@ class AssEvents:
             ))
 
         # 2. Ingest records
-        # If event_format was provided, we use it to define which fields are "Standard"
-        # but we still ingest EVERYTHING from the file's physical line.
-        standard_keys = set(parsing_fields) if event_format else None
-        
         # known_descriptors as standardized from Layer 1
         known_descriptors = {'dialogue', 'comment', 'picture', 'sound', 'movie', 'command'}
         for record in raw.records:
             try:
-                # Always split based on the FILE'S actual structure
+                # Always split based on the FILE'S actual structure to ensure type accuracy
                 parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
-                full_dict = {name: val for name, val in zip(file_format_fields, parts)}
+                record_dict = {name: val for name, val in zip(file_format_fields, parts)}
                 
-                if standard_keys:
-                    # Separate fields into "Standard" and "Extra"
-                    ingest_dict = {}
-                    extra_for_record = {}
-                    for k, v in full_dict.items():
-                        if k in standard_keys:
-                            ingest_dict[k] = v
-                        else:
-                            if v: # Only preserve non-empty extra fields
-                                extra_for_record[k] = v
-                    
-                    if record.descriptor in known_descriptors:
-                        event = AssEvent.from_dict(ingest_dict, event_type=record.descriptor, line_number=record.line_number)
-                        # Store identified extras
-                        event.extra_fields.update(extra_for_record)
-                        # Sync explicit fields to include those Extras
-                        event._explicit_fields.update({normalize_key(k) for k, v in extra_for_record.items() if v})
-                        events.append(event)
-                    else:
-                        events._custom_records.append(record)
+                if record.descriptor in known_descriptors:
+                    event = AssEvent.from_dict(record_dict, event_type=record.descriptor, line_number=record.line_number)
+                    events.append(event)
                 else:
-                    if record.descriptor in known_descriptors:
-                        event = AssEvent.from_dict(full_dict, event_type=record.descriptor, line_number=record.line_number)
-                        events.append(event)
-                    else:
-                        events._custom_records.append(record)
+                    events._custom_records.append(record)
             except Exception as e:
                 events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "EVENT_PARSE_ERROR"))
 
