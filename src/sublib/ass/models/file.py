@@ -65,7 +65,7 @@ class AssFile:
     _NOT_SET = object()
 
     @classmethod
-    def loads(cls, content: str, style_format: list[str] | None = None, event_format: list[str] | None = None) -> "AssFile":
+    def loads(cls, content: str, style_format: list[str] | None | Any = _NOT_SET, event_format: list[str] | None | Any = _NOT_SET) -> "AssFile":
         """Parse ASS content from string using 3-layered architecture.
         
         Args:
@@ -158,110 +158,87 @@ class AssFile:
     def dumps(self, style_format: list[str] | None | Any = _NOT_SET, event_format: list[str] | None | Any = _NOT_SET, auto_fill: bool = False) -> str:
         """Serialize the model back to an ASS string.
         
-        Args:
-            style_format: Optional format override. If explicitly None, minimalist output is used.
-            event_format: Optional format override. If explicitly None, minimalist output is used.
-            auto_fill: If True, fills missing semantic fields with defaults. Default False.
+        Priority for format fields:
+        1. Explicit parameter (list)
+        2. Minimalist (if parameter is None)
+        3. Intent View (from loads param)
+        4. Physical Fidelity (from file raw)
+        5. Fallback Minimalist (for fresh objects)
         """
         lines = []
+        script_type = self.script_info.get('scripttype', 'v4.00+')
         
         # 1. Script Info
         lines.append(f'[{get_canonical_name("script info", context="SECTION")}]')
-        # Output preserved header comments
         for comment in self.script_info.header_comments:
             lines.append(f'; {comment}')
         
-        # Explicit keys first in standard order, then others
         standard_keys = [
             'scripttype', 'title', 'original script', 'original translation', 
             'original editing', 'original timing', 'synch point', 'script updated by', 
             'update details', 'playresx', 'playresy', 'playdepth', 'timer', 
             'wrapstyle'
         ]
-        
         written_keys = set()
         for key in standard_keys:
             if key in self.script_info:
                 lines.append(self.script_info.render_line(key, self.script_info[key]))
                 written_keys.add(key)
-        
         for key in self.script_info.keys():
             if normalize_key(key) not in written_keys:
                 lines.append(self.script_info.render_line(key, self.script_info[key]))
-        
         lines.append('')
         
         # 2. Styles
-        # Determine appropriate section name
-        script_type = self.script_info.get('scripttype', 'v4.00+')
-        if "v4" in script_type.lower() and "+" not in script_type:
-             style_section_key = normalize_key("v4 styles")
-        else:
-             style_section_key = normalize_key("v4+ styles")
-        
+        is_v4 = "v4" in script_type.lower() and "+" not in script_type
+        style_section_key = normalize_key("v4 styles") if is_v4 else normalize_key("v4+ styles")
         lines.append(f'[{get_canonical_name(style_section_key, context="SECTION")}]')
-        # Output preserved comments
-        for comment in self.styles.get_comments():
+        for comment in self.styles.section_comments:
             lines.append(f'; {comment}')
             
-        # Determine format fields for Styles
-        if style_format is None:
-             if self.styles._raw_format_fields:
-                  # Round-trip Fidelity: Use exactly what was in the file
-                  out_fields = self.styles._raw_format_fields
-             else:
-                  # Minimalist Generation: Only explicitly defined fields
-                  out_fields = self.styles.get_explicit_format(script_type=script_type)
-        elif style_format is not self._NOT_SET:
-             out_fields = style_format
-        else:
-            # Standard Default based on ScriptType (Default View)
-            if "v4" in script_type.lower() and "+" not in script_type:
-                out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
+        # Format Priority (Phase 31):
+        # 1. Parameter List
+        # 2. Parameter None (Fidelity/Minimalist)
+        # 3. Parameter Auto/Default (View)
+        if style_format is not self._NOT_SET:
+            if style_format is None:
+                out_style_format = self.styles._raw_format_fields or self.styles.get_explicit_format(script_type)
             else:
-                out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+                out_style_format = style_format
+        else:
+            out_style_format = self.styles._view_format_fields or self.styles._raw_format_fields or self.styles.get_explicit_format(script_type)
             
-        lines.append(f"Format: {', '.join(out_fields)}")
-        
+        lines.append(f"Format: {', '.join(out_style_format)}")
+
         for style in self.styles:
-            lines.append(style.render(format_fields=out_fields, auto_fill=auto_fill))
-            
-        # Render custom records (unknown descriptors)
+            lines.append(style.render(format_fields=out_style_format, auto_fill=auto_fill))
         for record in self.styles.custom_records:
             lines.append(f"{record.raw_descriptor}: {record.value}")
-            
         lines.append('')
         
         # 3. Events
         lines.append(f'[{get_canonical_name("events", context="SECTION")}]')
-        # Output preserved comments
         for comment in self.events.get_comments():
             lines.append(f'; {comment}')
             
-        # Determine format fields for Events
-        if event_format is None:
-             if self.events._raw_format_fields:
-                  # Round-trip Fidelity: Use exactly what was in the file
-                  out_fields = self.events._raw_format_fields
-             else:
-                  # Minimalist Generation: Only explicitly defined fields
-                  out_fields = self.events.get_explicit_format(script_type=script_type)
-        elif event_format is not self._NOT_SET:
-             out_fields = event_format
-        else:
-            # Standard Default based on ScriptType (Default View)
-            if "v4" in script_type.lower() and "+" not in script_type:
-                out_fields = ['Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+        # Format Priority (Phase 31):
+        # 1. Parameter List
+        # 2. Parameter None (Fidelity/Minimalist)
+        # 3. Parameter Auto/Default (View)
+        if event_format is not self._NOT_SET:
+            if event_format is None:
+                out_event_format = self.events._raw_format_fields or self.events.get_explicit_format(script_type)
             else:
-                out_fields = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+                out_event_format = event_format
+        else:
+            out_event_format = self.events._view_format_fields or self.events._raw_format_fields or self.events.get_explicit_format(script_type)
             
-        lines.append(f"Format: {', '.join(out_fields)}")
+        lines.append(f"Format: {', '.join(out_event_format)}")
         for event in self.events:
-            lines.append(event.render(format_fields=out_fields, auto_fill=auto_fill))
-            
-        # Render custom records (unknown descriptors)
+            lines.append(event.render(format_fields=out_event_format, auto_fill=auto_fill))
         for record in self.events.custom_records:
             lines.append(f"{record.raw_descriptor}: {record.value}")
+
         
         # 4. Extra Sections (Fonts, Graphics, etc.)
         # Sort to ensure standard order: Fonts -> Graphics -> Others (stable sort)

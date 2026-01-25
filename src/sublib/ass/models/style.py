@@ -1,15 +1,22 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Iterable, TYPE_CHECKING
+from typing import Any, Iterable, TYPE_CHECKING
+from sublib.ass.types import AssColor
+from sublib.ass.naming import normalize_key, get_canonical_name
+from sublib.ass.tags.base import _format_float
+
+_VIEW_AUTO = object()
 
 if TYPE_CHECKING:
     from sublib.ass.models.raw import RawSection, RawRecord
-from sublib.ass.types import AssColor
-from sublib.ass.naming import normalize_key, get_canonical_name
+    from sublib.ass.diagnostics import Diagnostic
+
+
+def _format_bool(v: bool) -> str:
+    return "1" if v else "0"
 
 
 # Mapping of Python property names to normalized ASS field names
-STYLE_FIELD_MAP = {
+PROPERTY_TO_KEY = {
     'name': 'name',
     'fontname': 'fontname',
     'fontsize': 'fontsize',
@@ -36,300 +43,268 @@ STYLE_FIELD_MAP = {
 }
 
 
-@dataclass
+class FieldSchema:
+    def __init__(self, default: Any, converter: Any, formatter: Any = str):
+        self.default = default
+        self.converter = converter
+        self.formatter = formatter
+
+    def convert(self, value: Any) -> Any:
+        # If it's already the right type, great.
+        if isinstance(value, self.converter):
+            return value
+            
+        # If it's empty string or None, we return the default.
+        # (Note: In 'Sparse' mode, we won't even call this if the raw string was empty, 
+        # but this is here for safety/setter logic).
+        raw_str = str(value).strip()
+        if not raw_str:
+            return self.default
+            
+        try:
+            if self.converter == bool:
+                return raw_str not in ('0', 'false', 'False', '')
+            if self.converter == int:
+                return int(raw_str)
+            if self.converter == float:
+                return float(raw_str)
+            if self.converter == AssColor:
+                return AssColor.from_style_str(raw_str)
+            if self.converter == str:
+                return raw_str
+            return self.converter(raw_str)
+        except (ValueError, TypeError):
+            return self.default
+
+    def format(self, value: Any) -> str:
+        if value is None:
+            return ""
+        if self.formatter == _format_float:
+            return _format_float(value)
+        if self.formatter == _format_bool:
+            return _format_bool(bool(value))
+        if hasattr(value, 'to_style_str'):
+            return value.to_style_str()
+        return str(value)
+
+
+STYLE_SCHEMA = {
+    'name': FieldSchema("", str),
+    'fontname': FieldSchema("Arial", str),
+    'fontsize': FieldSchema(20.0, float, _format_float),
+    'primarycolour': FieldSchema(AssColor.from_style_str('&H00FFFFFF'), AssColor),
+    'secondarycolour': FieldSchema(AssColor.from_style_str('&H000000FF'), AssColor),
+    'outlinecolour': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
+    'tertiarycolour': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
+    'backcolour': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
+    'bold': FieldSchema(False, bool, _format_bool),
+    'italic': FieldSchema(False, bool, _format_bool),
+    'underline': FieldSchema(False, bool, _format_bool),
+    'strikeout': FieldSchema(False, bool, _format_bool),
+    'scalex': FieldSchema(100.0, float, _format_float),
+    'scaley': FieldSchema(100.0, float, _format_float),
+    'spacing': FieldSchema(0.0, float, _format_float),
+    'angle': FieldSchema(0.0, float, _format_float),
+    'borderstyle': FieldSchema(1, int),
+    'outline': FieldSchema(2.0, float, _format_float),
+    'shadow': FieldSchema(0.0, float, _format_float),
+    'alignment': FieldSchema(2, int),
+    'marginl': FieldSchema(10, int),
+    'marginr': FieldSchema(10, int),
+    'marginv': FieldSchema(10, int),
+    'encoding': FieldSchema(1, int),
+}
+
+
 class AssStyle:
-    """ASS style definition.
+    """ASS style definition using Eager Sparse Typed Storage."""
     
-    Represents a style from the [V4+ Styles] or [V4 Styles] section.
-    """
-    name: str
-    fontname: str
-    fontsize: float
-    primary_color: AssColor
-    secondary_color: AssColor
-    outline_color: AssColor  # Maps to TertiaryColour in v4
-    back_color: AssColor
-    bold: bool = False
-    italic: bool = False
-    underline: bool = False
-    strikeout: bool = False
-    scale_x: float = 100.0
-    scale_y: float = 100.0
-    spacing: float = 0.0
-    angle: float = 0.0
-    border_style: int = 1
-    outline: float = 2.0
-    shadow: float = 0.0
-    alignment: int = 2
-    margin_l: int = 10
-    margin_r: int = 10
-    margin_v: int = 10
-    encoding: int = 1
-    # For custom fields preservation: Stores normalized_key -> raw_value
-    extra_fields: dict[str, str] = field(default_factory=dict)
-    # Track which fields were explicitly provided or set
-    _explicit_fields: set[str] = field(default_factory=set, repr=False)
+    def __init__(self, fields: dict[str, Any] | None = None):
+        # We store normalized keys -> Typed Values
+        self._fields = fields if fields is not None else {}
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith('_'):
+            return super().__getattribute__(name)
+            
+        key = PROPERTY_TO_KEY.get(name)
+        if key:
+            return self[key]
+        return super().__getattribute__(name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith('_'):
+            super().__setattr__(name, value)
+            return
+            
+        key = PROPERTY_TO_KEY.get(name)
+        if key:
+            self[key] = value
+        else:
+            super().__setattr__(name, value)
+
+    def __getitem__(self, key: str) -> Any:
+        norm_key = normalize_key(key)
+        
+        # 1. Sparse Storage Check (Already Typed)
+        if norm_key in self._fields:
+            return self._fields[norm_key]
+            
+        # 2. Schema default
+        if norm_key in STYLE_SCHEMA:
+            return STYLE_SCHEMA[norm_key].default
+            
+        # 3. Aliases
+        if norm_key == 'tertiarycolour' and 'outlinecolour' in self._fields:
+            return self._fields['outlinecolour']
+            
+        return None
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        norm_key = normalize_key(key)
+        # Eager parsing on assignment
+        if norm_key in STYLE_SCHEMA:
+            self._fields[norm_key] = STYLE_SCHEMA[norm_key].convert(value)
+        else:
+            self._fields[norm_key] = value
+
+    def get(self, key: str, default: Any = None) -> Any:
+        val = self[key]
+        return val if val is not None else default
 
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> AssStyle:
-        """Create AssStyle from a dictionary of standardized field names."""
-        def get_field(names: list[str], default: str = "") -> str:
-            for n in names:
-                if n in data: return data[n]
-            return default
-
-        # Keys already standardized (normalized) by the parser or caller
-        known_standard = {
-            'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour',
-            'outlinecolour', 'tertiarycolour', 'backcolour', 'bold', 'italic',
-            'underline', 'strikeout', 'scalex', 'scaley', 'spacing', 'angle',
-            'borderstyle', 'outline', 'shadow', 'alignment', 'marginl', 'marginr',
-            'marginv', 'encoding'
-        }
-        
-        extra = {}
+        """Create AssStyle with Eager Conversion and Sparse Storage."""
+        parsed_fields = {}
         for k, v in data.items():
-            if k not in known_standard:
-                extra[k] = v
-
-        explicit = {normalize_key(k) for k, v in data.items() if v.strip()}
-
-        return cls(
-            name=get_field(['name']).strip(),
-            fontname=get_field(['fontname']).strip(),
-            fontsize=float(get_field(['fontsize'], '0')),
-            primary_color=AssColor.from_style_str(get_field(['primarycolour'])),
-            secondary_color=AssColor.from_style_str(get_field(['secondarycolour'])),
-            outline_color=AssColor.from_style_str(get_field(['outlinecolour', 'tertiarycolour'])),
-            back_color=AssColor.from_style_str(get_field(['backcolour'])),
-            bold=get_field(['bold'], '0').strip() != '0',
-            italic=get_field(['italic'], '0').strip() != '0',
-            underline=get_field(['underline'], '0').strip() != '0',
-            strikeout=get_field(['strikeout'], '0').strip() != '0',
-            scale_x=float(get_field(['scalex'], '100')),
-            scale_y=float(get_field(['scaley'], '100')),
-            spacing=float(get_field(['spacing'], '0')),
-            angle=float(get_field(['angle'], '0')),
-            border_style=int(get_field(['borderstyle'], '1')),
-            outline=float(get_field(['outline'], '2')),
-            shadow=float(get_field(['shadow'], '0')),
-            alignment=int(get_field(['alignment'], '2')),
-            margin_l=int(get_field(['marginl'], '10')),
-            margin_r=int(get_field(['marginr'], '10')),
-            margin_v=int(get_field(['marginv'], '10')),
-            encoding=int(get_field(['encoding'], '1')),
-            extra_fields=extra,
-            _explicit_fields=explicit
-        )
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        # Track manual property changes in _explicit_fields
-        # We only track if _explicit_fields already exists (not during early __init__)
-        # and if the field is one of the mapped ones.
-        if name in STYLE_FIELD_MAP:
-             try:
-                 expl = self.__dict__.get('_explicit_fields')
-                 if expl is not None:
-                     expl.add(STYLE_FIELD_MAP[name])
-             except Exception:
-                 pass
-        super().__setattr__(name, value)
-
+            norm_k = normalize_key(k)
+            v_str = str(v).strip()
+            # Sparse: Skip empty physical fields
+            if not v_str:
+                continue
+                
+            if norm_k in STYLE_SCHEMA:
+                parsed_fields[norm_k] = STYLE_SCHEMA[norm_k].convert(v_str)
+            else:
+                parsed_fields[norm_k] = v_str
+        
+        return cls(parsed_fields)
 
     def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
-        """Render AssStyle to Style: line according to requested format fields.
-        
-        Args:
-            format_fields: List of raw field names to output. If None, uses internal defaults.
-            auto_fill: If True, fills missing explicit fields with defaults. Default False (Transparent).
-        """
-        from sublib.ass.tags.base import _format_float
+        """Render AssStyle with Sparse Logic."""
         descriptor = get_canonical_name("Style", context="v4+ styles")
         
-        # Mapping of standardized key -> actual value
-        vals = {
-            'name': self.name,
-            'fontname': self.fontname,
-            'fontsize': _format_float(self.fontsize),
-            'primarycolour': self.primary_color.to_style_str(),
-            'secondarycolour': self.secondary_color.to_style_str(),
-            'tertiarycolour': self.outline_color.to_style_str(), # Alias for outline in V4
-            'outlinecolour': self.outline_color.to_style_str(),
-            'backcolour': self.back_color.to_style_str(),
-            'bold': str(int(self.bold)),
-            'italic': str(int(self.italic)),
-            'underline': str(int(self.underline)),
-            'strikeout': str(int(self.strikeout)),
-            'scalex': _format_float(self.scale_x),
-            'scaley': _format_float(self.scale_y),
-            'spacing': _format_float(self.spacing),
-            'angle': _format_float(self.angle),
-            'borderstyle': str(self.border_style),
-            'outline': _format_float(self.outline),
-            'shadow': _format_float(self.shadow),
-            'alignment': str(self.alignment),
-            'marginl': str(self.margin_l),
-            'marginr': str(self.margin_r),
-            'marginv': str(self.margin_v),
-            'encoding': str(self.encoding)
-        }
-        
-        # Add extra fields (mapped by normalized key)
-        extra_vals = {normalize_key(k): v for k, v in self.extra_fields.items()}
-        
         if format_fields:
-            field_values = []
-            for f in format_fields:
-                key = normalize_key(f)
-                
-                # Check if field should be rendered (is explicit or auto-fill is on)
-                # Note: 'name' is always mandatory for a meaningful Style line
-                is_explicit = key in self._explicit_fields or key == 'name'
-                
-                if is_explicit or auto_fill:
-                    # Priority: extra_vals (preserved raw data) > vals (properties)
-                    if key in extra_vals:
-                        field_values.append(extra_vals[key])
-                    elif key in vals:
-                        field_values.append(vals[key])
-                    else:
-                        field_values.append("") # Unknown field
-                else:
-                    field_values.append("") # Not explicit, no auto-fill
-            return f"{descriptor}: {','.join(field_values)}"
+            out_keys = [normalize_key(f) for f in format_fields]
+        else:
+            # Default V4+ sequence
+            out_keys = [
+                'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour',
+                'outlinecolour', 'backcolour', 'bold', 'italic', 'underline', 'strikeout',
+                'scalex', 'scaley', 'spacing', 'angle', 'borderstyle', 'outline', 'shadow',
+                'alignment', 'marginl', 'marginr', 'marginv', 'encoding'
+            ]
 
-        # Default V4+ render (backward compatibility)
-        return (
-            f"{descriptor}: {self.name},{self.fontname},{vals['fontsize']},"
-            f"{vals['primarycolour']},{vals['secondarycolour']},"
-            f"{vals['outlinecolour']},{vals['backcolour']},"
-            f"{vals['bold']},{vals['italic']},{vals['underline']},{vals['strikeout']},"
-            f"{vals['scalex']},{vals['scaley']},"
-            f"{vals['spacing']},{vals['angle']},"
-            f"{vals['borderstyle']},{vals['outline']},{vals['shadow']},"
-            f"{vals['alignment']},{vals['marginl']},{vals['marginr']},{vals['marginv']},{vals['encoding']}"
-        )
+        parts = []
+        for key in out_keys:
+            # 1. If we have it, use it.
+            if key in self._fields:
+                val = self._fields[key]
+                if key in STYLE_SCHEMA:
+                    parts.append(STYLE_SCHEMA[key].format(val))
+                else:
+                    parts.append(str(val))
+            # 2. If we don't, check if we should auto-fill
+            elif auto_fill or key == 'name' or (format_fields is not None):
+                # Using defaults to satisfy the requested format/view
+                if key in STYLE_SCHEMA:
+                    parts.append(STYLE_SCHEMA[key].format(STYLE_SCHEMA[key].default))
+                else:
+                    parts.append("")
+            # 3. Otherwise, pure sparse blank
+            else:
+                parts.append("")
+                
+        return f"{descriptor}: {','.join(parts)}"
 
 
 class AssStyles:
-    """Intelligent container for [V4+ Styles] section."""
+    """Container for [Styles] section."""
     def __init__(self, data: dict[str, AssStyle] | None = None):
         self._data = data if data is not None else {}
         self._custom_records: list[RawRecord] = []
         self._diagnostics: list[Diagnostic] = []
         self._section_comments: list[str] = []
         self._raw_format_fields: list[str] | None = None
+        self._view_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = None) -> AssStyles:
-        """Layer 2: Semantic ingestion from a RawSection.
-        
-        Args:
-            raw: The RawSection containing data.
-            script_type: Optional ScriptType hint.
-            style_format: Optional format override to filter which fields are ingested as explicit.
-        """
+    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None | Any = _VIEW_AUTO) -> AssStyles:
+        """Layer 2: Semantic ingestion with Unconditional Storage and Standardized View."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         styles = cls()
         styles._section_comments = list(raw.comments)
         
-        # Determine active format fields for this ingestion
-        if style_format:
-             styles._raw_format_fields = style_format
-             parsing_fields = [normalize_key(f) for f in style_format]
-        else:
-             styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
-             parsing_fields = raw.format_fields
+        # 1. Physical Reality (Permanent)
+        styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
         
-        if not raw.format_fields:
-            # StructParser should have caught this, but safety first
+        # 2. Ingest ALL physical data regardless of parameters
+        file_format_fields = raw.format_fields # Normalized
+        if not file_format_fields:
             styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Styles section", raw.line_number, "MISSING_FORMAT"))
             return styles
 
-        # 1. Mandatory field verification
-        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        
-        # Determine actual file format for parsing records
-        file_format_fields = raw.format_fields # Normalized keys from Layer 1
-        
-        # User defined mandatory sets for validation
-        V4_MANDATORY = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 
-                        'tertiarycolour', 'backcolour', 'bold', 'italic', 'borderstyle'}
-        V4PLUS_MANDATORY = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 
-                            'outlinecolour', 'backcolour', 'bold', 'italic', 'underline', 
-                            'strikeout', 'scalex', 'scaley', 'spacing', 'angle', 
-                            'borderstyle', 'outline', 'shadow', 'alignment', 'marginl', 
-                            'marginr', 'marginv', 'encoding'}
-        
-        required = V4_MANDATORY if is_v4 else V4PLUS_MANDATORY
-        # We check against parsing_fields (the effective format for this session)
-        missing = required - set(parsing_fields)
-        if missing:
-             styles._diagnostics.append(Diagnostic(
-                DiagnosticLevel.WARNING,
-                f"Styles section missing standard fields: {', '.join(sorted(missing))}",
-                raw.format_line_number or raw.line_number, "INCOMPLETE_FORMAT"
-            ))
-
-        # 2. Ingest records
         for record in raw.records:
             if record.descriptor == 'style':
                 try:
-                    # Always split based on the FILE'S actual structure to ensure type accuracy
                     parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
                     record_dict = {name: val for name, val in zip(file_format_fields, parts)}
-                    
                     style = AssStyle.from_dict(record_dict)
-                    
-                    # Warn on duplicate style names (Last-one-wins)
                     if style.name in styles:
-                        styles._diagnostics.append(Diagnostic(
-                            DiagnosticLevel.WARNING,
-                            f"Duplicate style name '{style.name}' found. The last definition will take precedence.",
-                            record.line_number, "DUPLICATE_STYLE_NAME"
-                        ))
-                    
+                        styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, f"Duplicate style name '{style.name}'", record.line_number, "DUPLICATE_STYLE_NAME"))
                     styles.set(style)
                 except Exception as e:
-                     styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "STYLE_PARSE_ERROR"))
+                     styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse style: {e}", record.line_number, "STYLE_PARSE_ERROR"))
             else:
-                # Custom record preservation: Store raw descriptor for restoration
                 styles._custom_records.append(record)
 
-        if not styles._data:
-            styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "No Style definitions found", raw.line_number, "EMPTY_STYLES"))
+        # 3. Standardized View Selection (_view_format_fields)
+        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
+        
+        if isinstance(style_format, list):
+            # Type A: Explicit intended slice
+            styles._view_format_fields = style_format
+        elif style_format is None:
+             # Type B: Explicit None (Minimalist)
+             styles._view_format_fields = styles.get_explicit_format(script_type)
+        else:
+             # Type C: Default (Unspecified/Auto) -> Standard v4/v4+
+             if is_v4:
+                 styles._view_format_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
+             else:
+                 styles._view_format_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
 
         return styles
 
     @property
-    def diagnostics(self) -> list[Diagnostic]:
-        return self._diagnostics
+    def diagnostics(self) -> list[Diagnostic]: return self._diagnostics
 
     @property
-    def section_comments(self) -> list[str]:
-        return self._section_comments
-
-    def get_comments(self) -> list[str]:
-        """Get all comments."""
-        return list(self._section_comments)
+    def section_comments(self) -> list[str]: return self._section_comments
 
     @property
-    def custom_records(self) -> list[RawRecord]:
-        return self._custom_records
+    def custom_records(self) -> list[RawRecord]: return self._custom_records
 
     def _get_canonical_name(self, name: str) -> str:
-        if name in self._data:
-            return name
+        if name in self._data: return name
         lower_name = name.lower()
         for k in self._data:
-            if k.lower() == lower_name:
-                return k
+            if k.lower() == lower_name: return k
         return name
 
     def __getitem__(self, name: str) -> AssStyle:
         canonical = self._get_canonical_name(name)
-        if canonical not in self._data:
-            raise KeyError(name)
+        if canonical not in self._data: raise KeyError(name)
         return self._data[canonical]
 
     def __setitem__(self, name: str, style: AssStyle) -> None:
@@ -346,60 +321,39 @@ class AssStyles:
         return any(k.lower() == lower_name for k in self._data)
 
     def get_explicit_format(self, script_type: str | None = None) -> list[str]:
-        """Get the union of all explicit fields across all styles in standard order."""
+        """Union of all physical keys in standard order."""
         is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        
-        # Standard Order
         if is_v4:
             standard = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
         else:
             standard = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
         
-        all_explicit = set()
+        all_physical_keys = set()
         for style in self._data.values():
-            all_explicit.update(style._explicit_fields)
-            
-        # Name is always mandatory
-        all_explicit.add('name')
+            all_physical_keys.update(style._fields.keys())
+        all_physical_keys.add('name')
         
-        # Result in standard order
         result = []
         for f in standard:
-            if normalize_key(f) in all_explicit:
+            if normalize_key(f) in all_physical_keys:
                 result.append(f)
         
-        # Any remaining explicit fields that are NOT in standard set (custom fields)
         standard_normalized = {normalize_key(f) for f in standard}
-        for field_key in sorted(all_explicit - standard_normalized):
+        for field_key in sorted(all_physical_keys - standard_normalized):
              result.append(field_key)
              
         return result
 
-    def __iter__(self):
-        return iter(self._data.values())
-
-    def __len__(self) -> int:
-        return len(self._data)
-
+    def __iter__(self): return iter(self._data.values())
+    def __len__(self) -> int: return len(self._data)
+    def keys(self): return self._data.keys()
+    def values(self): return self._data.values()
+    def items(self): return self._data.items()
     def get(self, name: str) -> AssStyle | None:
         canonical = self._get_canonical_name(name)
         return self._data.get(canonical)
-
     def set(self, style: AssStyle) -> None:
         self._data[style.name] = style
-
     def set_all(self, styles: Iterable[AssStyle]) -> None:
         self._data.clear()
-        for s in styles:
-            self.set(s)
-
-
-    def keys(self):
-        return self._data.keys()
-
-    def values(self):
-        return self._data.values()
-
-    def items(self):
-        return self._data.items()
-
+        for s in styles: self.set(s)
