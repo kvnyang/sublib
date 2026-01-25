@@ -153,16 +153,20 @@ class AssFile:
 
         return ass_file
 
-    def dumps(self, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False) -> str:
+    def dumps(self, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False, validate: bool = False) -> str:
         """Serialize the model back to an ASS string.
         
-        Priority for format fields:
-        1. Explicit parameter (list)
-        2. Minimalist (if parameter is None)
-        3. Intent View (from loads param)
-        4. Physical Fidelity (from file raw)
-        5. Fallback Minimalist (for fresh objects)
+        Args:
+            style_format: Optional format override for Styles section.
+            event_format: Optional format override for Events section.
+            auto_fill: If True, fills missing fields with defaults.
+            validate: If True, validates style references before dumping.
         """
+        if validate:
+            errors = self._validate_styles()
+            if errors:
+                raise ValueError(f"Style validation failed: {'; '.join(errors)}")
+
         lines = []
         script_type = self.script_info.get('scripttype', 'v4.00+')
         
@@ -271,24 +275,31 @@ class AssFile:
         return len(self.events)
     
     @classmethod
-    def load(cls, path: Path | str) -> "AssFile":
+    def load(cls, path: Path | str, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = True) -> "AssFile":
         """Load ASS file from path.
         
-        Validation warnings are logged at WARNING level.
+        Args:
+            path: Target file path.
+            style_format: Optional format override for Styles section.
+            event_format: Optional format override for Events section.
+            auto_fill: Whether to fill missing standard fields with defaults.
         """
         from sublib.io import read_text_file
         content = read_text_file(path, encoding='utf-8-sig')
-        return cls.loads(content)
+        return cls.loads(content, style_format=style_format, event_format=event_format, auto_fill=auto_fill)
     
-    def dump(self, path: Path | str, validate: bool = False) -> None:
-        """Save to file.
+    def dump(self, path: Path | str, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False, validate: bool = False) -> None:
+        """Save subtitle model to file.
         
         Args:
-            path: Output file path
-            validate: If True, raise ValueError for undefined style references
+            path: Output file path.
+            style_format: Optional format override for Styles section.
+            event_format: Optional format override for Events section.
+            auto_fill: Whether to fill missing fields with defaults.
+            validate: If True, raise ValueError for undefined style references.
         """
         from sublib.io import write_text_file
-        content = self.dumps(validate=validate)
+        content = self.dumps(style_format=style_format, event_format=event_format, auto_fill=auto_fill, validate=validate)
         write_text_file(path, content, encoding='utf-8-sig')
     
     def _validate_styles(self) -> list[str]:
