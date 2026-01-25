@@ -55,6 +55,13 @@ KNOWN_EVENT_FIELDS = frozenset({
     'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text'
 })
 
+from .naming import (
+    get_standard_name,
+    STANDARD_SECTION_NAMES,
+    STANDARD_DESCRIPTOR_NAMES,
+    STANDARD_FIELD_NAMES
+)
+
 
 @dataclass
 class FormatSpec:

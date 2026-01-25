@@ -6,7 +6,8 @@ from typing import Optional
 @dataclass
 class RawRecord:
     """A raw key-value pair from a descriptor line."""
-    descriptor: str
+    descriptor: str  # Standardized name if known
+    raw_descriptor: str # Original name from file
     value: str
     line_number: int
 
@@ -14,8 +15,8 @@ class RawRecord:
 @dataclass
 class RawSection:
     """A raw section containing comments and records."""
-    name: str  # Normalized lowercase name
-    original_name: str
+    name: str  # Standardized name (e.g., 'Script Info')
+    original_name: str # Original section name from file
     line_number: int = 0
     raw_lines: list[str] = field(default_factory=list)
 
@@ -23,7 +24,8 @@ class RawSection:
     records: list[RawRecord] = field(default_factory=list)
     
     # For Format-based sections (Styles, Events)
-    format_fields: Optional[list[str]] = None
+    format_fields: Optional[list[str]] = None      # Standardized fields
+    raw_format_fields: Optional[list[str]] = None  # Original fields
     format_line_number: Optional[int] = None
 
 
@@ -36,6 +38,6 @@ class RawDocument:
         """Get the first section with the given normalized name."""
         name_lower = name.lower()
         for section in self.sections:
-            if section.name == name_lower:
+            if section.name.lower() == name_lower:
                 return section
         return None

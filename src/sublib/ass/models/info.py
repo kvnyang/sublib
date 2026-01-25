@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any
 import logging
 
+from sublib.ass.naming import get_standard_name
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,13 +29,14 @@ class AssScriptInfo:
         "ScaledBorderAndShadow": "v4.00+",
         "YCbCr Matrix": "v4.00+",
     }
-    
-    _CANONICAL_KEYS = {k.lower(): k for k in KNOWN_FIELDS}
 
     def __init__(self, data: dict[str, Any] | None = None):
-        self._data = data if data is not None else {}
+        self._data: dict[str, Any] = {}
+        self._display_names: dict[str, str] = {}
         self._header_comments: list[str] = []
         self._diagnostics: list[Diagnostic] = []
+        if data:
+            self.set_all(data)
     
     @classmethod
     def from_raw(cls, raw: RawSection) -> AssScriptInfo:
@@ -42,23 +45,23 @@ class AssScriptInfo:
         info = cls()
         info.set_comments(raw.comments)
         
-        # Pass 1: Aggregate records (Last-one-wins) and detect duplicates
-        aggregated: dict[str, tuple[str, int]] = {}
+        # Pass 1: Aggregate records (Last-one-wins)
+        # record.descriptor is already standardized (or lowercase unknown) by Layer 1
+        aggregated: dict[str, tuple[str, str, int]] = {}
         for record in raw.records:
-            key_norm = info._normalize_key(record.descriptor)
-            if key_norm in aggregated:
+            if record.descriptor in aggregated:
                 info._diagnostics.append(Diagnostic(
                     DiagnosticLevel.WARNING,
-                    f"Duplicate key '{record.descriptor}' in [Script Info]",
+                    f"Duplicate key '{record.raw_descriptor}' in [Script Info]",
                     record.line_number, "DUPLICATE_KEY"
                 ))
-            aggregated[key_norm] = (record.value, record.line_number)
+            # Store (raw_descriptor, value, line_number)
+            aggregated[record.descriptor] = (record.raw_descriptor, record.value, record.line_number)
 
         # Pass 2: Detect Version (ScriptType)
         script_type = 'v4.00+'  # Default
-        st_key = info._normalize_key('ScriptType')
-        if st_key in aggregated:
-            val, ln = aggregated[st_key]
+        if 'ScriptType' in aggregated:
+            raw_st, val, ln = aggregated['ScriptType']
             if val in ('v4.00', 'v4.00+'):
                 script_type = val
             else:
@@ -67,28 +70,22 @@ class AssScriptInfo:
                     f"Invalid ScriptType '{val}', defaulting to 'v4.00+'",
                     ln, "INVALID_SCRIPTTYPE"
                 ))
-            # Update the map so Pass 3 uses the corrected/confirmed version
-            aggregated[st_key] = (script_type, ln)
+            # Update values
+            aggregated['ScriptType'] = (raw_st, script_type, ln)
         else:
             info._diagnostics.append(Diagnostic(
                 DiagnosticLevel.WARNING,
                 "Missing 'ScriptType' in [Script Info], defaulting to 'v4.00+'",
                 raw.line_number, "MISSING_SCRIPTTYPE"
             ))
+            info.set('ScriptType', script_type)
         
-        if not aggregated and not raw.comments:
-             info._diagnostics.append(Diagnostic(
-                DiagnosticLevel.WARNING,
-                "Section [Script Info] is empty",
-                raw.line_number, "EMPTY_SECTION"
-            ))
-            
         # Pass 3: Semantic Validation and Type Conversion
-        # Use a stable order (canonical keys if possible, or just the aggregated items)
-        for key_norm, (value, line_number) in aggregated.items():
-            # Get original key name if possible for the 'key' argument in set()
-            orig_key = next((r.descriptor for r in raw.records if info._normalize_key(r.descriptor) == key_norm), key_norm)
-            info.set(orig_key, value, line_number=line_number, script_type=script_type)
+        for std_key, (raw_key, value, line_number) in aggregated.items():
+            # Pass raw_key for display/diagnostic fidelity
+            info.set(std_key, value, raw_key=raw_key, line_number=line_number, script_type=script_type)
+            
+        return info
             
         return info
 
@@ -115,8 +112,7 @@ class AssScriptInfo:
         return list(self._header_comments)
 
     def _normalize_key(self, key: str) -> str:
-        # Case insensitive, but space sensitive as per requirement
-        return self._CANONICAL_KEYS.get(key.lower(), key)
+        return get_standard_name(key, context='script info')
 
     def render_line(self, key: str, value: Any) -> str:
         """Render a single Script Info line."""
@@ -134,10 +130,17 @@ class AssScriptInfo:
     def __setitem__(self, key: str, value: Any) -> None:
         self.set(key, value)
 
-    def set(self, key: str, value: Any, line_number: int = 0, script_type: str | None = None) -> None:
+    def set(self, key: str, value: Any, raw_key: str | None = None, line_number: int = 0, script_type: str | None = None) -> None:
         """Set a property with optional diagnostic reporting."""
         canonical_key = self._normalize_key(key)
         
+        # Update display name: Standard name for known fields, raw name for unknown fields
+        if canonical_key in self.KNOWN_FIELDS:
+            display_name = canonical_key
+        else:
+            display_name = raw_key or key
+        self._display_names[canonical_key] = display_name
+
         # 1. Version Check
         if script_type and canonical_key in self.VERSION_FIELDS:
             min_ver = self.VERSION_FIELDS[canonical_key]
@@ -145,7 +148,7 @@ class AssScriptInfo:
                 from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
                 self._diagnostics.append(Diagnostic(
                     DiagnosticLevel.WARNING,
-                    f"Field '{key}' is v4.00+ specific but ScriptType is '{script_type}'",
+                    f"Field '{raw_key or key}' is v4.00+ specific but ScriptType is '{script_type}'",
                     line_number, "VERSION_MISMATCH"
                 ))
 
@@ -153,17 +156,8 @@ class AssScriptInfo:
         if isinstance(value, str):
             field_type = self.KNOWN_FIELDS.get(canonical_key)
             if field_type:
-                value = self._parse_typed_value(canonical_key, value, field_type, line_number)
+                value = self._parse_typed_value(raw_key or key, value, field_type, line_number)
         
-        # 3. Duplicate Check
-        if canonical_key in self._data and line_number > 0:
-             from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-             self._diagnostics.append(Diagnostic(
-                DiagnosticLevel.WARNING,
-                f"Duplicate key '{key}' in [Script Info]",
-                line_number, "DUPLICATE_KEY"
-            ))
-
         self._data[canonical_key] = value
 
     def _parse_typed_value(self, key: str, value: str, field_type: str, line_number: int = 0) -> Any:
@@ -198,7 +192,7 @@ class AssScriptInfo:
         return self._normalize_key(key) in self._data
 
     def __iter__(self):
-        return iter(self._data)
+        return iter(self.keys())
 
     def __len__(self) -> int:
         return len(self._data)
@@ -216,13 +210,14 @@ class AssScriptInfo:
             self.set(k, v)
 
     def keys(self):
-        return self._data.keys()
+        return [self._display_names.get(k, k) for k in self._data.keys()]
 
     def values(self):
         return self._data.values()
 
     def items(self):
-        return self._data.items()
+        for k, v in self._data.items():
+            yield self._display_names.get(k, k), v
 
     def to_dict(self) -> dict[str, Any]:
         return dict(self._data)

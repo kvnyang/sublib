@@ -9,6 +9,7 @@ from sublib.ass.parser_layer1 import StructuralParser
 from .info import AssScriptInfo
 from .style import AssStyles
 from .event import AssEvents
+from sublib.ass.naming import get_standard_name
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ class AssFile:
         # 4. Custom/Other Sections (Fonts, Graphics, etc.)
         core_sections = {'script info', 'v4 styles', 'v4+ styles', 'events'}
         for section in raw_doc.sections:
-            if section.name not in core_sections:
+            if section.name.lower() not in core_sections:
                 ass_file.extra_sections.append(section)
 
         return ass_file
@@ -137,7 +138,7 @@ class AssFile:
         lines = []
         
         # 1. Script Info
-        lines.append('[Script Info]')
+        lines.append(f'[{get_standard_name("script info", context="SECTION")}]')
         # Output preserved comments first
         for comment in self.script_info.header_comments:
             lines.append(f'; {comment}')
@@ -147,30 +148,46 @@ class AssFile:
         
         # 2. Styles
         # Determine appropriate section name
-        style_section = "[V4+ Styles]"
         script_type = self.script_info.get('ScriptType', 'v4.00+')
         if "v4" in script_type.lower() and "+" not in script_type:
-             style_section = "[V4 Styles]"
-             
-        lines.append(style_section)
-        # TODO: Dynamic format based on styles present? For now sticks to standard
-        if style_section == "[V4 Styles]":
-            lines.append('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, '
-                         'TertiaryColour, BackColour, Bold, Italic, BorderStyle, '
-                         'Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding')
+             style_section = get_standard_name("v4 styles", context="SECTION")
         else:
-            lines.append('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, '
-                         'OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, '
-                         'ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, '
-                         'Alignment, MarginL, MarginR, MarginV, Encoding')
+             style_section = get_standard_name("v4+ styles", context="SECTION")
+             
+        lines.append(f'[{style_section}]')
+        # Output preserved comments
+        for comment in self.styles.get_comments():
+            lines.append(f'; {comment}')
+            
+        # TODO: Dynamic format based on styles present? For now sticks to standard
+        if "V4 Styles" in style_section:
+            fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
+                     'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle',
+                     'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+        else:
+            fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
+                     'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut',
+                     'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow',
+                     'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+        
+        # Standardize fields just in case
+        ctx = f"FIELD:{style_section.lower()}"
+        std_fields = [get_standard_name(f, context=ctx) for f in fields]
+        lines.append(f"Format: {', '.join(std_fields)}")
         
         for style in self.styles:
             lines.append(style.render())
         lines.append('')
         
         # 3. Events
-        lines.append('[Events]')
-        lines.append('Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text')
+        lines.append(f'[{get_standard_name("events", context="SECTION")}]')
+        # Output preserved comments
+        for comment in self.events.get_comments():
+            lines.append(f'; {comment}')
+            
+        fields = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+        std_fields = [get_standard_name(f, context="FIELD:events") for f in fields]
+        lines.append(f"Format: {', '.join(std_fields)}")
         for event in self.events:
             lines.append(event.render())
         

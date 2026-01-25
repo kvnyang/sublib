@@ -1,8 +1,8 @@
-"""ASS Style models."""
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 from sublib.ass.types import AssColor
+from sublib.ass.naming import get_standard_name
 
 
 @dataclass
@@ -37,8 +37,7 @@ class AssStyle:
 
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> AssStyle:
-        """Create AssStyle from a dictionary of raw strings (mapped by Format)."""
-        # Mapping for v4 compatibility
+        """Create AssStyle from a dictionary of standardized field names."""
         def get_field(names: list[str], default: str = "") -> str:
             for n in names:
                 if n in data: return data[n]
@@ -64,9 +63,9 @@ class AssStyle:
             outline=float(get_field(['Outline'], '2')),
             shadow=float(get_field(['Shadow'], '0')),
             alignment=int(get_field(['Alignment'], '2')),
-            margin_l=int(get_field(['MarginL', 'MarginLeft'], '10')),
-            margin_r=int(get_field(['MarginR', 'MarginRight'], '10')),
-            margin_v=int(get_field(['MarginV', 'MarginVertical'], '10')),
+            margin_l=int(get_field(['MarginL'], '10')),
+            margin_r=int(get_field(['MarginR'], '10')),
+            margin_v=int(get_field(['MarginV'], '10')),
             encoding=int(get_field(['Encoding'], '1')),
         )
 
@@ -74,8 +73,9 @@ class AssStyle:
     def render(self) -> str:
         """Render AssStyle to Style: line."""
         from sublib.ass.tags.base import _format_float
+        descriptor = get_standard_name("Style", context="v4+ styles")
         return (
-            f"Style: {self.name},{self.fontname},{_format_float(self.fontsize)},"
+            f"{descriptor}: {self.name},{self.fontname},{_format_float(self.fontsize)},"
             f"{self.primary_color.to_style_str()},"
             f"{self.secondary_color.to_style_str()},"
             f"{self.outline_color.to_style_str()},"
@@ -120,25 +120,24 @@ class AssStyles:
 
         # 2. Ingest records
         for record in raw.records:
-            if record.descriptor.lower() == 'style':
+            if record.descriptor == 'Style':
                 try:
-                    # Map fields using format
-                    record_data = {}
-                    for i, field_name in enumerate(raw.format_fields):
-                        # Split the value by commas (limited to Format length)
-                        # Actually RAW data already has values in records in StructuralParser? 
-                        # No, records have the WHOLE value string.
-                        pass
-                    
-                    # Wait, StructuralParser just strip() values. 
-                    # We need to split the value string by commas based on Format.
                     parts = [p.strip() for p in record.value.split(',', len(raw.format_fields)-1)]
                     record_dict = {name: val for name, val in zip(raw.format_fields, parts)}
                     
                     style = AssStyle.from_dict(record_dict)
+                    
+                    # Warn on duplicate style names (Last-one-wins)
+                    if style.name in styles:
+                        styles._diagnostics.append(Diagnostic(
+                            DiagnosticLevel.WARNING,
+                            f"Duplicate style name '{style.name}' found. The last definition will take precedence.",
+                            record.line_number, "DUPLICATE_STYLE_NAME"
+                        ))
+                    
                     styles.set(style)
                 except Exception as e:
-                     styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse Style: {e}", record.line_number, "STYLE_PARSE_ERROR"))
+                     styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "STYLE_PARSE_ERROR"))
             else:
                 styles._custom_records.append(record)
 

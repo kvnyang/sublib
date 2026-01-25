@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
+from sublib.ass.naming import get_standard_name
+
 from sublib.ass.models.text.elements import AssTextElement
 from sublib.ass.types import AssTimestamp
 
@@ -45,7 +47,7 @@ class AssEvent:
 
     @classmethod
     def from_dict(cls, data: dict[str, str], event_type: str = "Dialogue", line_number: int = 0) -> AssEvent:
-        """Create AssEvent from a dictionary of raw strings (mapped by Format)."""
+        """Create AssEvent from a dictionary of standardized field names."""
         def get_int(names: list[str], default: int = 0) -> int:
             for n in names:
                 if n in data:
@@ -71,8 +73,9 @@ class AssEvent:
 
     def render(self) -> str:
         """Render event to ASS line (Dialogue: or Comment:)."""
+        descriptor = get_standard_name(self.event_type, context="events")
         return (
-            f"{self.event_type}: {self.layer},{self.start.to_ass_str()},"
+            f"{descriptor}: {self.layer},{self.start.to_ass_str()},"
             f"{self.end.to_ass_str()},{self.style},{self.name},"
             f"{self.margin_l},{self.margin_r},{self.margin_v},{self.effect},{self.text}"
         )
@@ -176,10 +179,10 @@ class AssEvents:
             ))
 
         # 2. Ingest records
-        known_descriptors = {'dialogue', 'comment', 'picture', 'sound', 'movie', 'command'}
+        # known_descriptors as standardized from Layer 1
+        known_descriptors = {'Dialogue', 'Comment', 'Picture', 'Sound', 'Movie', 'Command'}
         for record in raw.records:
-            desc_lower = record.descriptor.lower()
-            if desc_lower in known_descriptors:
+            if record.descriptor in known_descriptors:
                 try:
                     parts = [p.strip() for p in record.value.split(',', len(raw.format_fields)-1)]
                     record_dict = {name: val for name, val in zip(raw.format_fields, parts)}
@@ -187,7 +190,7 @@ class AssEvents:
                     event = AssEvent.from_dict(record_dict, event_type=record.descriptor, line_number=record.line_number)
                     events.append(event)
                 except Exception as e:
-                     events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse Event: {e}", record.line_number, "EVENT_PARSE_ERROR"))
+                     events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "EVENT_PARSE_ERROR"))
             else:
                 events._custom_records.append(record)
 

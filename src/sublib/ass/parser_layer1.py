@@ -7,6 +7,7 @@ from sublib.ass.models.raw import RawDocument, RawSection, RawRecord
 from sublib.ass.descriptors import (
     parse_descriptor_line, CORE_SECTIONS, STYLE_SECTIONS, SECTION_RANKS
 )
+from sublib.ass.naming import get_standard_name
 
 
 class StructuralParser:
@@ -41,7 +42,8 @@ class StructuralParser:
             # 2. Section Headers
             if stripped.startswith('[') and stripped.endswith(']'):
                 section_name_raw = stripped[1:-1].strip()
-                section_name_norm = section_name_raw.lower()
+                section_name_std = get_standard_name(section_name_raw, context='SECTION')
+                section_name_norm = section_name_std.lower()
                 
                 # Validation: Duplicate Section
                 if section_name_norm in self._seen_sections:
@@ -66,7 +68,7 @@ class StructuralParser:
                 
                 self._seen_sections.add(section_name_norm)
                 current_section = RawSection(
-                    name=section_name_norm, 
+                    name=section_name_std, 
                     original_name=section_name_raw,
                     line_number=line_number
                 )
@@ -83,7 +85,7 @@ class StructuralParser:
 
             # NEW: If this is a raw passthrough section (e.g., [Fonts], [Graphics], or Custom)
             # We treat EVERYTHING as raw lines.
-            if current_section.name not in CORE_SECTIONS:
+            if current_section.name.lower() not in CORE_SECTIONS:
                 current_section.raw_lines.append(raw_line)
                 continue
 
@@ -104,16 +106,18 @@ class StructuralParser:
                 continue
             
             descriptor, descriptor_content = parsed
-            descriptor_norm = descriptor.lower()
+            descriptor_std = get_standard_name(descriptor, context=current_section.name.lower())
+            descriptor_norm = descriptor_std.lower()
             
             # Special case: Format line for Styles/Events
-            if descriptor_norm == 'format' and current_section.name in (STYLE_SECTIONS | {'events'}):
+            if descriptor_norm == 'format' and current_section.name.lower() in (STYLE_SECTIONS | {'events'}):
                 self._handle_format_line(current_section, descriptor_content, line_number)
                 continue
 
             # Standard records
             record = RawRecord(
-                descriptor=descriptor, 
+                descriptor=descriptor_std, 
+                raw_descriptor=descriptor,
                 value=descriptor_content, 
                 line_number=line_number
             )
@@ -156,17 +160,19 @@ class StructuralParser:
             )
             return
 
-        fields = [f.strip() for f in content.split(',')]
+        raw_fields = [f.strip() for f in content.split(',')]
         
         # Validation: Empty fields (checks if any field is empty, e.g., 'Format: Start, , Text')
-        if not fields or any(not f for f in fields):
+        if not raw_fields or any(not f for f in raw_fields):
             self.add_diagnostic(DiagnosticLevel.ERROR, "Format line contains empty fields", line_number, "EMPTY_FORMAT_FIELD")
             return
 
+        std_fields = [get_standard_name(f, context=f'FIELD:{section.name}') for f in raw_fields]
+
         # Validation: Duplicate Fields
         seen_fields = set()
-        for f in fields:
-            f_norm = f.lower()
+        for f in std_fields:
+            f_norm = f.lower().replace(" ", "")
             if f_norm in seen_fields:
                 self.add_diagnostic(
                     DiagnosticLevel.ERROR,
@@ -176,19 +182,20 @@ class StructuralParser:
             seen_fields.add(f_norm)
 
         # Validation: Text must be last for Events
-        if section.name == 'events' and fields[-1].lower() != 'text':
+        if section.name.lower() == 'events' and std_fields[-1].lower() != 'text':
              self.add_diagnostic(
                 DiagnosticLevel.ERROR,
                 "Format line in [Events] must end with 'Text'",
                 line_number, "FORMAT_TEXT_NOT_LAST"
             )
 
-        section.format_fields = fields
+        section.format_fields = std_fields
+        section.raw_format_fields = raw_fields
         section.format_line_number = line_number
 
     def _validate_global_structure(self, doc: RawDocument):
         """Validate section order and presence of core sections."""
-        actual_order = [s.name for s in doc.sections]
+        actual_order = [s.name.lower() for s in doc.sections]
         
         # 1. Required Sections
         # 1. Missing Required Sections (Script Info, Events, Styles)
@@ -206,7 +213,7 @@ class StructuralParser:
         # 2. Strict Order for Core Sections (Liberal for Fonts/Graphics)
         current_max_rank = -1
         for s in doc.sections:
-            rank = SECTION_RANKS.get(s.name, 99) # Custom sections get high rank
+            rank = SECTION_RANKS.get(s.name.lower(), 99) # Custom sections get high rank
             if rank < current_max_rank:
                  self.add_diagnostic(
                     DiagnosticLevel.WARNING,
@@ -216,7 +223,7 @@ class StructuralParser:
             current_max_rank = max(current_max_rank, rank)
             
             # Custom sections should be at the end
-            if rank == 99 and any(core_rank.get(s_next.name, 99) < 99 for s_next in doc.sections[doc.sections.index(s)+1:]):
+            if rank == 99 and any(SECTION_RANKS.get(s_next.name.lower(), 99) < 99 for s_next in doc.sections[doc.sections.index(s)+1:]):
                  self.add_diagnostic(
                     DiagnosticLevel.WARNING,
                     f"Custom section [{s.original_name}] should appear after standard sections",
