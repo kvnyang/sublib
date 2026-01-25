@@ -58,10 +58,10 @@ class AssScriptInfo:
             # Store (raw_descriptor, value, line_number)
             aggregated[record.descriptor] = (record.raw_descriptor, record.value, record.line_number)
 
-        # Pass 2: Detect Version (ScriptType)
+        # Pass 2: Detect Version (scripttype)
         script_type = 'v4.00+'  # Default
-        if 'ScriptType' in aggregated:
-            raw_st, val, ln = aggregated['ScriptType']
+        if 'scripttype' in aggregated:
+            raw_st, val, ln = aggregated['scripttype']
             if val in ('v4.00', 'v4.00+'):
                 script_type = val
             else:
@@ -71,14 +71,14 @@ class AssScriptInfo:
                     ln, "INVALID_SCRIPTTYPE"
                 ))
             # Update values
-            aggregated['ScriptType'] = (raw_st, script_type, ln)
+            aggregated['scripttype'] = (raw_st, script_type, ln)
         else:
             info._diagnostics.append(Diagnostic(
                 DiagnosticLevel.WARNING,
                 "Missing 'ScriptType' in [Script Info], defaulting to 'v4.00+'",
                 raw.line_number, "MISSING_SCRIPTTYPE"
             ))
-            info.set('ScriptType', script_type)
+            info.set('scripttype', script_type)
         
         # Pass 3: Semantic Validation and Type Conversion
         for std_key, (raw_key, value, line_number) in aggregated.items():

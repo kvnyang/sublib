@@ -47,11 +47,11 @@ class AssStyle:
 
         # Keys already standardized (normalized) by the parser or caller
         known_standard = {
-            'Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
-            'OutlineColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic',
-            'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle',
-            'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR',
-            'MarginV', 'Encoding'
+            'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour',
+            'outlinecolour', 'tertiarycolour', 'backcolour', 'bold', 'italic',
+            'underline', 'strikeout', 'scalex', 'scaley', 'spacing', 'angle',
+            'borderstyle', 'outline', 'shadow', 'alignment', 'marginl', 'marginr',
+            'marginv', 'encoding'
         }
         
         extra = {}
@@ -60,29 +60,29 @@ class AssStyle:
                 extra[k] = v
 
         return cls(
-            name=get_field(['Name']).strip(),
-            fontname=get_field(['Fontname']).strip(),
-            fontsize=float(get_field(['Fontsize'], '0')),
-            primary_color=AssColor.from_style_str(get_field(['PrimaryColour'])),
-            secondary_color=AssColor.from_style_str(get_field(['SecondaryColour'])),
-            outline_color=AssColor.from_style_str(get_field(['OutlineColour', 'TertiaryColour'])),
-            back_color=AssColor.from_style_str(get_field(['BackColour'])),
-            bold=get_field(['Bold'], '0').strip() != '0',
-            italic=get_field(['Italic'], '0').strip() != '0',
-            underline=get_field(['Underline'], '0').strip() != '0',
-            strikeout=get_field(['StrikeOut'], '0').strip() != '0',
-            scale_x=float(get_field(['ScaleX'], '100')),
-            scale_y=float(get_field(['ScaleY'], '100')),
-            spacing=float(get_field(['Spacing'], '0')),
-            angle=float(get_field(['Angle'], '0')),
-            border_style=int(get_field(['BorderStyle'], '1')),
-            outline=float(get_field(['Outline'], '2')),
-            shadow=float(get_field(['Shadow'], '0')),
-            alignment=int(get_field(['Alignment'], '2')),
-            margin_l=int(get_field(['MarginL'], '10')),
-            margin_r=int(get_field(['MarginR'], '10')),
-            margin_v=int(get_field(['MarginV'], '10')),
-            encoding=int(get_field(['Encoding'], '1')),
+            name=get_field(['name']).strip(),
+            fontname=get_field(['fontname']).strip(),
+            fontsize=float(get_field(['fontsize'], '0')),
+            primary_color=AssColor.from_style_str(get_field(['primarycolour'])),
+            secondary_color=AssColor.from_style_str(get_field(['secondarycolour'])),
+            outline_color=AssColor.from_style_str(get_field(['outlinecolour', 'tertiarycolour'])),
+            back_color=AssColor.from_style_str(get_field(['backcolour'])),
+            bold=get_field(['bold'], '0').strip() != '0',
+            italic=get_field(['italic'], '0').strip() != '0',
+            underline=get_field(['underline'], '0').strip() != '0',
+            strikeout=get_field(['strikeout'], '0').strip() != '0',
+            scale_x=float(get_field(['scalex'], '100')),
+            scale_y=float(get_field(['scaley'], '100')),
+            spacing=float(get_field(['spacing'], '0')),
+            angle=float(get_field(['angle'], '0')),
+            border_style=int(get_field(['borderstyle'], '1')),
+            outline=float(get_field(['outline'], '2')),
+            shadow=float(get_field(['shadow'], '0')),
+            alignment=int(get_field(['alignment'], '2')),
+            margin_l=int(get_field(['marginl'], '10')),
+            margin_r=int(get_field(['marginr'], '10')),
+            margin_v=int(get_field(['marginv'], '10')),
+            encoding=int(get_field(['encoding'], '1')),
             extra_fields=extra
         )
 
@@ -186,7 +186,7 @@ class AssStyles:
 
         # 2. Ingest records
         for record in raw.records:
-            if record.descriptor == 'Style':
+            if record.descriptor == 'style':
                 try:
                     parts = [p.strip() for p in record.value.split(',', len(raw.format_fields)-1)]
                     record_dict = {name: val for name, val in zip(raw.format_fields, parts)}

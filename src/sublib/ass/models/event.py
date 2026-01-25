@@ -59,8 +59,8 @@ class AssEvent:
 
         # Keys already standardized (normalized) by the parser or caller
         known_standard = {
-            'Layer', 'Marked', 'Start', 'End', 'Style', 'Name',
-            'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text'
+            'layer', 'marked', 'start', 'end', 'style', 'name',
+            'marginl', 'marginr', 'marginv', 'effect', 'text'
         }
         
         extra = {}
@@ -69,17 +69,17 @@ class AssEvent:
                 extra[k] = v
 
         return cls(
-            start=AssTimestamp.from_ass_str(data.get('Start', '0:00:00.00')),
-            end=AssTimestamp.from_ass_str(data.get('End', '0:00:00.00')),
-            style=data.get('Style', 'Default').strip(),
-            layer=get_int(['Layer', 'Marked']),
-            name=data.get('Name', '').strip(),
-            margin_l=get_int(['MarginL']),
-            margin_r=get_int(['MarginR']),
-            margin_v=get_int(['MarginV']),
-            effect=data.get('Effect', '').strip(),
+            start=AssTimestamp.from_ass_str(data.get('start', '0:00:00.00')),
+            end=AssTimestamp.from_ass_str(data.get('end', '0:00:00.00')),
+            style=data.get('style', 'Default').strip(),
+            layer=get_int(['layer', 'marked']),
+            name=data.get('name', '').strip(),
+            margin_l=get_int(['marginl']),
+            margin_r=get_int(['marginr']),
+            margin_v=get_int(['marginv']),
+            effect=data.get('effect', '').strip(),
             event_type=event_type,
-            _raw_text=data.get('Text', ''),
+            _raw_text=data.get('text', ''),
             _line_number=line_number,
             extra_fields=extra
         )
@@ -217,10 +217,10 @@ class AssEvents:
 
         # 1. Minimum field verification
         is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        # v4: Start, End, Style, Text (4)
-        # v4+: Layer, Start, End, Style, Text (5)
-        required = {'Start', 'End', 'Style', 'Text'}
-        if not is_v4: required.add('Layer')
+        # v4: start, end, style, text (4)
+        # v4+: layer, start, end, style, text (5)
+        required = {'start', 'end', 'style', 'text'}
+        if not is_v4: required.add('layer')
         
         missing = required - set(raw.format_fields)
         if missing:
@@ -232,7 +232,7 @@ class AssEvents:
 
         # 2. Ingest records
         # known_descriptors as standardized from Layer 1
-        known_descriptors = {'Dialogue', 'Comment', 'Picture', 'Sound', 'Movie', 'Command'}
+        known_descriptors = {'dialogue', 'comment', 'picture', 'sound', 'movie', 'command'}
         for record in raw.records:
             if record.descriptor in known_descriptors:
                 try:
