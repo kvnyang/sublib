@@ -62,10 +62,8 @@ class AssFile:
         """Get diagnostic messages with INFO level."""
         return [d for d in self.diagnostics if d.level == DiagnosticLevel.INFO]
 
-    _NOT_SET = object()
-
     @classmethod
-    def loads(cls, content: str, style_format: list[str] | None | Any = _NOT_SET, event_format: list[str] | None | Any = _NOT_SET) -> "AssFile":
+    def loads(cls, content: str, style_format: list[str] | None = [], event_format: list[str] | None = []) -> "AssFile":
         """Parse ASS content from string using 3-layered architecture.
         
         Args:
@@ -155,7 +153,7 @@ class AssFile:
 
         return ass_file
 
-    def dumps(self, style_format: list[str] | None | Any = _NOT_SET, event_format: list[str] | None | Any = _NOT_SET, auto_fill: bool = False) -> str:
+    def dumps(self, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False) -> str:
         """Serialize the model back to an ASS string.
         
         Priority for format fields:
@@ -196,17 +194,17 @@ class AssFile:
         for comment in self.styles.section_comments:
             lines.append(f'; {comment}')
             
-        # Format Priority (Phase 31):
-        # 1. Parameter List
-        # 2. Parameter None (Fidelity/Minimalist)
-        # 3. Parameter Auto/Default (View)
-        if style_format is not self._NOT_SET:
-            if style_format is None:
-                out_style_format = self.styles._raw_format_fields or self.styles.get_explicit_format(script_type)
-            else:
-                out_style_format = style_format
+        # Format Priority (Phase 32):
+        # 1. Parameter List (Non-empty): Specific Intent
+        # 2. Parameter None: Fidelity/Minimalist (Raw or Explicit)
+        # 3. Parameter Empty List []: Standard View
+        if style_format:
+            out_style_format = style_format
+        elif style_format is None:
+            out_style_format = self.styles._raw_format_fields or self.styles.get_explicit_format(script_type)
         else:
-            out_style_format = self.styles._view_format_fields or self.styles._raw_format_fields or self.styles.get_explicit_format(script_type)
+            # Default ([]) -> Use session view or standard
+            out_style_format = self.styles._view_format_fields or self.styles.get_explicit_format(script_type)
             
         lines.append(f"Format: {', '.join(out_style_format)}")
 
@@ -221,17 +219,17 @@ class AssFile:
         for comment in self.events.get_comments():
             lines.append(f'; {comment}')
             
-        # Format Priority (Phase 31):
-        # 1. Parameter List
-        # 2. Parameter None (Fidelity/Minimalist)
-        # 3. Parameter Auto/Default (View)
-        if event_format is not self._NOT_SET:
-            if event_format is None:
-                out_event_format = self.events._raw_format_fields or self.events.get_explicit_format(script_type)
-            else:
-                out_event_format = event_format
+        # Format Priority (Phase 32):
+        # 1. Parameter List (Non-empty): Specific Intent
+        # 2. Parameter None: Fidelity/Minimalist (Raw or Explicit)
+        # 3. Parameter Empty List []: Standard View
+        if event_format:
+            out_event_format = event_format
+        elif event_format is None:
+            out_event_format = self.events._raw_format_fields or self.events.get_explicit_format(script_type)
         else:
-            out_event_format = self.events._view_format_fields or self.events._raw_format_fields or self.events.get_explicit_format(script_type)
+            # Default ([]) -> Use session view or standard
+            out_event_format = self.events._view_format_fields or self.events.get_explicit_format(script_type)
             
         lines.append(f"Format: {', '.join(out_event_format)}")
         for event in self.events:

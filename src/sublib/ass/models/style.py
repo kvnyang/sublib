@@ -4,8 +4,6 @@ from sublib.ass.types import AssColor
 from sublib.ass.naming import normalize_key, get_canonical_name
 from sublib.ass.tags.base import _format_float
 
-_VIEW_AUTO = object()
-
 if TYPE_CHECKING:
     from sublib.ass.models.raw import RawSection, RawRecord
     from sublib.ass.diagnostics import Diagnostic
@@ -239,8 +237,14 @@ class AssStyles:
         self._view_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None | Any = _VIEW_AUTO) -> AssStyles:
-        """Layer 2: Semantic ingestion with Unconditional Storage and Standardized View."""
+    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = None) -> AssStyles:
+        """Layer 2: Semantic ingestion with Unconditional Storage and Standardized View.
+        
+        View Interpretation:
+        - Non-empty List: Specific Intent (Slicing)
+        - None: Minimalist/Physical Fidelity (Existing columns only)
+        - Empty List []: Standard/Auto (v4/v4+ columns)
+        """
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         styles = cls()
         styles._section_comments = list(raw.comments)
@@ -271,14 +275,13 @@ class AssStyles:
         # 3. Standardized View Selection (_view_format_fields)
         is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
         
-        if isinstance(style_format, list):
-            # Type A: Explicit intended slice
+        if style_format: # Non-empty List
             styles._view_format_fields = style_format
         elif style_format is None:
-             # Type B: Explicit None (Minimalist)
+             # Minimalist (Manual None)
              styles._view_format_fields = styles.get_explicit_format(script_type)
         else:
-             # Type C: Default (Unspecified/Auto) -> Standard v4/v4+
+             # Default ([] or Empty List) -> Standard v4/v4+
              if is_v4:
                  styles._view_format_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
              else:
