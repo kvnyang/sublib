@@ -168,6 +168,7 @@ class StructuralParser:
         std_fields = [normalize_key(f) for f in raw_fields]
 
         # Validation: Duplicate Fields
+        seen_fields = set()
         for f in std_fields:
             if f in seen_fields:
                 self.add_diagnostic(

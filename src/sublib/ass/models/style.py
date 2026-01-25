@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable
 from sublib.ass.types import AssColor
 from sublib.ass.naming import normalize_key, get_canonical_name
@@ -34,6 +34,8 @@ class AssStyle:
     margin_r: int = 10
     margin_v: int = 10
     encoding: int = 1
+    # For custom fields preservation: Stores normalized_key -> raw_value
+    extra_fields: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> AssStyle:
@@ -42,6 +44,20 @@ class AssStyle:
             for n in names:
                 if n in data: return data[n]
             return default
+
+        # Keys already standardized (normalized) by the parser or caller
+        known_standard = {
+            'Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
+            'OutlineColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic',
+            'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle',
+            'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR',
+            'MarginV', 'Encoding'
+        }
+        
+        extra = {}
+        for k, v in data.items():
+            if k not in known_standard:
+                extra[k] = v
 
         return cls(
             name=get_field(['Name']).strip(),
@@ -67,24 +83,72 @@ class AssStyle:
             margin_r=int(get_field(['MarginR'], '10')),
             margin_v=int(get_field(['MarginV'], '10')),
             encoding=int(get_field(['Encoding'], '1')),
+            extra_fields=extra
         )
 
 
-    def render(self) -> str:
-        """Render AssStyle to Style: line."""
+    def render(self, format_fields: list[str] | None = None) -> str:
+        """Render AssStyle to Style: line according to requested format fields.
+        
+        Args:
+            format_fields: List of raw field names to output. If None, uses internal defaults.
+        """
         from sublib.ass.tags.base import _format_float
         descriptor = get_canonical_name("Style", context="v4+ styles")
+        
+        # Mapping of standardized key -> actual value
+        vals = {
+            'name': self.name,
+            'fontname': self.fontname,
+            'fontsize': _format_float(self.fontsize),
+            'primarycolour': self.primary_color.to_style_str(),
+            'secondarycolour': self.secondary_color.to_style_str(),
+            'tertiarycolour': self.outline_color.to_style_str(), # Alias for outline in V4
+            'outlinecolour': self.outline_color.to_style_str(),
+            'backcolour': self.back_color.to_style_str(),
+            'bold': str(int(self.bold)),
+            'italic': str(int(self.italic)),
+            'underline': str(int(self.underline)),
+            'strikeout': str(int(self.strikeout)),
+            'scalex': _format_float(self.scale_x),
+            'scaley': _format_float(self.scale_y),
+            'spacing': _format_float(self.spacing),
+            'angle': _format_float(self.angle),
+            'borderstyle': str(self.border_style),
+            'outline': _format_float(self.outline),
+            'shadow': _format_float(self.shadow),
+            'alignment': str(self.alignment),
+            'marginl': str(self.margin_l),
+            'marginr': str(self.margin_r),
+            'marginv': str(self.margin_v),
+            'encoding': str(self.encoding)
+        }
+        
+        # Add extra fields (mapped by normalized key)
+        extra_vals = {normalize_key(k): v for k, v in self.extra_fields.items()}
+        
+        if format_fields:
+            field_values = []
+            for f in format_fields:
+                key = normalize_key(f)
+                if key in vals:
+                    field_values.append(vals[key])
+                elif key in extra_vals:
+                    field_values.append(extra_vals[key])
+                else:
+                    field_values.append("") # Unknown field without data
+            return f"{descriptor}: {','.join(field_values)}"
+
+        # Default V4+ render (backward compatibility)
         return (
-            f"{descriptor}: {self.name},{self.fontname},{_format_float(self.fontsize)},"
-            f"{self.primary_color.to_style_str()},"
-            f"{self.secondary_color.to_style_str()},"
-            f"{self.outline_color.to_style_str()},"
-            f"{self.back_color.to_style_str()},"
-            f"{int(self.bold)},{int(self.italic)},{int(self.underline)},{int(self.strikeout)},"
-            f"{_format_float(self.scale_x)},{_format_float(self.scale_y)},"
-            f"{_format_float(self.spacing)},{_format_float(self.angle)},"
-            f"{self.border_style},{_format_float(self.outline)},{_format_float(self.shadow)},"
-            f"{self.alignment},{self.margin_l},{self.margin_r},{self.margin_v},{self.encoding}"
+            f"{descriptor}: {self.name},{self.fontname},{vals['fontsize']},"
+            f"{vals['primarycolour']},{vals['secondarycolour']},"
+            f"{vals['outlinecolour']},{vals['backcolour']},"
+            f"{vals['bold']},{vals['italic']},{vals['underline']},{vals['strikeout']},"
+            f"{vals['scalex']},{vals['scaley']},"
+            f"{vals['spacing']},{vals['angle']},"
+            f"{vals['borderstyle']},{vals['outline']},{vals['shadow']},"
+            f"{vals['alignment']},{vals['marginl']},{vals['marginr']},{vals['marginv']},{vals['encoding']}"
         )
 
 
@@ -95,6 +159,7 @@ class AssStyles:
         self._custom_records: list[RawRecord] = []
         self._diagnostics: list[Diagnostic] = []
         self._section_comments: list[str] = []
+        self._raw_format_fields: list[str] | None = None
 
     @classmethod
     def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssStyles:
@@ -102,6 +167,7 @@ class AssStyles:
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         styles = cls()
         styles._section_comments = list(raw.comments)
+        styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
         
         if not raw.format_fields:
             # StructParser should have caught this, but safety first
@@ -139,6 +205,7 @@ class AssStyles:
                 except Exception as e:
                      styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "STYLE_PARSE_ERROR"))
             else:
+                # Custom record preservation: Store raw descriptor for restoration
                 styles._custom_records.append(record)
 
         if not styles._data:

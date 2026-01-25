@@ -33,6 +33,8 @@ class AssEvent:
     _text_elements: list[AssTextElement] = field(default_factory=list, repr=False)
     _raw_text: Optional[str] = field(default=None, repr=False)
     _line_number: int = 0
+    # For custom fields preservation: Stores normalized_key -> raw_value
+    extra_fields: dict[str, str] = field(default_factory=dict)
 
     @property
     def text_elements(self) -> list[AssTextElement]:
@@ -55,6 +57,17 @@ class AssEvent:
                     except ValueError: pass
             return default
 
+        # Keys already standardized (normalized) by the parser or caller
+        known_standard = {
+            'Layer', 'Marked', 'Start', 'End', 'Style', 'Name',
+            'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text'
+        }
+        
+        extra = {}
+        for k, v in data.items():
+            if k not in known_standard:
+                extra[k] = v
+
         return cls(
             start=AssTimestamp.from_ass_str(data.get('Start', '0:00:00.00')),
             end=AssTimestamp.from_ass_str(data.get('End', '0:00:00.00')),
@@ -67,13 +80,50 @@ class AssEvent:
             effect=data.get('Effect', '').strip(),
             event_type=event_type,
             _raw_text=data.get('Text', ''),
-            _line_number=line_number
+            _line_number=line_number,
+            extra_fields=extra
         )
 
 
-    def render(self) -> str:
-        """Render event to ASS line (Dialogue: or Comment:)."""
+    def render(self, format_fields: list[str] | None = None) -> str:
+        """Render event to ASS line according to requested format fields.
+        
+        Args:
+            format_fields: List of raw field names to output. If None, uses internal defaults.
+        """
         descriptor = get_canonical_name(self.event_type, context="events")
+        
+        # Mapping of standardized key -> actual value
+        vals = {
+            'layer': str(self.layer),
+            'marked': str(self.layer), # Alias
+            'start': self.start.to_ass_str(),
+            'end': self.end.to_ass_str(),
+            'style': self.style,
+            'name': self.name,
+            'marginl': str(self.margin_l),
+            'marginr': str(self.margin_r),
+            'marginv': str(self.margin_v),
+            'effect': self.effect,
+            'text': self.text
+        }
+        
+        # Add extra fields (mapped by normalized key)
+        extra_vals = {normalize_key(k): v for k, v in self.extra_fields.items()}
+        
+        if format_fields:
+            field_values = []
+            for f in format_fields:
+                key = normalize_key(f)
+                if key in vals:
+                    field_values.append(vals[key])
+                elif key in extra_vals:
+                    field_values.append(extra_vals[key])
+                else:
+                    field_values.append("") # Unknown field
+            return f"{descriptor}: {','.join(field_values)}"
+
+        # Default V4+ render (backward compatibility)
         return (
             f"{descriptor}: {self.layer},{self.start.to_ass_str()},"
             f"{self.end.to_ass_str()},{self.style},{self.name},"
@@ -151,6 +201,7 @@ class AssEvents:
         self._custom_records: list[RawRecord] = []
         self._diagnostics: list[Diagnostic] = []
         self._section_comments: list[str] = []
+        self._raw_format_fields: list[str] | None = None
 
     @classmethod
     def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssEvents:
@@ -158,6 +209,7 @@ class AssEvents:
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         events = cls()
         events._section_comments = list(raw.comments)
+        events._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
         
         if not raw.format_fields:
             events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Events section", raw.line_number, "MISSING_FORMAT"))
@@ -192,6 +244,7 @@ class AssEvents:
                 except Exception as e:
                      events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse {record.raw_descriptor}: {e}", record.line_number, "EVENT_PARSE_ERROR"))
             else:
+                # Custom record preservation: Store raw descriptor for restoration
                 events._custom_records.append(record)
 
         if not events._data:

@@ -159,24 +159,28 @@ class AssFile:
         for comment in self.styles.get_comments():
             lines.append(f'; {comment}')
             
-        # TODO: Dynamic format based on styles present? For now sticks to standard
-        if "v4 styles" == style_section_key:
-            fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
-                     'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle',
-                     'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+        # Use raw format if available, else standard
+        if self.styles._raw_format_fields:
+            out_fields = self.styles._raw_format_fields
+        elif "v4 styles" == style_section_key:
+            out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
+                        'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle',
+                        'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
         else:
-            fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
-                     'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut',
-                     'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow',
-                     'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+            out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
+                        'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut',
+                        'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow',
+                        'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
         
-        # Standardize fields just in case
-        ctx = f"FIELD:{style_section_key}"
-        std_fields = [get_canonical_name(f, context=ctx) for f in fields]
-        lines.append(f"Format: {', '.join(std_fields)}")
+        lines.append(f"Format: {', '.join(out_fields)}")
         
         for style in self.styles:
-            lines.append(style.render())
+            lines.append(style.render(format_fields=out_fields))
+            
+        # Render custom records (unknown descriptors)
+        for record in self.styles.custom_records:
+            lines.append(f"{record.raw_descriptor}: {record.value}")
+            
         lines.append('')
         
         # 3. Events
@@ -185,11 +189,19 @@ class AssFile:
         for comment in self.events.get_comments():
             lines.append(f'; {comment}')
             
-        fields = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
-        std_fields = [get_canonical_name(f, context="FIELD:events") for f in fields]
-        lines.append(f"Format: {', '.join(std_fields)}")
+        # Use raw format if available, else standard
+        if self.events._raw_format_fields:
+            out_fields = self.events._raw_format_fields
+        else:
+            out_fields = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+            
+        lines.append(f"Format: {', '.join(out_fields)}")
         for event in self.events:
-            lines.append(event.render())
+            lines.append(event.render(format_fields=out_fields))
+            
+        # Render custom records (unknown descriptors)
+        for record in self.events.custom_records:
+            lines.append(f"{record.raw_descriptor}: {record.value}")
         
         # 4. Extra Sections (Fonts, Graphics, etc.)
         # Sort to ensure standard order: Fonts -> Graphics -> Others (stable sort)
