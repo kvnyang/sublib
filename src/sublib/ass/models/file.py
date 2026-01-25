@@ -99,8 +99,25 @@ class AssFile:
         script_type = ass_file.script_info.get('scripttype')
 
         # 2. [Styles]
-        raw_styles = raw_doc.get_section('v4+ styles') or raw_doc.get_section('v4 styles')
+        raw_styles_v4plus = raw_doc.get_section('v4+ styles')
+        raw_styles_v4 = raw_doc.get_section('v4 styles')
+        raw_styles = raw_styles_v4plus or raw_styles_v4
+        
         if raw_styles:
+            from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+            # Version Consistency Check
+            actual_is_v4plus = raw_styles.name == 'v4+ styles'
+            defined_is_v4plus = script_type == 'v4.00+'
+            
+            if actual_is_v4plus != defined_is_v4plus:
+                expected_header = "[V4+ Styles]" if defined_is_v4plus else "[V4 Styles]"
+                actual_header = f"[{raw_styles.original_name}]"
+                ass_file.diagnostics.append(Diagnostic(
+                    DiagnosticLevel.WARNING,
+                    f"ScriptType '{script_type}' mismatch with section header {actual_header} (expected {expected_header})",
+                    raw_styles.line_number, "VERSION_SECTION_MISMATCH"
+                ))
+
             ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type)
             ass_file.diagnostics.extend(ass_file.styles.diagnostics)
         else:
