@@ -236,27 +236,54 @@ class AssStyles:
         self._raw_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssStyles:
-        """Layer 2: Semantic ingestion (Stateless Total Ingestion)."""
+    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = []) -> AssStyles:
+        """Layer 2: Semantic ingestion with Symmetric Slicing.
+        
+        Filtering Policy:
+        - Non-empty List: Specific Slicing
+        - None: Total Ingestion (Fidelity)
+        - Empty List []: Standard Slicing (v4/v4+ columns)
+        """
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         styles = cls()
         styles._section_comments = list(raw.comments)
         
-        # 1. Physical Reality (Permanent)
-        styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
+        # 1. Physical Reality
+        if style_format:
+            styles._raw_format_fields = list(style_format)
+        else:
+            styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
         
-        # 2. Ingest ALL physical data
-        file_format_fields = raw.format_fields # Normalized
+        # 2. Ingest data based on Slicing Policy
+        file_format_fields = raw.format_fields # Normalized columns present in file
         if not file_format_fields:
             styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Styles section", raw.line_number, "MISSING_FORMAT"))
             return styles
+
+        # Determine Ingestion Slice
+        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
+        if style_format:
+            ingest_keys = {normalize_key(f) for f in style_format}
+        elif style_format is None:
+            ingest_keys = set(file_format_fields) # No filter
+        else:
+            # Standard Slice
+            if is_v4:
+                std = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 'tertiarycolour', 'backcolour', 'bold', 'italic', 'borderstyle'}
+            else:
+                std = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 'outlinecolour', 'backcolour', 'bold', 'italic', 'underline', 'strikeout', 'scalex', 'scaley', 'spacing', 'angle', 'borderstyle', 'outline', 'shadow', 'alignment', 'marginl', 'marginr', 'marginv', 'encoding'}
+            ingest_keys = std
 
         for record in raw.records:
             if record.descriptor == 'style':
                 try:
                     parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
                     record_dict = {name: val for name, val in zip(file_format_fields, parts)}
-                    style = AssStyle.from_dict(record_dict)
+                    
+                    # Apply Slicing Filter
+                    filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
+                    
+                    style = AssStyle.from_dict(filtered_dict)
                     if style.name in styles:
                         styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, f"Duplicate style name '{style.name}'", record.line_number, "DUPLICATE_STYLE_NAME"))
                     styles.set(style)

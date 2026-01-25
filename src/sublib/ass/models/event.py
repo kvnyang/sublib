@@ -243,20 +243,41 @@ class AssEvents:
         self._raw_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssEvents:
-        """Layer 2: Semantic ingestion (Stateless Total Ingestion)."""
+    def from_raw(cls, raw: RawSection, script_type: str | None = None, event_format: list[str] | None = []) -> AssEvents:
+        """Layer 2: Semantic ingestion with Symmetric Slicing.
+        
+        Filtering Policy:
+        - Non-empty List: Specific Slicing
+        - None: Total Ingestion (Fidelity)
+        - Empty List []: Standard Slicing
+        """
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         events = cls()
         events._section_comments = list(raw.comments)
         
         # 1. Physical Reality
-        events._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
+        if event_format:
+            events._raw_format_fields = list(event_format)
+        else:
+            events._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
         
-        # 2. Ingest ALL physical data
+        # 2. Ingest data based on Slicing Policy
         file_format_fields = raw.format_fields
         if not file_format_fields:
             events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Events section", raw.line_number, "MISSING_FORMAT"))
             return events
+
+        # Determine Ingestion Slice
+        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
+        if event_format:
+            ingest_keys = {normalize_key(f) for f in event_format}
+        elif event_format is None:
+            ingest_keys = set(file_format_fields)
+        else:
+            if is_v4:
+                ingest_keys = {'layer', 'start', 'end', 'style', 'name', 'marginl', 'marginr', 'marginv', 'effect', 'text', 'marked'}
+            else:
+                ingest_keys = {'layer', 'start', 'end', 'style', 'name', 'marginl', 'marginr', 'marginv', 'effect', 'text'}
 
         # Ingest records
         known_descriptors = {'dialogue', 'comment'}
@@ -265,8 +286,11 @@ class AssEvents:
                 parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
                 record_dict = {name: val for name, val in zip(file_format_fields, parts)}
                 
+                # Apply Slicing Filter
+                filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
+                
                 if record.descriptor in known_descriptors:
-                    event = AssEvent.from_dict(record_dict, event_type=record.descriptor, line_number=record.line_number)
+                    event = AssEvent.from_dict(filtered_dict, event_type=record.descriptor, line_number=record.line_number)
                     events.append(event)
                 else:
                     events._custom_records.append(record)

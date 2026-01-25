@@ -63,7 +63,7 @@ class AssFile:
         return [d for d in self.diagnostics if d.level == DiagnosticLevel.INFO]
 
     @classmethod
-    def loads(cls, content: str) -> "AssFile":
+    def loads(cls, content: str, style_format: list[str] | None = [], event_format: list[str] | None = []) -> "AssFile":
         """Parse ASS content from string using 3-layered architecture.
         
         Args:
@@ -130,7 +130,7 @@ class AssFile:
                     raw_styles.line_number, "VERSION_SECTION_MISMATCH"
                 ))
 
-            ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type)
+            ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type, style_format=style_format)
             ass_file.diagnostics.extend(ass_file.styles.diagnostics)
         else:
             # StructuralParser already warned if Styles are missing
@@ -139,7 +139,7 @@ class AssFile:
         # 3. [Events]
         raw_events = raw_doc.get_section('events')
         if raw_events:
-            ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type)
+            ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type, event_format=event_format)
             ass_file.diagnostics.extend(ass_file.events.diagnostics)
         else:
             # StructuralParser already warned if Events are missing
