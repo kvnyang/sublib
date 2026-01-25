@@ -95,6 +95,13 @@ class AssFile:
             # StructuralParser already added a MISSING_SECTION warning.
             ass_file.script_info = AssScriptInfo()
             ass_file.script_info.set('scripttype', 'v4.00+')
+            
+            from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+            ass_file.diagnostics.append(Diagnostic(
+                DiagnosticLevel.WARNING,
+                "Missing [Script Info] section, assuming ScriptType: v4.00+",
+                0, "MISSING_SCRIPTTYPE"
+            ))
 
         script_type = ass_file.script_info.get('scripttype')
 
