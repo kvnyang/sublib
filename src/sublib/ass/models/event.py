@@ -72,20 +72,20 @@ EVENT_SCHEMA = {
 class AssEvent:
     """ASS dialogue event using Eager Sparse Typed Storage."""
     
-    def __init__(self, fields: dict[str, Any] | None = None, event_type: str = AssEventType.DIALOGUE, line_number: int = 0, extra_fields: dict[str, Any] | None = None, **kwargs):
+    def __init__(self, fields: dict[str, Any] | None = None, type: str = AssEventType.DIALOGUE, line_number: int = 0, extra_fields: dict[str, Any] | None = None, **kwargs):
         """Initialize AssEvent.
         
         Args:
             fields: Optional dictionary of normalized keys -> typed values (Internal use).
-            event_type: The type of event (e.g. Dialogue, Comment, Picture). 
-                        Accepts raw strings or AssEventType constants.
+            type: The type of event (e.g. Dialogue, Comment, Picture). 
+                  Accepts raw strings or AssEventType constants.
             line_number: Physical line number in file.
             extra_fields: Optional dictionary of custom/non-standard fields.
             **kwargs: Standard fields using snake_case (e.g., start=1000).
         """
         # We store Typed values for non-empty fields
         self._fields = fields if fields is not None else {}
-        self._event_type = get_canonical_name(event_type, context='events')
+        self._type = get_canonical_name(type, context='events')
         self._line_number = line_number
         # AST Sync
         self._text_elements: list[AssTextElement] = []
@@ -117,7 +117,7 @@ class AssEvent:
         return super().__getattribute__(name)
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name.startswith('_') or name in ('event_type',):
+        if name.startswith('_') or name in ('_type',):
             super().__setattr__(name, value)
             return
             
@@ -133,23 +133,23 @@ class AssEvent:
             self[name] = value
 
     @property
-    def event_type(self) -> str:
+    def type(self) -> str:
         """The canonical type of the event (e.g. 'Dialogue', 'Comment')."""
-        return self._event_type
+        return self._type
     
-    @event_type.setter
-    def event_type(self, value: str):
-        self._event_type = get_canonical_name(value, context='events')
+    @type.setter
+    def type(self, value: str):
+        self._type = get_canonical_name(value, context='events')
 
     @property
     def is_dialogue(self) -> bool:
         """True if the event is a Dialogue entry."""
-        return normalize_key(self._event_type) == 'dialogue'
+        return normalize_key(self._type) == 'dialogue'
 
     @property
     def is_comment(self) -> bool:
         """True if the event is a Comment entry."""
-        return normalize_key(self._event_type) == 'comment'
+        return normalize_key(self._type) == 'comment'
 
     def __getitem__(self, key: str) -> Any:
         norm_key = normalize_key(key)
@@ -232,11 +232,11 @@ class AssEvent:
                 if k not in parsed_fields:
                     parsed_fields[k] = schema.default
                     
-        return cls(parsed_fields, event_type=event_type, line_number=line_number)
+        return cls(parsed_fields, type=event_type, line_number=line_number)
 
     def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
         """Render event with Sparse Logic."""
-        descriptor = get_canonical_name(self.event_type, context="events")
+        descriptor = self._type
         
         if format_fields:
             out_keys = [normalize_key(f) for f in format_fields]
@@ -274,7 +274,7 @@ class AssEvent:
             if isinstance(val, int): return AssTimestamp.from_ms(val)
             return AssTimestamp.from_ass_str(str(val))
 
-        event = cls(event_type=kwargs.get('event_type', AssEventType.DIALOGUE))
+        event = cls(type=kwargs.get('type', AssEventType.DIALOGUE))
         event.start = _to_timestamp(start)
         event.end = _to_timestamp(end)
         
@@ -286,7 +286,7 @@ class AssEvent:
             
         # Add any other fields via kwargs
         for k, v in kwargs.items():
-            if k not in ('event_type', 'start', 'end', 'text'):
+            if k not in ('type', 'start', 'end', 'text'):
                 setattr(event, k, v)
                 
         return event
