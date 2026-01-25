@@ -171,21 +171,31 @@ class AssStyle:
         return val if val is not None else default
 
     @classmethod
-    def from_dict(cls, data: dict[str, str]) -> AssStyle:
-        """Create AssStyle with Eager Conversion and Sparse Storage."""
+    def from_dict(cls, data: dict[str, str], auto_fill: bool = True) -> AssStyle:
+        """Create AssStyle with Eager Conversion and Symmetrical Auto-Fill.
+        
+        If auto_fill=True (Default): Missing standard fields take Schema defaults.
+        If auto_fill=False: Missing fields stay out of _fields (results in None).
+        """
         parsed_fields = {}
+        
+        # 1. Process Input Data (Filtered by previous layer if applicable)
         for k, v in data.items():
             norm_k = normalize_key(k)
             v_str = str(v).strip()
-            # Sparse: Skip empty physical fields
-            if not v_str:
-                continue
-                
+            # Sparse: Skip empty physical fields if auto_fill is off? 
+            # Actually, if it's in data, it's physical. Empty string should still be converted.
             if norm_k in STYLE_SCHEMA:
                 parsed_fields[norm_k] = STYLE_SCHEMA[norm_k].convert(v_str)
             else:
                 parsed_fields[norm_k] = v_str
         
+        # 2. Handle Gaps (auto_fill policy)
+        if auto_fill:
+            for k, schema in STYLE_SCHEMA.items():
+                if k not in parsed_fields:
+                    parsed_fields[k] = schema.default
+                    
         return cls(parsed_fields)
 
     def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
@@ -205,21 +215,21 @@ class AssStyle:
 
         parts = []
         for key in out_keys:
-            # 1. If we have it, use it.
-            if key in self._fields:
+            # Symmetrical Gap Logic (Phase 35):
+            # 1. Physical Presence (Value exists in sparse storage)
+            if key in self._fields and self._fields[key] is not None:
                 val = self._fields[key]
                 if key in STYLE_SCHEMA:
                     parts.append(STYLE_SCHEMA[key].format(val))
                 else:
                     parts.append(str(val))
-            # 2. If we don't, check if we should auto-fill
-            elif auto_fill or key == 'name' or (format_fields is not None):
-                # Using defaults to satisfy the requested format/view
+            # 2. Logical Presence (Auto-Fill with Defaults)
+            elif auto_fill:
                 if key in STYLE_SCHEMA:
                     parts.append(STYLE_SCHEMA[key].format(STYLE_SCHEMA[key].default))
                 else:
                     parts.append("")
-            # 3. Otherwise, pure sparse blank
+            # 3. Gap (Fidelity to None)
             else:
                 parts.append("")
                 
@@ -236,14 +246,8 @@ class AssStyles:
         self._raw_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = []) -> AssStyles:
-        """Layer 2: Semantic ingestion with Symmetric Slicing.
-        
-        Filtering Policy:
-        - Non-empty List: Specific Slicing
-        - None: Total Ingestion (Fidelity)
-        - Empty List []: Standard Slicing (v4/v4+ columns)
-        """
+    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = [], auto_fill: bool = True) -> AssStyles:
+        """Layer 2: Semantic ingestion with Symmetric Slicing and Auto-Fill Control."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         styles = cls()
         styles._section_comments = list(raw.comments)
@@ -283,7 +287,7 @@ class AssStyles:
                     # Apply Slicing Filter
                     filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
                     
-                    style = AssStyle.from_dict(filtered_dict)
+                    style = AssStyle.from_dict(filtered_dict, auto_fill=auto_fill)
                     if style.name in styles:
                         styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, f"Duplicate style name '{style.name}'", record.line_number, "DUPLICATE_STYLE_NAME"))
                     styles.set(style)

@@ -165,21 +165,27 @@ class AssEvent:
         return self.end - self.start
 
     @classmethod
-    def from_dict(cls, data: dict[str, str], event_type: str = "Dialogue", line_number: int = 0) -> AssEvent:
-        """Create AssEvent with Eager Conversion and Sparse Storage."""
+    def from_dict(cls, data: dict[str, str], event_type: str = "Dialogue", line_number: int = 0, auto_fill: bool = True) -> AssEvent:
+        """Create AssEvent with Eager Conversion and Symmetrical Auto-Fill.
+        
+        If auto_fill=True (Default): Missing standard fields take Schema defaults.
+        If auto_fill=False: Missing fields stay out of _fields (results in None).
+        """
         parsed_fields = {}
         for k, v in data.items():
             norm_k = normalize_key(k)
             v_str = str(v).strip()
-            # Sparse: Skip empty physical fields
-            if not v_str:
-                continue
-                
             if norm_k in EVENT_SCHEMA:
                 parsed_fields[norm_k] = EVENT_SCHEMA[norm_k].convert(v_str)
             else:
                 parsed_fields[norm_k] = v_str
         
+        # Handle Gaps
+        if auto_fill:
+            for k, schema in EVENT_SCHEMA.items():
+                if k not in parsed_fields:
+                    parsed_fields[k] = schema.default
+                    
         return cls(parsed_fields, event_type=event_type, line_number=line_number)
 
     def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
@@ -194,17 +200,21 @@ class AssEvent:
 
         parts = []
         for key in out_keys:
-            if key in self._fields:
+            # Symmetrical Gap Logic (Phase 35):
+            # 1. Physical Presence
+            if key in self._fields and self._fields[key] is not None:
                 val = self[key] # Uses property logic (synced text)
                 if key in EVENT_SCHEMA:
                     parts.append(EVENT_SCHEMA[key].format(val))
                 else:
                     parts.append(str(val))
-            elif auto_fill or key == 'text' or (format_fields is not None):
+            # 2. Logical Presence (Auto-Fill)
+            elif auto_fill:
                 if key in EVENT_SCHEMA:
                     parts.append(EVENT_SCHEMA[key].format(EVENT_SCHEMA[key].default))
                 else:
                     parts.append("")
+            # 3. Gap
             else:
                 parts.append("")
                 
@@ -243,14 +253,8 @@ class AssEvents:
         self._raw_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None, event_format: list[str] | None = []) -> AssEvents:
-        """Layer 2: Semantic ingestion with Symmetric Slicing.
-        
-        Filtering Policy:
-        - Non-empty List: Specific Slicing
-        - None: Total Ingestion (Fidelity)
-        - Empty List []: Standard Slicing
-        """
+    def from_raw(cls, raw: RawSection, script_type: str | None = None, event_format: list[str] | None = [], auto_fill: bool = True) -> AssEvents:
+        """Layer 2: Semantic ingestion with Symmetric Slicing and Auto-Fill Control."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         events = cls()
         events._section_comments = list(raw.comments)
@@ -290,7 +294,7 @@ class AssEvents:
                 filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
                 
                 if record.descriptor in known_descriptors:
-                    event = AssEvent.from_dict(filtered_dict, event_type=record.descriptor, line_number=record.line_number)
+                    event = AssEvent.from_dict(filtered_dict, event_type=record.descriptor, line_number=record.line_number, auto_fill=auto_fill)
                     events.append(event)
                 else:
                     events._custom_records.append(record)
