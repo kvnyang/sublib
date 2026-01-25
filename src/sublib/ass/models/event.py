@@ -261,14 +261,14 @@ class AssEvent:
             
             val = None
             if prop:
-                val = self._fields.get(prop)
+                val = self[prop]
                 if val is None and auto_fill:
                     val = EVENT_SCHEMA[prop].default
                 
                 parts.append(EVENT_SCHEMA[prop].format(val) if val is not None else "")
             else:
                 # Custom field
-                val = self._extra.get(key)
+                val = self[key]
                 parts.append(str(val) if val is not None else "")
                 
         return f"{descriptor}: {','.join(parts)}"
