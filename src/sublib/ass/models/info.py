@@ -69,6 +69,19 @@ class AssScriptInfo:
                 ))
             # Update the map so Pass 3 uses the corrected/confirmed version
             aggregated[st_key] = (script_type, ln)
+        else:
+            info._diagnostics.append(Diagnostic(
+                DiagnosticLevel.WARNING,
+                "Missing 'ScriptType' in [Script Info], defaulting to 'v4.00+'",
+                raw.line_number, "MISSING_SCRIPTTYPE"
+            ))
+        
+        if not aggregated and not raw.comments:
+             info._diagnostics.append(Diagnostic(
+                DiagnosticLevel.WARNING,
+                "Section [Script Info] is empty",
+                raw.line_number, "EMPTY_SECTION"
+            ))
             
         # Pass 3: Semantic Validation and Type Conversion
         # Use a stable order (canonical keys if possible, or just the aggregated items)

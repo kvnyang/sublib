@@ -90,7 +90,8 @@ class AssFile:
             ass_file.script_info = AssScriptInfo.from_raw(raw_info)
             ass_file.diagnostics.extend(ass_file.script_info.diagnostics)
         else:
-            # Fallback: Create default Script Info if missing
+            # Fallback: Create default Script Info if missing.
+            # StructuralParser already added a MISSING_SECTION warning.
             ass_file.script_info = AssScriptInfo()
             ass_file.script_info.set('ScriptType', 'v4.00+')
 
@@ -102,7 +103,8 @@ class AssFile:
             ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type)
             ass_file.diagnostics.extend(ass_file.styles.diagnostics)
         else:
-             ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "Missing Styles section", 0, "MISSING_SECTION"))
+            # StructuralParser already warned if Styles are missing
+            ass_file.styles = AssStyles()
 
         # 3. [Events]
         raw_events = raw_doc.get_section('events')
@@ -110,7 +112,8 @@ class AssFile:
             ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type)
             ass_file.diagnostics.extend(ass_file.events.diagnostics)
         else:
-            ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "Missing [Events] section", 0, "MISSING_SECTION"))
+            # StructuralParser already warned if Events are missing
+            ass_file.events = AssEvents()
 
         # 4. Custom/Other Sections (Fonts, Graphics, etc.)
         core_sections = {'script info', 'v4 styles', 'v4+ styles', 'events'}
@@ -118,11 +121,6 @@ class AssFile:
             if section.name not in core_sections:
                 ass_file.extra_sections.append(section)
 
-        # Post-parse validation: check for missing ScriptType
-        if 'ScriptType' not in ass_file.script_info:
-            ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, 
-                       "No ScriptType declaration, assuming v4.00+", 0, "MISSING_SCRIPTTYPE"))
-        
         return ass_file
 
     def dumps(self, validate: bool = False) -> str:

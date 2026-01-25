@@ -191,10 +191,17 @@ class StructuralParser:
         actual_order = [s.name for s in doc.sections]
         
         # 1. Required Sections
-        required = {'script info', 'events'} # Styles is technically optional but highly recommended
-        missing = required - set(actual_order)
+        # 1. Missing Required Sections (Script Info, Events, Styles)
+        required = {'script info', 'events'}
+        actual_sections = set(actual_order)
+        
+        missing = required - actual_sections
         for m in missing:
             self.add_diagnostic(DiagnosticLevel.WARNING, f"Missing core section: [{m.upper()}]", 0, "MISSING_SECTION")
+            
+        # Styles is technically optional but highly recommended
+        if not (actual_sections & {'v4+ styles', 'v4 styles'}):
+            self.add_diagnostic(DiagnosticLevel.WARNING, "Missing Styles section", 0, "MISSING_SECTION")
         
         # 2. Strict Order for Core Sections (Liberal for Fonts/Graphics)
         current_max_rank = -1
