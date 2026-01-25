@@ -241,17 +241,10 @@ class AssEvents:
         self._diagnostics: list[Diagnostic] = []
         self._section_comments: list[str] = []
         self._raw_format_fields: list[str] | None = None
-        self._view_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None, event_format: list[str] | None = None) -> AssEvents:
-        """Layer 2: Semantic ingestion with Unconditional Storage and Standardized View.
-        
-        View Interpretation:
-        - Non-empty List: Specific Intent
-        - None: Minimalist/Physical Fidelity
-        - Empty List []: Standard/Auto (v4/v4+ columns)
-        """
+    def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssEvents:
+        """Layer 2: Semantic ingestion (Stateless Total Ingestion)."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         events = cls()
         events._section_comments = list(raw.comments)
@@ -279,21 +272,6 @@ class AssEvents:
                     events._custom_records.append(record)
             except Exception as e:
                 events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse event: {e}", record.line_number, "EVENT_PARSE_ERROR"))
-
-        # 3. Standardized View Selection (_view_format_fields)
-        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        
-        if event_format: # Non-empty List
-            events._view_format_fields = event_format
-        elif event_format is None:
-             # Minimalist
-             events._view_format_fields = events.get_explicit_format(script_type)
-        else:
-             # Default ([] or Empty List) -> Standard v4/v4+
-             if is_v4:
-                 events._view_format_fields = ['Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
-             else:
-                 events._view_format_fields = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
 
         return events
 

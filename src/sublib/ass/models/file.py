@@ -63,7 +63,7 @@ class AssFile:
         return [d for d in self.diagnostics if d.level == DiagnosticLevel.INFO]
 
     @classmethod
-    def loads(cls, content: str, style_format: list[str] | None = [], event_format: list[str] | None = []) -> "AssFile":
+    def loads(cls, content: str) -> "AssFile":
         """Parse ASS content from string using 3-layered architecture.
         
         Args:
@@ -130,7 +130,7 @@ class AssFile:
                     raw_styles.line_number, "VERSION_SECTION_MISMATCH"
                 ))
 
-            ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type, style_format=style_format)
+            ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type)
             ass_file.diagnostics.extend(ass_file.styles.diagnostics)
         else:
             # StructuralParser already warned if Styles are missing
@@ -139,7 +139,7 @@ class AssFile:
         # 3. [Events]
         raw_events = raw_doc.get_section('events')
         if raw_events:
-            ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type, event_format=event_format)
+            ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type)
             ass_file.diagnostics.extend(ass_file.events.diagnostics)
         else:
             # StructuralParser already warned if Events are missing
@@ -194,17 +194,20 @@ class AssFile:
         for comment in self.styles.section_comments:
             lines.append(f'; {comment}')
             
-        # Format Priority (Phase 32):
+        # Format Priority (Phase 33 - Stateless):
         # 1. Parameter List (Non-empty): Specific Intent
-        # 2. Parameter None: Fidelity/Minimalist (Raw or Explicit)
+        # 2. Parameter None: Fidelity/Minimalist
         # 3. Parameter Empty List []: Standard View
         if style_format:
             out_style_format = style_format
         elif style_format is None:
             out_style_format = self.styles._raw_format_fields or self.styles.get_explicit_format(script_type)
         else:
-            # Default ([]) -> Use session view or standard
-            out_style_format = self.styles._view_format_fields or self.styles.get_explicit_format(script_type)
+            # Default ([]) -> Standard Mode
+            if is_v4:
+                out_style_format = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
+            else:
+                out_style_format = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
             
         lines.append(f"Format: {', '.join(out_style_format)}")
 
@@ -219,17 +222,20 @@ class AssFile:
         for comment in self.events.get_comments():
             lines.append(f'; {comment}')
             
-        # Format Priority (Phase 32):
+        # Format Priority (Phase 33 - Stateless):
         # 1. Parameter List (Non-empty): Specific Intent
-        # 2. Parameter None: Fidelity/Minimalist (Raw or Explicit)
+        # 2. Parameter None: Fidelity/Minimalist
         # 3. Parameter Empty List []: Standard View
         if event_format:
             out_event_format = event_format
         elif event_format is None:
             out_event_format = self.events._raw_format_fields or self.events.get_explicit_format(script_type)
         else:
-            # Default ([]) -> Use session view or standard
-            out_event_format = self.events._view_format_fields or self.events.get_explicit_format(script_type)
+            # Default ([]) -> Standard Mode
+            if is_v4:
+                out_event_format = ['Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+            else:
+                out_event_format = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
             
         lines.append(f"Format: {', '.join(out_event_format)}")
         for event in self.events:

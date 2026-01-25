@@ -234,17 +234,10 @@ class AssStyles:
         self._diagnostics: list[Diagnostic] = []
         self._section_comments: list[str] = []
         self._raw_format_fields: list[str] | None = None
-        self._view_format_fields: list[str] | None = None
 
     @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = None) -> AssStyles:
-        """Layer 2: Semantic ingestion with Unconditional Storage and Standardized View.
-        
-        View Interpretation:
-        - Non-empty List: Specific Intent (Slicing)
-        - None: Minimalist/Physical Fidelity (Existing columns only)
-        - Empty List []: Standard/Auto (v4/v4+ columns)
-        """
+    def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssStyles:
+        """Layer 2: Semantic ingestion (Stateless Total Ingestion)."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         styles = cls()
         styles._section_comments = list(raw.comments)
@@ -252,7 +245,7 @@ class AssStyles:
         # 1. Physical Reality (Permanent)
         styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
         
-        # 2. Ingest ALL physical data regardless of parameters
+        # 2. Ingest ALL physical data
         file_format_fields = raw.format_fields # Normalized
         if not file_format_fields:
             styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Styles section", raw.line_number, "MISSING_FORMAT"))
@@ -271,21 +264,6 @@ class AssStyles:
                      styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse style: {e}", record.line_number, "STYLE_PARSE_ERROR"))
             else:
                 styles._custom_records.append(record)
-
-        # 3. Standardized View Selection (_view_format_fields)
-        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        
-        if style_format: # Non-empty List
-            styles._view_format_fields = style_format
-        elif style_format is None:
-             # Minimalist (Manual None)
-             styles._view_format_fields = styles.get_explicit_format(script_type)
-        else:
-             # Default ([] or Empty List) -> Standard v4/v4+
-             if is_v4:
-                 styles._view_format_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
-             else:
-                 styles._view_format_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
 
         return styles
 
