@@ -7,7 +7,7 @@ from sublib.ass.models.raw import RawDocument, RawSection, RawRecord
 from sublib.ass.descriptors import (
     parse_descriptor_line, CORE_SECTIONS, STYLE_SECTIONS, SECTION_RANKS
 )
-from sublib.ass.naming import get_standard_name
+from .naming import normalize_key, get_canonical_name
 
 
 class StructuralParser:
@@ -42,8 +42,7 @@ class StructuralParser:
             # 2. Section Headers
             if stripped.startswith('[') and stripped.endswith(']'):
                 section_name_raw = stripped[1:-1].strip()
-                section_name_std = get_standard_name(section_name_raw, context='SECTION')
-                section_name_norm = section_name_std.lower()
+                section_name_norm = normalize_key(section_name_raw)
                 
                 # Validation: Duplicate Section
                 if section_name_norm in self._seen_sections:
@@ -68,7 +67,7 @@ class StructuralParser:
                 
                 self._seen_sections.add(section_name_norm)
                 current_section = RawSection(
-                    name=section_name_std, 
+                    name=section_name_norm, 
                     original_name=section_name_raw,
                     line_number=line_number
                 )
@@ -106,8 +105,7 @@ class StructuralParser:
                 continue
             
             descriptor, descriptor_content = parsed
-            descriptor_std = get_standard_name(descriptor, context=current_section.name.lower())
-            descriptor_norm = descriptor_std.lower()
+            descriptor_norm = normalize_key(descriptor)
             
             # Special case: Format line for Styles/Events
             if descriptor_norm == 'format' and current_section.name.lower() in (STYLE_SECTIONS | {'events'}):
@@ -116,7 +114,7 @@ class StructuralParser:
 
             # Standard records
             record = RawRecord(
-                descriptor=descriptor_std, 
+                descriptor=descriptor_norm, 
                 raw_descriptor=descriptor,
                 value=descriptor_content, 
                 line_number=line_number
@@ -167,19 +165,17 @@ class StructuralParser:
             self.add_diagnostic(DiagnosticLevel.ERROR, "Format line contains empty fields", line_number, "EMPTY_FORMAT_FIELD")
             return
 
-        std_fields = [get_standard_name(f, context=f'FIELD:{section.name}') for f in raw_fields]
+        std_fields = [normalize_key(f) for f in raw_fields]
 
         # Validation: Duplicate Fields
-        seen_fields = set()
         for f in std_fields:
-            f_norm = f.lower().replace(" ", "")
-            if f_norm in seen_fields:
+            if f in seen_fields:
                 self.add_diagnostic(
                     DiagnosticLevel.ERROR,
                     f"Duplicate field '{f}' in Format line",
                     line_number, "DUPLICATE_FORMAT_FIELD"
                 )
-            seen_fields.add(f_norm)
+            seen_fields.add(f)
 
         # Validation: Text must be last for Events
         if section.name.lower() == 'events' and std_fields[-1].lower() != 'text':
@@ -213,7 +209,7 @@ class StructuralParser:
         # 2. Strict Order for Core Sections (Liberal for Fonts/Graphics)
         current_max_rank = -1
         for s in doc.sections:
-            rank = SECTION_RANKS.get(s.name.lower(), 99) # Custom sections get high rank
+            rank = SECTION_RANKS.get(s.name, 99) # Custom sections get high rank
             if rank < current_max_rank:
                  self.add_diagnostic(
                     DiagnosticLevel.WARNING,

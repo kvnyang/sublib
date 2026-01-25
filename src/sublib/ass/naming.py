@@ -1,6 +1,7 @@
-"""ASS Naming standardization logic."""
+import re
 
-# Canonical names for normalization
+# Canonical mapping (normalized_key -> Canonical Name)
+# Key is lowercase with collapsed spaces.
 STANDARD_SECTION_NAMES = {
     'script info': 'Script Info',
     'v4 styles': 'V4 Styles',
@@ -10,7 +11,7 @@ STANDARD_SECTION_NAMES = {
     'graphics': 'Graphics',
 }
 
-# Descriptor normalization (Section -> {lower_case -> Standard})
+# Descriptor normalization (Section -> {normalized_key -> Canonical Name})
 STANDARD_DESCRIPTOR_NAMES = {
     'script info': {
         'scripttype': 'ScriptType',
@@ -42,7 +43,7 @@ STANDARD_DESCRIPTOR_NAMES = {
     }
 }
 
-# Format field normalization (mapped by section for differentiation control)
+# Format field normalization (mapped by normalized section key)
 STANDARD_FIELD_NAMES = {
     'styles': {
         'name': 'Name',
@@ -91,32 +92,44 @@ STANDARD_FIELD_NAMES = {
     }
 }
 
-def get_standard_name(raw_name: str, context: str | None = None) -> str:
-    """Normalize a name to its canonical version if known.
+def normalize_key(name: str) -> str:
+    """Standardize a string for use as an internal identity key.
+    
+    1. Lowercase
+    2. Replace all whitespace (including tabs, newlines, etc) with single ASCII space
+    3. Strip leading/trailing whitespace
+    """
+    if not name: return ""
+    # Collapse whitespace
+    key = re.sub(r'\s+', ' ', name)
+    return key.strip().lower()
+
+def get_canonical_name(name_or_key: str, context: str | None = None) -> str:
+    """Lookup the pretty/canonical name for a given raw name or normalized key.
     
     Args:
-        raw_name: Original string from file
+        name_or_key: Original name from file or already normalized key
         context: Context for normalization:
                 - 'SECTION': section headers
                 - 'FIELD:section': format fields (e.g., 'FIELD:events', 'FIELD:v4+ styles')
                 - 'section': descriptors within a section (e.g., 'events', 'script info')
     """
-    clean = raw_name.strip()
-    key = clean.lower()
+    key = normalize_key(name_or_key)
     
     if context == 'SECTION':
-        return STANDARD_SECTION_NAMES.get(key, clean)
+        return STANDARD_SECTION_NAMES.get(key, name_or_key.strip() if name_or_key else "")
     
     if context and context.startswith('FIELD:'):
         # Extract section part, handle v4/v4+ styles both as 'styles' for fields
-        section_part = context[6:].lower()
-        key_collapsed = key.replace(" ", "")
+        section_part = normalize_key(context[6:])
         
         # Determine mapping category
         category = 'events' if 'events' in section_part else 'styles'
-        return STANDARD_FIELD_NAMES.get(category, {}).get(key_collapsed, clean)
+        return STANDARD_FIELD_NAMES.get(category, {}).get(key, name_or_key.strip() if name_or_key else "")
         
-    if context and context.lower() in STANDARD_DESCRIPTOR_NAMES:
-        return STANDARD_DESCRIPTOR_NAMES[context.lower()].get(key, clean)
+    if context:
+        ctx_key = normalize_key(context)
+        if ctx_key in STANDARD_DESCRIPTOR_NAMES:
+            return STANDARD_DESCRIPTOR_NAMES[ctx_key].get(key, name_or_key.strip() if name_or_key else "")
         
-    return clean
+    return name_or_key.strip() if name_or_key else ""

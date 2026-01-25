@@ -9,7 +9,7 @@ from sublib.ass.parser_layer1 import StructuralParser
 from .info import AssScriptInfo
 from .style import AssStyles
 from .event import AssEvents
-from sublib.ass.naming import get_standard_name
+from sublib.ass.naming import normalize_key, get_canonical_name
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ class AssFile:
         lines = []
         
         # 1. Script Info
-        lines.append(f'[{get_standard_name("script info", context="SECTION")}]')
+        lines.append(f'[{get_canonical_name("script info", context="SECTION")}]')
         # Output preserved comments first
         for comment in self.script_info.header_comments:
             lines.append(f'; {comment}')
@@ -150,17 +150,17 @@ class AssFile:
         # Determine appropriate section name
         script_type = self.script_info.get('ScriptType', 'v4.00+')
         if "v4" in script_type.lower() and "+" not in script_type:
-             style_section = get_standard_name("v4 styles", context="SECTION")
+             style_section_key = normalize_key("v4 styles")
         else:
-             style_section = get_standard_name("v4+ styles", context="SECTION")
+             style_section_key = normalize_key("v4+ styles")
              
-        lines.append(f'[{style_section}]')
+        lines.append(f'[{get_canonical_name(style_section_key, context="SECTION")}]')
         # Output preserved comments
         for comment in self.styles.get_comments():
             lines.append(f'; {comment}')
             
         # TODO: Dynamic format based on styles present? For now sticks to standard
-        if "V4 Styles" in style_section:
+        if "v4 styles" == style_section_key:
             fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
                      'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle',
                      'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
@@ -171,8 +171,8 @@ class AssFile:
                      'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
         
         # Standardize fields just in case
-        ctx = f"FIELD:{style_section.lower()}"
-        std_fields = [get_standard_name(f, context=ctx) for f in fields]
+        ctx = f"FIELD:{style_section_key}"
+        std_fields = [get_canonical_name(f, context=ctx) for f in fields]
         lines.append(f"Format: {', '.join(std_fields)}")
         
         for style in self.styles:
@@ -180,13 +180,13 @@ class AssFile:
         lines.append('')
         
         # 3. Events
-        lines.append(f'[{get_standard_name("events", context="SECTION")}]')
+        lines.append(f'[{get_canonical_name("events", context="SECTION")}]')
         # Output preserved comments
         for comment in self.events.get_comments():
             lines.append(f'; {comment}')
             
         fields = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
-        std_fields = [get_standard_name(f, context="FIELD:events") for f in fields]
+        std_fields = [get_canonical_name(f, context="FIELD:events") for f in fields]
         lines.append(f"Format: {', '.join(std_fields)}")
         for event in self.events:
             lines.append(event.render())

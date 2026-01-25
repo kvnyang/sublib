@@ -56,7 +56,8 @@ KNOWN_EVENT_FIELDS = frozenset({
 })
 
 from .naming import (
-    get_standard_name,
+    normalize_key,
+    get_canonical_name,
     STANDARD_SECTION_NAMES,
     STANDARD_DESCRIPTOR_NAMES,
     STANDARD_FIELD_NAMES
@@ -82,17 +83,17 @@ class FormatSpec:
     def __post_init__(self):
         # Build index map for known fields only (case-insensitive and ignore internal spaces)
         # Store canonical names from KNOWN_EVENT_FIELDS for consistent access
-        known_collapsed = {f.lower().replace(" ", ""): f for f in KNOWN_EVENT_FIELDS}
+        known_collapsed = {normalize_key(f): f for f in KNOWN_EVENT_FIELDS}
         seen_fields: set[str] = set()
         
         for i, f in enumerate(self.fields):
-            f_collapsed = f.lower().replace(" ", "")
-            if f_collapsed in seen_fields:
+            f_norm = normalize_key(f)
+            if f_norm in seen_fields:
                 self.duplicate_fields.append(f)
-            seen_fields.add(f_collapsed)
+            seen_fields.add(f_norm)
             
-            if f_collapsed in known_collapsed:
-                canonical = known_collapsed[f_collapsed]
+            if f_norm in known_collapsed:
+                canonical = known_collapsed[f_norm]
                 # Last wins (dictionary behavior)
                 self.field_indices[canonical] = i
         self.text_index = len(self.fields) - 1
@@ -115,7 +116,7 @@ class FormatSpec:
         if not fields:
             raise ValueError("Empty Format line")
         
-        if fields[-1].lower().replace(" ", "") != 'text':
+        if normalize_key(fields[-1]) != 'text':
             raise ValueError(f"Text must be last field, got '{fields[-1]}'")
         
         return cls(fields=fields)
@@ -168,8 +169,8 @@ def is_descriptor_allowed(section: str, descriptor: str) -> bool:
     if allowed is None:
         return True  # Script Info allows any key
     
-    descriptor_collapsed = descriptor.lower().replace(" ", "")
-    return any(descriptor_collapsed == a.lower().replace(" ", "") for a in allowed)
+    descriptor_norm = normalize_key(descriptor)
+    return any(descriptor_norm == normalize_key(a) for a in allowed)
 
 
 def get_default_format_for_script_type(script_type: str | None) -> FormatSpec:

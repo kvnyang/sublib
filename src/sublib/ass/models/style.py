@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 from sublib.ass.types import AssColor
-from sublib.ass.naming import get_standard_name
+from sublib.ass.naming import normalize_key, get_canonical_name
 
 
 @dataclass
@@ -73,7 +73,7 @@ class AssStyle:
     def render(self) -> str:
         """Render AssStyle to Style: line."""
         from sublib.ass.tags.base import _format_float
-        descriptor = get_standard_name("Style", context="v4+ styles")
+        descriptor = get_canonical_name("Style", context="v4+ styles")
         return (
             f"{descriptor}: {self.name},{self.fontname},{_format_float(self.fontsize)},"
             f"{self.primary_color.to_style_str()},"

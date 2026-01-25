@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 import logging
 
-from sublib.ass.naming import get_standard_name
+from sublib.ass.naming import normalize_key, get_canonical_name
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +86,7 @@ class AssScriptInfo:
             info.set(std_key, value, raw_key=raw_key, line_number=line_number, script_type=script_type)
             
         return info
-            
-        return info
+
 
     @property
     def header_comments(self) -> list[str]:
@@ -112,17 +111,18 @@ class AssScriptInfo:
         return list(self._header_comments)
 
     def _normalize_key(self, key: str) -> str:
-        return get_standard_name(key, context='script info')
+        return normalize_key(key)
 
     def render_line(self, key: str, value: Any) -> str:
         """Render a single Script Info line."""
+        canonical_key = get_canonical_name(key, context='script info')
         if isinstance(value, bool):
             formatted = "yes" if value else "no"
-        elif isinstance(value, float) and key == "Timer":
+        elif isinstance(value, float) and canonical_key == "Timer":
             formatted = f"{value:.4f}"
         else:
             formatted = str(value)
-        return f"{key}: {formatted}"
+        return f"{canonical_key}: {formatted}"
 
     def __getitem__(self, key: str) -> Any:
         return self._data[self._normalize_key(key)]
@@ -134,11 +134,8 @@ class AssScriptInfo:
         """Set a property with optional diagnostic reporting."""
         canonical_key = self._normalize_key(key)
         
-        # Update display name: Standard name for known fields, raw name for unknown fields
-        if canonical_key in self.KNOWN_FIELDS:
-            display_name = canonical_key
-        else:
-            display_name = raw_key or key
+        # Update display name
+        display_name = get_canonical_name(raw_key or key, context='script info')
         self._display_names[canonical_key] = display_name
 
         # 1. Version Check
@@ -217,7 +214,7 @@ class AssScriptInfo:
 
     def items(self):
         for k, v in self._data.items():
-            yield self._display_names.get(k, k), v
+            yield self._display_names.get(k, get_canonical_name(k, context='script info')), v
 
     def to_dict(self) -> dict[str, Any]:
         return dict(self._data)

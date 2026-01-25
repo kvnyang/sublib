@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from sublib.ass.naming import get_standard_name
+from sublib.ass.naming import normalize_key, get_canonical_name
 
 from sublib.ass.models.text.elements import AssTextElement
 from sublib.ass.types import AssTimestamp
@@ -73,7 +73,7 @@ class AssEvent:
 
     def render(self) -> str:
         """Render event to ASS line (Dialogue: or Comment:)."""
-        descriptor = get_standard_name(self.event_type, context="events")
+        descriptor = get_canonical_name(self.event_type, context="events")
         return (
             f"{descriptor}: {self.layer},{self.start.to_ass_str()},"
             f"{self.end.to_ass_str()},{self.style},{self.name},"
