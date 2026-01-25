@@ -90,7 +90,9 @@ class AssFile:
             ass_file.script_info = AssScriptInfo.from_raw(raw_info)
             ass_file.diagnostics.extend(ass_file.script_info.diagnostics)
         else:
-            ass_file.diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, "Missing [Script Info] section", 0, "MISSING_SECTION"))
+            # Fallback: Create default Script Info if missing
+            ass_file.script_info = AssScriptInfo()
+            ass_file.script_info.set('ScriptType', 'v4.00+')
 
         script_type = ass_file.script_info.get('ScriptType')
 

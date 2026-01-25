@@ -16,8 +16,8 @@ class RawSection:
     """A raw section containing comments and records."""
     name: str  # Normalized lowercase name
     original_name: str
-    raw_lines: list[str] = field(default_factory=list)
     line_number: int = 0
+    raw_lines: list[str] = field(default_factory=list)
 
     comments: list[str] = field(default_factory=list)
     records: list[RawRecord] = field(default_factory=list)

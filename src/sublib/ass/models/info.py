@@ -38,20 +38,44 @@ class AssScriptInfo:
     @classmethod
     def from_raw(cls, raw: RawSection) -> AssScriptInfo:
         """Layer 2: Semantic ingestion from a RawSection."""
+        from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         info = cls()
         info.set_comments(raw.comments)
         
-        script_type = None
-        # First pass: find ScriptType
+        # Pass 1: Aggregate records (Last-one-wins) and detect duplicates
+        aggregated: dict[str, tuple[str, int]] = {}
         for record in raw.records:
-            if record.descriptor.lower() == 'scripttype':
-                script_type = record.value
-                break
-        
-        # Second pass: ingest values
-        for record in raw.records:
-            info.set(record.descriptor, record.value, line_number=record.line_number, 
-                     script_type=script_type)
+            key_norm = info._normalize_key(record.descriptor)
+            if key_norm in aggregated:
+                info._diagnostics.append(Diagnostic(
+                    DiagnosticLevel.WARNING,
+                    f"Duplicate key '{record.descriptor}' in [Script Info]",
+                    record.line_number, "DUPLICATE_KEY"
+                ))
+            aggregated[key_norm] = (record.value, record.line_number)
+
+        # Pass 2: Detect Version (ScriptType)
+        script_type = 'v4.00+'  # Default
+        st_key = info._normalize_key('ScriptType')
+        if st_key in aggregated:
+            val, ln = aggregated[st_key]
+            if val in ('v4.00', 'v4.00+'):
+                script_type = val
+            else:
+                info._diagnostics.append(Diagnostic(
+                    DiagnosticLevel.WARNING,
+                    f"Invalid ScriptType '{val}', defaulting to 'v4.00+'",
+                    ln, "INVALID_SCRIPTTYPE"
+                ))
+            # Update the map so Pass 3 uses the corrected/confirmed version
+            aggregated[st_key] = (script_type, ln)
+            
+        # Pass 3: Semantic Validation and Type Conversion
+        # Use a stable order (canonical keys if possible, or just the aggregated items)
+        for key_norm, (value, line_number) in aggregated.items():
+            # Get original key name if possible for the 'key' argument in set()
+            orig_key = next((r.descriptor for r in raw.records if info._normalize_key(r.descriptor) == key_norm), key_norm)
+            info.set(orig_key, value, line_number=line_number, script_type=script_type)
             
         return info
 
