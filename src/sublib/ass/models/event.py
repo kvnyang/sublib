@@ -1,7 +1,7 @@
 """ASS Event models using Eager Sparse Typed Storage."""
 from __future__ import annotations
-from typing import Any, Iterable, Optional, TYPE_CHECKING
-from sublib.ass.naming import normalize_key, get_canonical_name
+from typing import Any, Iterable, Optional, TYPE_CHECKING, Literal
+from sublib.ass.naming import normalize_key, get_canonical_name, AssEventType
 from sublib.ass.models.text.elements import AssTextElement
 from sublib.ass.types import AssTimestamp
 
@@ -72,19 +72,20 @@ EVENT_SCHEMA = {
 class AssEvent:
     """ASS dialogue event using Eager Sparse Typed Storage."""
     
-    def __init__(self, fields: dict[str, Any] | None = None, event_type: str = "Dialogue", line_number: int = 0, extra_fields: dict[str, Any] | None = None, **kwargs):
+    def __init__(self, fields: dict[str, Any] | None = None, event_type: str = AssEventType.DIALOGUE, line_number: int = 0, extra_fields: dict[str, Any] | None = None, **kwargs):
         """Initialize AssEvent.
         
         Args:
             fields: Optional dictionary of normalized keys -> typed values (Internal use).
-            event_type: "Dialogue" or "Comment".
+            event_type: The type of event (e.g. Dialogue, Comment, Picture). 
+                        Accepts raw strings or AssEventType constants.
             line_number: Physical line number in file.
             extra_fields: Optional dictionary of custom/non-standard fields.
             **kwargs: Standard fields using snake_case (e.g., start=1000).
         """
         # We store Typed values for non-empty fields
         self._fields = fields if fields is not None else {}
-        self.event_type = event_type
+        self._event_type = get_canonical_name(event_type, context='events')
         self._line_number = line_number
         # AST Sync
         self._text_elements: list[AssTextElement] = []
@@ -130,6 +131,25 @@ class AssEvent:
             self[key] = value
         else:
             self[name] = value
+
+    @property
+    def event_type(self) -> str:
+        """The canonical type of the event (e.g. 'Dialogue', 'Comment')."""
+        return self._event_type
+    
+    @event_type.setter
+    def event_type(self, value: str):
+        self._event_type = get_canonical_name(value, context='events')
+
+    @property
+    def is_dialogue(self) -> bool:
+        """True if the event is a Dialogue entry."""
+        return normalize_key(self._event_type) == 'dialogue'
+
+    @property
+    def is_comment(self) -> bool:
+        """True if the event is a Comment entry."""
+        return normalize_key(self._event_type) == 'comment'
 
     def __getitem__(self, key: str) -> Any:
         norm_key = normalize_key(key)
@@ -254,7 +274,7 @@ class AssEvent:
             if isinstance(val, int): return AssTimestamp.from_ms(val)
             return AssTimestamp.from_ass_str(str(val))
 
-        event = cls(event_type=kwargs.get('event_type', "Dialogue"))
+        event = cls(event_type=kwargs.get('event_type', AssEventType.DIALOGUE))
         event.start = _to_timestamp(start)
         event.end = _to_timestamp(end)
         
@@ -313,7 +333,7 @@ class AssEvents:
                 ingest_keys = {'layer', 'start', 'end', 'style', 'name', 'marginl', 'marginr', 'marginv', 'effect', 'text'}
 
         # Ingest records
-        known_descriptors = {'dialogue', 'comment'}
+        standard_descriptors = {normalize_key(t) for t in AssEventType.get_standard_types()}
         for record in raw.records:
             try:
                 parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
@@ -322,7 +342,7 @@ class AssEvents:
                 # Apply Slicing Filter
                 filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
                 
-                if record.descriptor in known_descriptors:
+                if record.descriptor in standard_descriptors:
                     event = AssEvent.from_dict(filtered_dict, event_type=record.descriptor, line_number=record.line_number, auto_fill=auto_fill)
                     events.append(event)
                 else:

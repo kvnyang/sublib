@@ -43,6 +43,23 @@ STANDARD_DESCRIPTOR_NAMES = {
     }
 }
 
+class AssEventType:
+    """Flexible constants for [Events] descriptors.
+    
+    Standard ASS descriptors are provided as constants, but arbitrary 
+    strings are supported for custom/plugin extensions.
+    """
+    DIALOGUE = "Dialogue"
+    COMMENT = "Comment"
+    PICTURE = "Picture"
+    SOUND = "Sound"
+    MOVIE = "Movie"
+    COMMAND = "Command"
+    
+    @classmethod
+    def get_standard_types(cls) -> set[str]:
+        return {cls.DIALOGUE, cls.COMMENT, cls.PICTURE, cls.SOUND, cls.MOVIE, cls.COMMAND}
+
 # Format field normalization (mapped by normalized section key)
 STANDARD_FIELD_NAMES = {
     'styles': {
