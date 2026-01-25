@@ -148,26 +148,40 @@ class AssFile:
 
         return ass_file
 
-    def dumps(self, validate: bool = False) -> str:
-        """Render to ASS format string.
+    def dumps(self, style_format: list[str] | None = None, event_format: list[str] | None = None, auto_fill: bool = False) -> str:
+        """Serialize the model back to an ASS string.
         
         Args:
-            validate: If True, raise ValueError for undefined style references
+            style_format: Optional list of field names for the Styles section.
+            event_format: Optional list of field names for the Events section.
+            auto_fill: If True, fills missing semantic fields with defaults. Default False.
         """
-        if validate:
-            errors = self._validate_styles()
-            if errors:
-                raise ValueError(f"Invalid style references:\n" + "\n".join(errors))
-        
         lines = []
         
         # 1. Script Info
         lines.append(f'[{get_canonical_name("script info", context="SECTION")}]')
-        # Output preserved comments first
+        # Output preserved header comments
         for comment in self.script_info.header_comments:
             lines.append(f'; {comment}')
-        for key, value in self.script_info.items():
-            lines.append(self.script_info.render_line(key, value))
+        
+        # Explicit keys first in standard order, then others
+        standard_keys = [
+            'scripttype', 'title', 'original script', 'original translation', 
+            'original editing', 'original timing', 'synch point', 'script updated by', 
+            'update details', 'playresx', 'playresy', 'playdepth', 'timer', 
+            'wrapstyle'
+        ]
+        
+        written_keys = set()
+        for key in standard_keys:
+            if key in self.script_info:
+                lines.append(self.script_info.render_line(key, self.script_info[key]))
+                written_keys.add(key)
+        
+        for key in self.script_info.keys():
+            if normalize_key(key) not in written_keys:
+                lines.append(self.script_info.render_line(key, self.script_info[key]))
+        
         lines.append('')
         
         # 2. Styles
@@ -177,29 +191,28 @@ class AssFile:
              style_section_key = normalize_key("v4 styles")
         else:
              style_section_key = normalize_key("v4+ styles")
-             
+        
         lines.append(f'[{get_canonical_name(style_section_key, context="SECTION")}]')
         # Output preserved comments
         for comment in self.styles.get_comments():
             lines.append(f'; {comment}')
             
-        # Use raw format if available, else standard
-        if self.styles._raw_format_fields:
+        # Determine format fields
+        if style_format:
+            out_fields = style_format
+        elif self.styles._raw_format_fields:
             out_fields = self.styles._raw_format_fields
-        elif "v4 styles" == style_section_key:
-            out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
-                        'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle',
-                        'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
         else:
-            out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour',
-                        'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut',
-                        'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow',
-                        'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
-        
+            # Standard Default based on ScriptType
+            if "v4" in script_type.lower() and "+" not in script_type:
+                out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+            else:
+                out_fields = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+            
         lines.append(f"Format: {', '.join(out_fields)}")
         
         for style in self.styles:
-            lines.append(style.render(format_fields=out_fields))
+            lines.append(style.render(format_fields=out_fields, auto_fill=auto_fill))
             
         # Render custom records (unknown descriptors)
         for record in self.styles.custom_records:
@@ -213,15 +226,21 @@ class AssFile:
         for comment in self.events.get_comments():
             lines.append(f'; {comment}')
             
-        # Use raw format if available, else standard
-        if self.events._raw_format_fields:
+        # Determine format fields
+        if event_format:
+            out_fields = event_format
+        elif self.events._raw_format_fields:
             out_fields = self.events._raw_format_fields
         else:
-            out_fields = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+            # Standard Default based on ScriptType
+            if "v4" in script_type.lower() and "+" not in script_type:
+                out_fields = ['Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
+            else:
+                out_fields = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
             
         lines.append(f"Format: {', '.join(out_fields)}")
         for event in self.events:
-            lines.append(event.render(format_fields=out_fields))
+            lines.append(event.render(format_fields=out_fields, auto_fill=auto_fill))
             
         # Render custom records (unknown descriptors)
         for record in self.events.custom_records:

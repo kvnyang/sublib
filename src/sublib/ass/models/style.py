@@ -39,6 +39,8 @@ class AssStyle:
     encoding: int = 1
     # For custom fields preservation: Stores normalized_key -> raw_value
     extra_fields: dict[str, str] = field(default_factory=dict)
+    # Track which fields were explicitly provided or set
+    _explicit_fields: set[str] = field(default_factory=set, repr=False)
 
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> AssStyle:
@@ -61,6 +63,8 @@ class AssStyle:
         for k, v in data.items():
             if k not in known_standard:
                 extra[k] = v
+
+        explicit = {k for k, v in data.items() if v.strip()}
 
         return cls(
             name=get_field(['name']).strip(),
@@ -86,15 +90,17 @@ class AssStyle:
             margin_r=int(get_field(['marginr'], '10')),
             margin_v=int(get_field(['marginv'], '10')),
             encoding=int(get_field(['encoding'], '1')),
-            extra_fields=extra
+            extra_fields=extra,
+            _explicit_fields=explicit
         )
 
 
-    def render(self, format_fields: list[str] | None = None) -> str:
+    def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
         """Render AssStyle to Style: line according to requested format fields.
         
         Args:
             format_fields: List of raw field names to output. If None, uses internal defaults.
+            auto_fill: If True, fills missing explicit fields with defaults. Default False (Transparent).
         """
         from sublib.ass.tags.base import _format_float
         descriptor = get_canonical_name("Style", context="v4+ styles")
@@ -134,12 +140,20 @@ class AssStyle:
             field_values = []
             for f in format_fields:
                 key = normalize_key(f)
-                if key in vals:
-                    field_values.append(vals[key])
-                elif key in extra_vals:
-                    field_values.append(extra_vals[key])
+                
+                # Check if field should be rendered (is explicit or auto-fill is on)
+                # Note: 'name' is always mandatory for a meaningful Style line
+                is_explicit = key in self._explicit_fields or key == 'name'
+                
+                if is_explicit or auto_fill:
+                    if key in vals:
+                        field_values.append(vals[key])
+                    elif key in extra_vals:
+                        field_values.append(extra_vals[key])
+                    else:
+                        field_values.append("") # Unknown field
                 else:
-                    field_values.append("") # Unknown field without data
+                    field_values.append("") # Not explicit, no auto-fill
             return f"{descriptor}: {','.join(field_values)}"
 
         # Default V4+ render (backward compatibility)

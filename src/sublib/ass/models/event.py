@@ -38,6 +38,8 @@ class AssEvent:
     _line_number: int = 0
     # For custom fields preservation: Stores normalized_key -> raw_value
     extra_fields: dict[str, str] = field(default_factory=dict)
+    # Track which fields were explicitly provided or set
+    _explicit_fields: set[str] = field(default_factory=set, repr=False)
 
     @property
     def text_elements(self) -> list[AssTextElement]:
@@ -71,6 +73,8 @@ class AssEvent:
             if k not in known_standard:
                 extra[k] = v
 
+        explicit = {k for k, v in data.items() if v.strip()}
+
         return cls(
             start=AssTimestamp.from_ass_str(data.get('start', '0:00:00.00')),
             end=AssTimestamp.from_ass_str(data.get('end', '0:00:00.00')),
@@ -84,15 +88,17 @@ class AssEvent:
             event_type=event_type,
             _raw_text=data.get('text', ''),
             _line_number=line_number,
-            extra_fields=extra
+            extra_fields=extra,
+            _explicit_fields=explicit
         )
 
 
-    def render(self, format_fields: list[str] | None = None) -> str:
+    def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
         """Render event to ASS line according to requested format fields.
         
         Args:
             format_fields: List of raw field names to output. If None, uses internal defaults.
+            auto_fill: If True, fills missing explicit fields with defaults. Default False (Transparent).
         """
         descriptor = get_canonical_name(self.event_type, context="events")
         
@@ -118,12 +124,20 @@ class AssEvent:
             field_values = []
             for f in format_fields:
                 key = normalize_key(f)
-                if key in vals:
-                    field_values.append(vals[key])
-                elif key in extra_vals:
-                    field_values.append(extra_vals[key])
+                
+                # Check if field should be rendered (is explicit or auto-fill is on)
+                # Note: 'text' is always mandatory for a meaningful event line
+                is_explicit = key in self._explicit_fields or key == 'text'
+                
+                if is_explicit or auto_fill:
+                    if key in vals:
+                        field_values.append(vals[key])
+                    elif key in extra_vals:
+                        field_values.append(extra_vals[key])
+                    else:
+                        field_values.append("") # Unknown field
                 else:
-                    field_values.append("") # Unknown field
+                    field_values.append("") # Not explicit, no auto-fill
             return f"{descriptor}: {','.join(field_values)}"
 
         # Default V4+ render (backward compatibility)
