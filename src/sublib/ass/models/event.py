@@ -147,12 +147,14 @@ class AssEvents:
         self._data = data if data is not None else []
         self._custom_records: list[RawRecord] = []
         self._diagnostics: list[Diagnostic] = []
+        self._section_comments: list[str] = []
 
     @classmethod
     def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssEvents:
         """Layer 2: Semantic ingestion from a RawSection."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         events = cls()
+        events._section_comments = list(raw.comments)
         
         if not raw.format_fields:
             events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Events section", raw.line_number, "MISSING_FORMAT"))
@@ -197,6 +199,10 @@ class AssEvents:
     @property
     def diagnostics(self) -> list[Diagnostic]:
         return self._diagnostics
+
+    def get_comments(self) -> list[str]:
+        """Get all comments."""
+        return list(self._section_comments)
 
     @property
     def custom_records(self) -> list[RawRecord]:

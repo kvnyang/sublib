@@ -94,12 +94,14 @@ class AssStyles:
         self._data = data if data is not None else {}
         self._custom_records: list[RawRecord] = []
         self._diagnostics: list[Diagnostic] = []
+        self._section_comments: list[str] = []
 
     @classmethod
     def from_raw(cls, raw: RawSection, script_type: str | None = None) -> AssStyles:
         """Layer 2: Semantic ingestion from a RawSection."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         styles = cls()
+        styles._section_comments = list(raw.comments)
         
         if not raw.format_fields:
             # StructParser should have caught this, but safety first
@@ -148,6 +150,14 @@ class AssStyles:
     @property
     def diagnostics(self) -> list[Diagnostic]:
         return self._diagnostics
+
+    @property
+    def section_comments(self) -> list[str]:
+        return self._section_comments
+
+    def get_comments(self) -> list[str]:
+        """Get all comments."""
+        return list(self._section_comments)
 
     @property
     def custom_records(self) -> list[RawRecord]:

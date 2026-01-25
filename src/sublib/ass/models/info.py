@@ -73,6 +73,10 @@ class AssScriptInfo:
         """Replace all comments."""
         self._header_comments = list(comments)
 
+    def get_comments(self) -> list[str]:
+        """Get all comments."""
+        return list(self._header_comments)
+
     def _normalize_key(self, key: str) -> str:
         # Case insensitive, but space sensitive as per requirement
         return self._CANONICAL_KEYS.get(key.lower(), key)

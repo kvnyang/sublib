@@ -87,12 +87,10 @@ class StructuralParser:
                 current_section.raw_lines.append(raw_line)
                 continue
 
-            # 3. Comments (Only for CORE/STYLE sections now)
+            # 3. Comments (All core sections)
             if stripped.startswith(';') or stripped.startswith('!:'):
-                if current_section.name == 'script info':
-                    # Value extraction for comments
-                    comment_val = stripped[1:] if stripped.startswith(';') else stripped[2:]
-                    current_section.comments.append(comment_val.lstrip())
+                comment_val = stripped[1:] if stripped.startswith(';') else stripped[2:]
+                current_section.comments.append(comment_val.lstrip())
                 continue
 
             # 4. Descriptor: Value Lines (Use raw_line to preserve trailing spaces via lstrip in helper)
