@@ -177,13 +177,24 @@ class AssStyles:
             styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Styles section", raw.line_number, "MISSING_FORMAT"))
             return styles
 
-        # 1. Minimum field verification
+        # 1. Mandatory field verification
         is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        expected_min = 10 if is_v4 else 23
-        if len(raw.format_fields) < expected_min:
+        
+        # User defined mandatory sets
+        V4_MANDATORY = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 
+                        'tertiarycolour', 'backcolour', 'bold', 'italic', 'borderstyle'}
+        V4PLUS_MANDATORY = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 
+                            'outlinecolour', 'backcolour', 'bold', 'italic', 'underline', 
+                            'strikeout', 'scalex', 'scaley', 'spacing', 'angle', 
+                            'borderstyle', 'outline', 'shadow', 'alignment', 'marginl', 
+                            'marginr', 'marginv', 'encoding'}
+        
+        required = V4_MANDATORY if is_v4 else V4PLUS_MANDATORY
+        missing = required - set(raw.format_fields)
+        if missing:
              styles._diagnostics.append(Diagnostic(
                 DiagnosticLevel.WARNING,
-                f"Styles section has fewer fields ({len(raw.format_fields)}) than standard ({expected_min}) for {script_type or 'v4.00+'}",
+                f"Styles section missing standard fields: {', '.join(sorted(missing))}",
                 raw.format_line_number or raw.line_number, "INCOMPLETE_FORMAT"
             ))
 

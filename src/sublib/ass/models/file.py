@@ -70,6 +70,7 @@ class AssFile:
         Layer 2: Semantic Parser (Typing/Logic)
         Layer 3: Content Parser (AST/Tags)
         """
+        from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         # --- Layer 1: Structural Parsing ---
         struct_parser = StructuralParser()
         raw_doc = struct_parser.parse(content)
@@ -96,7 +97,6 @@ class AssFile:
             ass_file.script_info = AssScriptInfo()
             ass_file.script_info.set('scripttype', 'v4.00+')
             
-            from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
             ass_file.diagnostics.append(Diagnostic(
                 DiagnosticLevel.WARNING,
                 "Missing [Script Info] section, assuming ScriptType: v4.00+",

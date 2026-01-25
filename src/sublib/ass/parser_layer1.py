@@ -186,6 +186,14 @@ class StructuralParser:
                 line_number, "FORMAT_TEXT_NOT_LAST"
             )
 
+        # Validation: Name must be present for Styles (Structural requirement for indexing)
+        if section.name.lower() in ('v4 styles', 'v4+ styles') and 'name' not in std_fields:
+             self.add_diagnostic(
+                DiagnosticLevel.ERROR,
+                f"Format line in [{section.original_name}] must include 'Name'",
+                line_number, "FORMAT_NAME_MISSING"
+            )
+
         section.format_fields = std_fields
         section.raw_format_fields = raw_fields
         section.format_line_number = line_number
