@@ -60,6 +60,51 @@ class AssEventType:
     def get_standard_types(cls) -> set[str]:
         return {cls.DIALOGUE, cls.COMMENT, cls.PICTURE, cls.SOUND, cls.MOVIE, cls.COMMAND}
 
+# Standard style properties -> normalized ASS keys
+STYLE_PROP_TO_KEY = {
+    'name': 'name',
+    'font_name': 'fontname',
+    'font_size': 'fontsize',
+    'primary_color': 'primarycolour',
+    'secondary_color': 'secondarycolour',
+    'outline_color': 'outlinecolour',
+    'back_color': 'backcolour',
+    'bold': 'bold',
+    'italic': 'italic',
+    'underline': 'underline',
+    'strikeout': 'strikeout',
+    'scale_x': 'scalex',
+    'scale_y': 'scaley',
+    'spacing': 'spacing',
+    'angle': 'angle',
+    'border_style': 'borderstyle',
+    'outline': 'outline',
+    'shadow': 'shadow',
+    'alignment': 'alignment',
+    'margin_l': 'marginl',
+    'margin_r': 'marginr',
+    'margin_v': 'marginv',
+    'encoding': 'encoding'
+}
+
+# Standard event properties -> normalized ASS keys
+EVENT_PROP_TO_KEY = {
+    'layer': 'layer',
+    'start': 'start',
+    'end': 'end',
+    'style': 'style',
+    'name': 'name',
+    'margin_l': 'marginl',
+    'margin_r': 'marginr',
+    'margin_v': 'marginv',
+    'effect': 'effect',
+    'text': 'text'
+}
+
+# Reverse lookups (normalized ASS keys -> snake_case)
+STYLE_KEY_TO_PROP = {v: k for k, v in STYLE_PROP_TO_KEY.items()}
+EVENT_KEY_TO_PROP = {v: k for k, v in EVENT_PROP_TO_KEY.items()}
+
 # Format field normalization (mapped by normalized section key)
 STANDARD_FIELD_NAMES = {
     'styles': {

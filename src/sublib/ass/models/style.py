@@ -13,32 +13,7 @@ def _format_bool(v: bool) -> str:
     return "1" if v else "0"
 
 
-# Mapping of Pythonic property names to normalized internal keys
-PROPERTY_TO_KEY = {
-    'name': 'name',
-    'font_name': 'fontname',
-    'font_size': 'fontsize',
-    'primary_color': 'primarycolour',
-    'secondary_color': 'secondarycolour',
-    'outline_color': 'outlinecolour',
-    'back_color': 'backcolour',
-    'bold': 'bold',
-    'italic': 'italic',
-    'underline': 'underline',
-    'strikeout': 'strikeout',
-    'scale_x': 'scalex',
-    'scale_y': 'scaley',
-    'spacing': 'spacing',
-    'angle': 'angle',
-    'border_style': 'borderstyle',
-    'outline': 'outline',
-    'shadow': 'shadow',
-    'alignment': 'alignment',
-    'margin_l': 'marginl',
-    'margin_r': 'marginr',
-    'margin_v': 'marginv',
-    'encoding': 'encoding'
-}
+from sublib.ass.naming import STYLE_PROP_TO_KEY as PROPERTY_TO_KEY, STYLE_KEY_TO_PROP as KEY_TO_PROPERTY
 
 
 class FieldSchema:
@@ -88,28 +63,27 @@ class FieldSchema:
 
 STYLE_SCHEMA = {
     'name': FieldSchema("", str),
-    'fontname': FieldSchema("Arial", str),
-    'fontsize': FieldSchema(20.0, float, _format_float),
-    'primarycolour': FieldSchema(AssColor.from_style_str('&H00FFFFFF'), AssColor),
-    'secondarycolour': FieldSchema(AssColor.from_style_str('&H000000FF'), AssColor),
-    'outlinecolour': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
-    'tertiarycolour': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
-    'backcolour': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
+    'font_name': FieldSchema("Arial", str),
+    'font_size': FieldSchema(20.0, float, _format_float),
+    'primary_color': FieldSchema(AssColor.from_style_str('&H00FFFFFF'), AssColor),
+    'secondary_color': FieldSchema(AssColor.from_style_str('&H000000FF'), AssColor),
+    'outline_color': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
+    'back_color': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
     'bold': FieldSchema(False, bool, _format_bool),
     'italic': FieldSchema(False, bool, _format_bool),
     'underline': FieldSchema(False, bool, _format_bool),
     'strikeout': FieldSchema(False, bool, _format_bool),
-    'scalex': FieldSchema(100.0, float, _format_float),
-    'scaley': FieldSchema(100.0, float, _format_float),
+    'scale_x': FieldSchema(100.0, float, _format_float),
+    'scale_y': FieldSchema(100.0, float, _format_float),
     'spacing': FieldSchema(0.0, float, _format_float),
     'angle': FieldSchema(0.0, float, _format_float),
-    'borderstyle': FieldSchema(1, int),
+    'border_style': FieldSchema(1, int),
     'outline': FieldSchema(2.0, float, _format_float),
     'shadow': FieldSchema(0.0, float, _format_float),
     'alignment': FieldSchema(2, int),
-    'marginl': FieldSchema(10, int),
-    'marginr': FieldSchema(10, int),
-    'marginv': FieldSchema(10, int),
+    'margin_l': FieldSchema(10, int),
+    'margin_r': FieldSchema(10, int),
+    'margin_v': FieldSchema(10, int),
     'encoding': FieldSchema(1, int),
 }
 
@@ -121,37 +95,37 @@ class AssStyle:
         """Initialize AssStyle.
         
         Args:
-            fields: Optional dictionary of normalized keys -> typed values (Internal use).
+            fields: Optional dictionary of snake_case field names -> typed values (Internal use).
             extra_fields: Optional dictionary of custom/non-standard fields.
             **kwargs: Standard fields using snake_case (e.g., primary_color="&H0000FF").
         """
-        # 1. Base storage
+        # Internal fields using snake_case keys for standard fields
         self._fields = fields if fields is not None else {}
+        # Separate storage for custom/non-standard fields
+        self._extra = extra_fields if extra_fields is not None else {}
         
-        # 2. Apply standard properties via kwargs
+        # Apply standard properties via kwargs
         for name, value in kwargs.items():
             if name in PROPERTY_TO_KEY:
                 setattr(self, name, value)
             else:
-                # If name isn't a standard property, we could either raise or put in extra_fields.
-                # Here we put it in extra_fields for maximum flexibility.
-                self[name] = value
+                self._extra[normalize_key(name)] = value
 
-        # 3. Apply explicit extra_fields
-        if extra_fields:
-            for k, v in extra_fields.items():
-                self[k] = v
+    @property
+    def extra_fields(self) -> dict[str, Any]:
+        """Custom/non-standard fields."""
+        return self._extra
 
     def __getattr__(self, name: str) -> Any:
         if name.startswith('_'):
             return super().__getattribute__(name)
             
-        key = PROPERTY_TO_KEY.get(name)
-        if key:
-            return self[key]
+        if name in PROPERTY_TO_KEY:
+            return self[name]
             
-        if name in self._fields:
-            return self._fields[name]
+        norm_name = normalize_key(name)
+        if norm_name in self._extra:
+            return self._extra[norm_name]
             
         return super().__getattribute__(name)
 
@@ -160,36 +134,35 @@ class AssStyle:
             super().__setattr__(name, value)
             return
             
-        key = PROPERTY_TO_KEY.get(name)
-        if key:
-            self[key] = value
-        else:
+        if name in PROPERTY_TO_KEY:
+            # Standard property - use __setitem__ for conversion
             self[name] = value
+        else:
+            self._extra[normalize_key(name)] = value
 
     def __getitem__(self, key: str) -> Any:
-        norm_key = normalize_key(key)
+        # Enforce Pythonic-only keys for standard fields
+        if key in PROPERTY_TO_KEY:
+            # Check sparse storage
+            if key in self._fields:
+                return self._fields[key]
+            # Schema default fallback
+            schema = STYLE_SCHEMA.get(key)
+            return schema.default if schema else None
         
-        # 1. Sparse Storage Check (Already Typed)
-        if norm_key in self._fields:
-            return self._fields[norm_key]
+        # Fallback to extra fields
+        if key in self._extra:
+            return self._extra[key]
             
-        # 2. Schema default
-        if norm_key in STYLE_SCHEMA:
-            return STYLE_SCHEMA[norm_key].default
-            
-        # 3. Aliases
-        if norm_key == 'tertiarycolour' and 'outlinecolour' in self._fields:
-            return self._fields['outlinecolour']
-            
-        return None
+        raise KeyError(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        norm_key = normalize_key(key)
-        # Eager parsing on assignment
-        if norm_key in STYLE_SCHEMA:
-            self._fields[norm_key] = STYLE_SCHEMA[norm_key].convert(value)
+        # Enforce Pythonic-only keys for standard fields
+        if key in PROPERTY_TO_KEY:
+            schema = STYLE_SCHEMA[key]
+            self._fields[key] = schema.convert(value)
         else:
-            self._fields[norm_key] = value
+            self._extra[normalize_key(key)] = value
 
     def get(self, key: str, default: Any = None) -> Any:
         val = self[key]
@@ -197,66 +170,54 @@ class AssStyle:
 
     @classmethod
     def from_dict(cls, data: dict[str, str], auto_fill: bool = True) -> AssStyle:
-        """Create AssStyle with Eager Conversion and Symmetrical Auto-Fill.
-        
-        If auto_fill=True (Default): Missing standard fields take Schema defaults.
-        If auto_fill=False: Missing fields stay out of _fields (results in None).
-        """
+        """Create AssStyle with Eager Conversion and Pythonic storage."""
+        from sublib.ass.naming import STYLE_KEY_TO_PROP as KEY_TO_PROPERTY
         parsed_fields = {}
+        extra_fields = {}
         
-        # 1. Process Input Data (Filtered by previous layer if applicable)
         for k, v in data.items():
             norm_k = normalize_key(k)
+            prop = KEY_TO_PROPERTY.get(norm_k)
             v_str = str(v).strip()
-            # Sparse: Skip empty physical fields if auto_fill is off? 
-            # Actually, if it's in data, it's physical. Empty string should still be converted.
-            if norm_k in STYLE_SCHEMA:
-                parsed_fields[norm_k] = STYLE_SCHEMA[norm_k].convert(v_str)
+            
+            if prop:
+                parsed_fields[prop] = STYLE_SCHEMA[prop].convert(v_str)
             else:
-                parsed_fields[norm_k] = v_str
+                extra_fields[norm_k] = v_str
         
-        # 2. Handle Gaps (auto_fill policy)
         if auto_fill:
-            for k, schema in STYLE_SCHEMA.items():
-                if k not in parsed_fields:
-                    parsed_fields[k] = schema.default
+            for prop, schema in STYLE_SCHEMA.items():
+                if prop not in parsed_fields:
+                    parsed_fields[prop] = schema.default
                     
-        return cls(parsed_fields)
+        return cls(parsed_fields, extra_fields=extra_fields)
 
     def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
-        """Render AssStyle with Sparse Logic."""
+        """Render AssStyle with Pythonic-to-Canonical mapping."""
+        from sublib.ass.naming import STYLE_KEY_TO_PROP as KEY_TO_PROPERTY
         descriptor = get_canonical_name("Style", context="v4+ styles")
         
         if format_fields:
             out_keys = [normalize_key(f) for f in format_fields]
         else:
             # Default V4+ sequence
-            out_keys = [
-                'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour',
-                'outlinecolour', 'backcolour', 'bold', 'italic', 'underline', 'strikeout',
-                'scalex', 'scaley', 'spacing', 'angle', 'borderstyle', 'outline', 'shadow',
-                'alignment', 'marginl', 'marginr', 'marginv', 'encoding'
-            ]
+            out_keys = [PROPERTY_TO_KEY[p] for p in ('name', 'font_name', 'font_size', 'primary_color', 'secondary_color', 'outline_color', 'back_color', 'bold', 'italic', 'underline', 'strikeout', 'scale_x', 'scale_y', 'spacing', 'angle', 'border_style', 'outline', 'shadow', 'alignment', 'margin_l', 'margin_r', 'margin_v', 'encoding')]
 
         parts = []
         for key in out_keys:
-            # Symmetrical Gap Logic (Phase 35):
-            # 1. Physical Presence (Value exists in sparse storage)
-            if key in self._fields and self._fields[key] is not None:
-                val = self._fields[key]
-                if key in STYLE_SCHEMA:
-                    parts.append(STYLE_SCHEMA[key].format(val))
-                else:
-                    parts.append(str(val))
-            # 2. Logical Presence (Auto-Fill with Defaults)
-            elif auto_fill:
-                if key in STYLE_SCHEMA:
-                    parts.append(STYLE_SCHEMA[key].format(STYLE_SCHEMA[key].default))
-                else:
-                    parts.append("")
-            # 3. Gap (Fidelity to None)
+            prop = KEY_TO_PROPERTY.get(key)
+            
+            val = None
+            if prop:
+                val = self._fields.get(prop)
+                if val is None and auto_fill:
+                    val = STYLE_SCHEMA[prop].default
+                
+                parts.append(STYLE_SCHEMA[prop].format(val) if val is not None else "")
             else:
-                parts.append("")
+                # Custom field
+                val = self._extra.get(key)
+                parts.append(str(val) if val is not None else "")
                 
         return f"{descriptor}: {','.join(parts)}"
 
@@ -367,7 +328,8 @@ class AssStyles:
         
         all_physical_keys = set()
         for style in self._data.values():
-            all_physical_keys.update(style._fields.keys())
+            for prop in style._fields:
+                all_physical_keys.add(PROPERTY_TO_KEY[prop])
         all_physical_keys.add('name')
         
         result = []
