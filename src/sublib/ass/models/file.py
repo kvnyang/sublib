@@ -91,12 +91,12 @@ class AssFile:
             ass_file.script_info = AssScriptInfo.from_raw(raw_info)
             ass_file.diagnostics.extend(ass_file.script_info.diagnostics)
         else:
-            # Fallback: Create default Script Info if missing.
+            # Create default Script Info if missing.
             # StructuralParser already added a MISSING_SECTION warning.
             ass_file.script_info = AssScriptInfo()
-            ass_file.script_info.set('ScriptType', 'v4.00+')
+            ass_file.script_info.set('scripttype', 'v4.00+')
 
-        script_type = ass_file.script_info.get('ScriptType')
+        script_type = ass_file.script_info.get('scripttype')
 
         # 2. [Styles]
         raw_styles = raw_doc.get_section('v4+ styles') or raw_doc.get_section('v4 styles')
@@ -148,7 +148,7 @@ class AssFile:
         
         # 2. Styles
         # Determine appropriate section name
-        script_type = self.script_info.get('ScriptType', 'v4.00+')
+        script_type = self.script_info.get('scripttype', 'v4.00+')
         if "v4" in script_type.lower() and "+" not in script_type:
              style_section_key = normalize_key("v4 styles")
         else:
