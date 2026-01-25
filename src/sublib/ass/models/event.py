@@ -10,18 +10,19 @@ if TYPE_CHECKING:
     from sublib.ass.diagnostics import Diagnostic
 
 
-# Mapping of Python property names to normalized ASS field names
-PROPERTY_TO_KEY = {
-    'layer': 'layer',
-    'start': 'start',
-    'end': 'end',
-    'style': 'style',
-    'name': 'name',
-    'margin_l': 'marginl',
-    'margin_r': 'marginr',
-    'margin_v': 'marginv',
-    'effect': 'effect',
-    'text': 'text'
+# Mapping of Canonical Spec Names to normalized internal keys
+CANONICAL_TO_KEY = {
+    'Layer': 'layer',
+    'Start': 'start',
+    'End': 'end',
+    'Style': 'style',
+    'Name': 'name',
+    'MarginL': 'marginl',
+    'MarginR': 'marginr',
+    'MarginV': 'marginv',
+    'Effect': 'effect',
+    'Text': 'text',
+    'Marked': 'marked' # v4 Alias
 }
 
 
@@ -72,7 +73,15 @@ EVENT_SCHEMA = {
 class AssEvent:
     """ASS dialogue event using Eager Sparse Typed Storage."""
     
-    def __init__(self, fields: dict[str, Any] | None = None, event_type: str = "Dialogue", line_number: int = 0):
+    def __init__(self, fields: dict[str, Any] | None = None, event_type: str = "Dialogue", line_number: int = 0, **kwargs):
+        """Initialize AssEvent.
+        
+        Args:
+            fields: Optional dictionary of normalized keys -> typed values.
+            event_type: "Dialogue" or "Comment".
+            line_number: Physical line number in file.
+            **kwargs: Optional keyword arguments using Canonical Spec Names.
+        """
         # We store Typed values for non-empty fields
         self._fields = fields if fields is not None else {}
         self.event_type = event_type
@@ -80,12 +89,16 @@ class AssEvent:
         # AST Sync
         self._text_elements: list[AssTextElement] = []
         self._ast_synced = False
+        
+        # Apply keyword arguments
+        for name, value in kwargs.items():
+            setattr(self, name, value)
 
     def __getattr__(self, name: str) -> Any:
         if name.startswith('_'):
             return super().__getattribute__(name)
             
-        key = PROPERTY_TO_KEY.get(name)
+        key = CANONICAL_TO_KEY.get(name)
         if key:
             return self[key]
         return super().__getattribute__(name)
@@ -95,7 +108,12 @@ class AssEvent:
             super().__setattr__(name, value)
             return
             
-        key = PROPERTY_TO_KEY.get(name)
+        # If it's the Text property (or other future explicit properties), let the property setter handle it
+        if name == 'Text':
+            super().__setattr__(name, value)
+            return
+
+        key = CANONICAL_TO_KEY.get(name)
         if key:
             self[key] = value
         else:
@@ -106,7 +124,7 @@ class AssEvent:
         
         # 1. Text is special (requires AST sync)
         if norm_key == 'text':
-             return self.text
+             return self.Text
              
         # 2. Sparse Physical Storage (Typed)
         if norm_key in self._fields:
@@ -125,21 +143,21 @@ class AssEvent:
     def __setitem__(self, key: str, value: Any) -> None:
         norm_key = normalize_key(key)
         if norm_key == 'text':
-            self.text = value
+            self.Text = value
         elif norm_key in EVENT_SCHEMA:
             self._fields[norm_key] = EVENT_SCHEMA[norm_key].convert(value)
         else:
             self._fields[norm_key] = value
 
     @property
-    def text(self) -> str:
+    def Text(self) -> str:
         if self._ast_synced:
             from sublib.ass.text import AssTextRenderer
             return AssTextRenderer().render(self._text_elements)
         return self._fields.get('text', "")
 
-    @text.setter
-    def text(self, value: str) -> None:
+    @Text.setter
+    def Text(self, value: str) -> None:
         self._fields['text'] = value
         self._ast_synced = False
 
@@ -203,7 +221,7 @@ class AssEvent:
             # Symmetrical Gap Logic (Phase 35):
             # 1. Physical Presence
             if key in self._fields and self._fields[key] is not None:
-                val = self[key] # Uses property logic (synced text)
+                val = self[key] # Uses property logic (synced Text)
                 if key in EVENT_SCHEMA:
                     parts.append(EVENT_SCHEMA[key].format(val))
                 else:
@@ -222,23 +240,24 @@ class AssEvent:
 
     @classmethod
     def create(cls, text: str | list[AssTextElement], start: str | AssTimestamp | int, end: str | AssTimestamp | int, **kwargs) -> AssEvent:
-        """Robust factory."""
+        """Robust factory using Canonical Spec Names."""
         def _to_timestamp(val: Any) -> AssTimestamp:
             if isinstance(val, AssTimestamp): return val
             if isinstance(val, int): return AssTimestamp.from_ms(val)
             return AssTimestamp.from_ass_str(str(val))
 
         event = cls(event_type=kwargs.get('event_type', "Dialogue"))
-        event.start = _to_timestamp(start)
-        event.end = _to_timestamp(end)
+        event.Start = _to_timestamp(start)
+        event.End = _to_timestamp(end)
         
         if isinstance(text, str):
-            event.text = text
+            event.Text = text
         else:
-            event.text_elements = text
+            event._text_elements = text
+            event._ast_synced = True
             
         for k, v in kwargs.items():
-            if k not in ('event_type', 'start', 'end'):
+            if k not in ('event_type', 'Start', 'End', 'Text'):
                 setattr(event, k, v)
         return event
 
@@ -317,7 +336,7 @@ class AssEvents:
     def filter(self, style: str | None = None) -> list[AssEvent]:
         if style is None: return list(self._data)
         target = style.lower()
-        return [e for e in self._data if e.style.lower() == target]
+        return [e for e in self._data if e.Style.lower() == target]
 
     def get_explicit_format(self, script_type: str | None = None) -> list[str]:
         """Union of all physical keys."""

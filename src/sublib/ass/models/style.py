@@ -13,31 +13,32 @@ def _format_bool(v: bool) -> str:
     return "1" if v else "0"
 
 
-# Mapping of Python property names to normalized ASS field names
-PROPERTY_TO_KEY = {
-    'name': 'name',
-    'fontname': 'fontname',
-    'fontsize': 'fontsize',
-    'primary_color': 'primarycolour',
-    'secondary_color': 'secondarycolour',
-    'outline_color': 'outlinecolour',
-    'back_color': 'backcolour',
-    'bold': 'bold',
-    'italic': 'italic',
-    'underline': 'underline',
-    'strikeout': 'strikeout',
-    'scale_x': 'scalex',
-    'scale_y': 'scaley',
-    'spacing': 'spacing',
-    'angle': 'angle',
-    'border_style': 'borderstyle',
-    'outline': 'outline',
-    'shadow': 'shadow',
-    'alignment': 'alignment',
-    'margin_l': 'marginl',
-    'margin_r': 'marginr',
-    'margin_v': 'marginv',
-    'encoding': 'encoding'
+# Mapping of Canonical Spec Names to normalized internal keys
+CANONICAL_TO_KEY = {
+    'Name': 'name',
+    'Fontname': 'fontname',
+    'Fontsize': 'fontsize',
+    'PrimaryColour': 'primarycolour',
+    'SecondaryColour': 'secondarycolour',
+    'OutlineColour': 'outlinecolour',
+    'TertiaryColour': 'tertiarycolour',
+    'BackColour': 'backcolour',
+    'Bold': 'bold',
+    'Italic': 'italic',
+    'Underline': 'underline',
+    'StrikeOut': 'strikeout',
+    'ScaleX': 'scalex',
+    'ScaleY': 'scaley',
+    'Spacing': 'spacing',
+    'Angle': 'angle',
+    'BorderStyle': 'borderstyle',
+    'Outline': 'outline',
+    'Shadow': 'shadow',
+    'Alignment': 'alignment',
+    'MarginL': 'marginl',
+    'MarginR': 'marginr',
+    'MarginV': 'marginv',
+    'Encoding': 'encoding'
 }
 
 
@@ -117,15 +118,25 @@ STYLE_SCHEMA = {
 class AssStyle:
     """ASS style definition using Eager Sparse Typed Storage."""
     
-    def __init__(self, fields: dict[str, Any] | None = None):
+    def __init__(self, fields: dict[str, Any] | None = None, **kwargs):
+        """Initialize AssStyle.
+        
+        Args:
+            fields: Optional dictionary of normalized keys -> typed values.
+            **kwargs: Optional keyword arguments using Canonical Spec Names.
+        """
         # We store normalized keys -> Typed Values
         self._fields = fields if fields is not None else {}
+        
+        # Apply keyword arguments
+        for name, value in kwargs.items():
+            setattr(self, name, value)
 
     def __getattr__(self, name: str) -> Any:
         if name.startswith('_'):
             return super().__getattribute__(name)
             
-        key = PROPERTY_TO_KEY.get(name)
+        key = CANONICAL_TO_KEY.get(name)
         if key:
             return self[key]
         return super().__getattribute__(name)
@@ -135,7 +146,7 @@ class AssStyle:
             super().__setattr__(name, value)
             return
             
-        key = PROPERTY_TO_KEY.get(name)
+        key = CANONICAL_TO_KEY.get(name)
         if key:
             self[key] = value
         else:
@@ -288,8 +299,8 @@ class AssStyles:
                     filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
                     
                     style = AssStyle.from_dict(filtered_dict, auto_fill=auto_fill)
-                    if style.name in styles:
-                        styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, f"Duplicate style name '{style.name}'", record.line_number, "DUPLICATE_STYLE_NAME"))
+                    if style.Name in styles:
+                        styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, f"Duplicate style name '{style.Name}'", record.line_number, "DUPLICATE_STYLE_NAME"))
                     styles.set(style)
                 except Exception as e:
                      styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse style: {e}", record.line_number, "STYLE_PARSE_ERROR"))
@@ -320,9 +331,9 @@ class AssStyles:
         return self._data[canonical]
 
     def __setitem__(self, name: str, style: AssStyle) -> None:
-        if name.lower() != style.name.lower():
-            raise ValueError(f"Style name mismatch: {name} != {style.name}")
-        self._data[style.name] = style
+        if name.lower() != style.Name.lower():
+            raise ValueError(f"Style name mismatch: {name} != {style.Name}")
+        self._data[style.Name] = style
 
     def __delitem__(self, name: str) -> None:
         canonical = self._get_canonical_name(name)
@@ -365,7 +376,7 @@ class AssStyles:
         canonical = self._get_canonical_name(name)
         return self._data.get(canonical)
     def set(self, style: AssStyle) -> None:
-        self._data[style.name] = style
+        self._data[style.Name] = style
     def set_all(self, styles: Iterable[AssStyle]) -> None:
         self._data.clear()
         for s in styles: self.set(s)
