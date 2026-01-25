@@ -1,7 +1,10 @@
 """ASS Event models."""
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sublib.ass.models.raw import RawSection, RawRecord
 
 from sublib.ass.naming import normalize_key, get_canonical_name
 

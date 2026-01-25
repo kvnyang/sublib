@@ -1,6 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sublib.ass.models.raw import RawSection, RawRecord
 from sublib.ass.types import AssColor
 from sublib.ass.naming import normalize_key, get_canonical_name
 
