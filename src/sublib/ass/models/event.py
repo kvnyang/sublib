@@ -14,12 +14,12 @@ from sublib.ass.naming import EVENT_PROP_TO_KEY as PROPERTY_TO_KEY, EVENT_KEY_TO
 
 
 class FieldSchema:
-    def __init__(self, default: Any, converter: Any, formatter: Any = str):
+    def __init__(self, default: Any, converter: Any, field_name: str = ""):
         self.default = default
         self.converter = converter
-        self.formatter = formatter
+        self.field_name = field_name
 
-    def convert(self, value: Any) -> Any:
+    def convert(self, value: Any, diagnostics: list[Diagnostic] | None = None, line_number: int = 0) -> Any:
         if isinstance(value, self.converter):
             return value
         raw_str = str(value).strip()
@@ -32,8 +32,17 @@ class FieldSchema:
                 return AssTimestamp.from_ass_str(raw_str)
             if self.converter == int:
                 return int(raw_str)
+            if self.converter == str:
+                return raw_str
             return self.converter(raw_str)
         except (ValueError, TypeError):
+            if diagnostics is not None:
+                from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+                diagnostics.append(Diagnostic(
+                    DiagnosticLevel.WARNING,
+                    f"Invalid value for {self.field_name or 'field'}: '{raw_str}' (expected {self.converter.__name__ if hasattr(self.converter, '__name__') else self.converter}). Falling back to default: {self.default}",
+                    line_number, "INVALID_VALUE_TYPE"
+                ))
             return self.default
 
     def format(self, value: Any) -> str:
@@ -45,16 +54,16 @@ class FieldSchema:
 
 
 EVENT_SCHEMA = {
-    'layer': FieldSchema(0, int),
-    'start': FieldSchema(AssTimestamp(), AssTimestamp),
-    'end': FieldSchema(AssTimestamp(), AssTimestamp),
-    'style': FieldSchema("Default", str),
-    'name': FieldSchema("", str),
-    'margin_l': FieldSchema(0, int),
-    'margin_r': FieldSchema(0, int),
-    'margin_v': FieldSchema(0, int),
-    'effect': FieldSchema("", str),
-    'text': FieldSchema("", str),
+    'layer': FieldSchema(0, int, field_name='Layer'),
+    'start': FieldSchema(AssTimestamp(), AssTimestamp, field_name='Start'),
+    'end': FieldSchema(AssTimestamp(), AssTimestamp, field_name='End'),
+    'style': FieldSchema("Default", str, field_name='Style'),
+    'name': FieldSchema("", str, field_name='Name'),
+    'margin_l': FieldSchema(0, int, field_name='MarginL'),
+    'margin_r': FieldSchema(0, int, field_name='MarginR'),
+    'margin_v': FieldSchema(0, int, field_name='MarginV'),
+    'effect': FieldSchema("", str, field_name='Effect'),
+    'text': FieldSchema("", str, field_name='Text'),
 }
 
 
@@ -220,7 +229,7 @@ class AssEvent:
         return extract_event_tags_and_segments(self.text_elements)
 
     @classmethod
-    def from_dict(cls, data: dict[str, str], event_type: str = "Dialogue", line_number: int = 0, auto_fill: bool = True) -> AssEvent:
+    def from_dict(cls, data: dict[str, str], event_type: str = "Dialogue", line_number: int = 0, auto_fill: bool = True, diagnostics: list[Diagnostic] | None = None) -> AssEvent:
         """Create AssEvent with Eager Conversion and Pythonic storage."""
         from sublib.ass.naming import EVENT_KEY_TO_PROP as KEY_TO_PROPERTY
         parsed_fields = {}
@@ -232,7 +241,7 @@ class AssEvent:
             v_str = str(v).strip()
             
             if prop:
-                parsed_fields[prop] = EVENT_SCHEMA[prop].convert(v_str)
+                parsed_fields[prop] = EVENT_SCHEMA[prop].convert(v_str, diagnostics=diagnostics, line_number=line_number)
             else:
                 extra_fields[norm_k] = v_str
         
@@ -350,8 +359,18 @@ class AssEvents:
                 filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
                 
                 if record.descriptor in standard_descriptors:
-                    event = AssEvent.from_dict(filtered_dict, event_type=record.descriptor, line_number=record.line_number, auto_fill=auto_fill)
+                    event = AssEvent.from_dict(filtered_dict, event_type=record.descriptor, line_number=record.line_number, auto_fill=auto_fill, diagnostics=events._diagnostics)
                     events.append(event)
+                    
+                    # 3. Field count check
+                    actual_count = len(record.value.split(','))
+                    expected_count = len(file_format_fields)
+                    if actual_count < expected_count:
+                        events._diagnostics.append(Diagnostic(
+                            DiagnosticLevel.WARNING,
+                            f"Field count mismatch in event at line {record.line_number}: found {actual_count}, expected {expected_count}",
+                            record.line_number, "FIELD_COUNT_MISMATCH"
+                        ))
                 else:
                     events._custom_records.append(record)
             except Exception as e:

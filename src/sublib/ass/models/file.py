@@ -1,7 +1,6 @@
 """ASS File model."""
 from __future__ import annotations
 from dataclasses import dataclass, field
-import logging
 from pathlib import Path
 
 from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
@@ -11,7 +10,7 @@ from .style import AssStyles
 from .event import AssEvents
 from sublib.ass.naming import normalize_key, get_canonical_name
 
-logger = logging.getLogger(__name__)
+
 
 
 
@@ -26,7 +25,7 @@ class AssFile:
         script_info: Script metadata and comments
         styles: Style definitions
         events: Dialogue and other events
-        diagnostics: Structured diagnostics (Error, Warning, Info)
+        diagnostics: Structured diagnostics (Error, Warning)
     """
     script_info: AssScriptInfo = field(default_factory=AssScriptInfo)
     styles: AssStyles = field(default_factory=AssStyles)
@@ -56,11 +55,6 @@ class AssFile:
     def warnings(self) -> list[Diagnostic]:
         """Get diagnostic messages with WARNING level."""
         return [d for d in self.diagnostics if d.level == DiagnosticLevel.WARNING]
-
-    @property
-    def infos(self) -> list[Diagnostic]:
-        """Get diagnostic messages with INFO level."""
-        return [d for d in self.diagnostics if d.level == DiagnosticLevel.INFO]
 
     @classmethod
     def loads(cls, content: str, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = True) -> "AssFile":
@@ -95,18 +89,18 @@ class AssFile:
         raw_info = raw_doc.get_section('script info')
         if raw_info:
             ass_file.script_info = AssScriptInfo.from_raw(raw_info)
-            ass_file.diagnostics.extend(ass_file.script_info.diagnostics)
         else:
             # Create default Script Info if missing.
-            # StructuralParser already added a MISSING_SECTION warning.
             ass_file.script_info = AssScriptInfo()
             ass_file.script_info.set('scripttype', 'v4.00+')
             
-            ass_file.diagnostics.append(Diagnostic(
+            ass_file.script_info.diagnostics.append(Diagnostic(
                 DiagnosticLevel.WARNING,
                 "Missing [Script Info] section, assuming ScriptType: v4.00+",
                 0, "MISSING_SCRIPTTYPE"
             ))
+        
+        ass_file.diagnostics.extend(ass_file.script_info.diagnostics)
 
         script_type = ass_file.script_info.get('scripttype')
 
@@ -140,10 +134,11 @@ class AssFile:
         raw_events = raw_doc.get_section('events')
         if raw_events:
             ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type, event_format=event_format, auto_fill=auto_fill)
-            ass_file.diagnostics.extend(ass_file.events.diagnostics)
         else:
             # StructuralParser already warned if Events are missing
             ass_file.events = AssEvents()
+            
+        ass_file.diagnostics.extend(ass_file.events.diagnostics)
 
         # 4. Custom/Other Sections (Fonts, Graphics, etc.)
         core_sections = {'script info', 'v4 styles', 'v4+ styles', 'events'}
@@ -153,20 +148,14 @@ class AssFile:
 
         return ass_file
 
-    def dumps(self, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False, validate: bool = False) -> str:
+    def dumps(self, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False) -> str:
         """Serialize the model back to an ASS string.
         
         Args:
             style_format: Optional format override for Styles section.
             event_format: Optional format override for Events section.
             auto_fill: If True, fills missing fields with defaults.
-            validate: If True, validates style references before dumping.
         """
-        if validate:
-            errors = self._validate_styles()
-            if errors:
-                raise ValueError(f"Style validation failed: {'; '.join(errors)}")
-
         lines = []
         script_type = self.script_info.get('scripttype', 'v4.00+')
         
@@ -287,7 +276,7 @@ class AssFile:
         content = read_text_file(path, encoding='utf-8-sig')
         return cls.loads(content, style_format=style_format, event_format=event_format, auto_fill=auto_fill)
     
-    def dump(self, path: Path | str, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False, validate: bool = False) -> None:
+    def dump(self, path: Path | str, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False) -> None:
         """Save subtitle model to file.
         
         Args:
@@ -295,30 +284,8 @@ class AssFile:
             style_format: Optional format override for Styles section.
             event_format: Optional format override for Events section.
             auto_fill: Whether to fill missing fields with defaults.
-            validate: If True, raise ValueError for undefined style references.
         """
         from sublib.io import write_text_file
-        content = self.dumps(style_format=style_format, event_format=event_format, auto_fill=auto_fill, validate=validate)
+        content = self.dumps(style_format=style_format, event_format=event_format, auto_fill=auto_fill)
         write_text_file(path, content, encoding='utf-8-sig')
     
-    def _validate_styles(self) -> list[str]:
-        """Validate that all style references are defined.
-        
-        Returns:
-            List of error messages (empty = valid)
-        """
-        errors = []
-        # Case-insensitive set for quick lookup
-        defined_styles = {s.name.lower() for s in self.styles}
-        
-        for i, event in enumerate(self.events):
-            if event.style.lower() not in defined_styles:
-                errors.append(f"Event {i+1}: style '{event.style}' not defined")
-            
-            result = event.extract()
-            for seg in result.segments:
-                r_style = seg.block_tags.get("r")
-                if r_style and r_style.lower() not in defined_styles:
-                    errors.append(f"Event {i+1}: \\r style '{r_style}' not defined")
-        
-        return errors

@@ -17,19 +17,17 @@ from sublib.ass.naming import STYLE_PROP_TO_KEY as PROPERTY_TO_KEY, STYLE_KEY_TO
 
 
 class FieldSchema:
-    def __init__(self, default: Any, converter: Any, formatter: Any = str):
+    def __init__(self, default: Any, converter: Any, formatter: Any = str, field_name: str = ""):
         self.default = default
         self.converter = converter
         self.formatter = formatter
+        self.field_name = field_name
 
-    def convert(self, value: Any) -> Any:
+    def convert(self, value: Any, diagnostics: list[Diagnostic] | None = None, line_number: int = 0) -> Any:
         # If it's already the right type, great.
         if isinstance(value, self.converter):
             return value
             
-        # If it's empty string or None, we return the default.
-        # (Note: In 'Sparse' mode, we won't even call this if the raw string was empty, 
-        # but this is here for safety/setter logic).
         raw_str = str(value).strip()
         if not raw_str:
             return self.default
@@ -46,7 +44,14 @@ class FieldSchema:
             if self.converter == str:
                 return raw_str
             return self.converter(raw_str)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as e:
+            if diagnostics is not None:
+                from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+                diagnostics.append(Diagnostic(
+                    DiagnosticLevel.WARNING,
+                    f"Invalid value for {self.field_name or 'field'}: '{raw_str}' (expected {self.converter.__name__ if hasattr(self.converter, '__name__') else self.converter}). Falling back to default: {self.default}",
+                    line_number, "INVALID_VALUE_TYPE"
+                ))
             return self.default
 
     def format(self, value: Any) -> str:
@@ -62,29 +67,29 @@ class FieldSchema:
 
 
 STYLE_SCHEMA = {
-    'name': FieldSchema("", str),
-    'font_name': FieldSchema("Arial", str),
-    'font_size': FieldSchema(20.0, float, _format_float),
-    'primary_color': FieldSchema(AssColor.from_style_str('&H00FFFFFF'), AssColor),
-    'secondary_color': FieldSchema(AssColor.from_style_str('&H000000FF'), AssColor),
-    'outline_color': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
-    'back_color': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor),
-    'bold': FieldSchema(False, bool, _format_bool),
-    'italic': FieldSchema(False, bool, _format_bool),
-    'underline': FieldSchema(False, bool, _format_bool),
-    'strikeout': FieldSchema(False, bool, _format_bool),
-    'scale_x': FieldSchema(100.0, float, _format_float),
-    'scale_y': FieldSchema(100.0, float, _format_float),
-    'spacing': FieldSchema(0.0, float, _format_float),
-    'angle': FieldSchema(0.0, float, _format_float),
-    'border_style': FieldSchema(1, int),
-    'outline': FieldSchema(2.0, float, _format_float),
-    'shadow': FieldSchema(0.0, float, _format_float),
-    'alignment': FieldSchema(2, int),
-    'margin_l': FieldSchema(10, int),
-    'margin_r': FieldSchema(10, int),
-    'margin_v': FieldSchema(10, int),
-    'encoding': FieldSchema(1, int),
+    'name': FieldSchema("", str, field_name='Name'),
+    'font_name': FieldSchema("Arial", str, field_name='Fontname'),
+    'font_size': FieldSchema(20.0, float, _format_float, field_name='Fontsize'),
+    'primary_color': FieldSchema(AssColor.from_style_str('&H00FFFFFF'), AssColor, field_name='PrimaryColour'),
+    'secondary_color': FieldSchema(AssColor.from_style_str('&H000000FF'), AssColor, field_name='SecondaryColour'),
+    'outline_color': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor, field_name='OutlineColour'),
+    'back_color': FieldSchema(AssColor.from_style_str('&H00000000'), AssColor, field_name='BackColour'),
+    'bold': FieldSchema(False, bool, _format_bool, field_name='Bold'),
+    'italic': FieldSchema(False, bool, _format_bool, field_name='Italic'),
+    'underline': FieldSchema(False, bool, _format_bool, field_name='Underline'),
+    'strikeout': FieldSchema(False, bool, _format_bool, field_name='StrikeOut'),
+    'scale_x': FieldSchema(100.0, float, _format_float, field_name='ScaleX'),
+    'scale_y': FieldSchema(100.0, float, _format_float, field_name='ScaleY'),
+    'spacing': FieldSchema(0.0, float, _format_float, field_name='Spacing'),
+    'angle': FieldSchema(0.0, float, _format_float, field_name='Angle'),
+    'border_style': FieldSchema(1, int, field_name='BorderStyle'),
+    'outline': FieldSchema(2.0, float, _format_float, field_name='Outline'),
+    'shadow': FieldSchema(0.0, float, _format_float, field_name='Shadow'),
+    'alignment': FieldSchema(2, int, field_name='Alignment'),
+    'margin_l': FieldSchema(10, int, field_name='MarginL'),
+    'margin_r': FieldSchema(10, int, field_name='MarginR'),
+    'margin_v': FieldSchema(10, int, field_name='MarginV'),
+    'encoding': FieldSchema(1, int, field_name='Encoding'),
 }
 
 
@@ -169,7 +174,7 @@ class AssStyle:
         return val if val is not None else default
 
     @classmethod
-    def from_dict(cls, data: dict[str, str], auto_fill: bool = True) -> AssStyle:
+    def from_dict(cls, data: dict[str, str], auto_fill: bool = True, diagnostics: list[Diagnostic] | None = None, line_number: int = 0) -> AssStyle:
         """Create AssStyle with Eager Conversion and Pythonic storage."""
         from sublib.ass.naming import STYLE_KEY_TO_PROP as KEY_TO_PROPERTY
         parsed_fields = {}
@@ -181,7 +186,7 @@ class AssStyle:
             v_str = str(v).strip()
             
             if prop:
-                parsed_fields[prop] = STYLE_SCHEMA[prop].convert(v_str)
+                parsed_fields[prop] = STYLE_SCHEMA[prop].convert(v_str, diagnostics=diagnostics, line_number=line_number)
             else:
                 extra_fields[norm_k] = v_str
         
@@ -273,10 +278,20 @@ class AssStyles:
                     # Apply Slicing Filter
                     filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
                     
-                    style = AssStyle.from_dict(filtered_dict, auto_fill=auto_fill)
+                    style = AssStyle.from_dict(filtered_dict, auto_fill=auto_fill, diagnostics=styles._diagnostics, line_number=record.line_number)
                     if style.name in styles:
                         styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, f"Duplicate style name '{style.name}'", record.line_number, "DUPLICATE_STYLE_NAME"))
                     styles.set(style)
+                    
+                    # 3. Field count check
+                    actual_count = len(record.value.split(','))
+                    expected_count = len(file_format_fields)
+                    if actual_count != expected_count:
+                        styles._diagnostics.append(Diagnostic(
+                            DiagnosticLevel.WARNING,
+                            f"Field count mismatch in style '{style.name}': found {actual_count}, expected {expected_count}",
+                            record.line_number, "FIELD_COUNT_MISMATCH"
+                        ))
                 except Exception as e:
                      styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse style: {e}", record.line_number, "STYLE_PARSE_ERROR"))
             else:

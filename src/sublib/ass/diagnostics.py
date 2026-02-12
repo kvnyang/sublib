@@ -8,7 +8,6 @@ class DiagnosticLevel(Enum):
     """Severity of a diagnostic message."""
     ERROR = auto()    # Fundamental violation, parsing might be compromised
     WARNING = auto()  # Specification deviation, parsing continues
-    INFO = auto()     # Normalization or informational message
 
 
 @dataclass(frozen=True)

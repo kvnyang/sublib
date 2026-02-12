@@ -6,9 +6,8 @@ utilities for parsing Format lines according to ASS specification.
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
-import logging
 
-logger = logging.getLogger(__name__)
+
 
 
 # Section classification for parsing

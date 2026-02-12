@@ -1,14 +1,13 @@
 """ASS Script Info model."""
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
-import logging
 
 if TYPE_CHECKING:
     from sublib.ass.models.raw import RawSection
 
 from sublib.ass.naming import normalize_key, get_canonical_name
 
-logger = logging.getLogger(__name__)
+
 
 
 class AssScriptInfo:
