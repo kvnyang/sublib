@@ -119,49 +119,7 @@ class AssEvent(AssStructuredRecord):
         from sublib.ass.text.transform import extract_event_tags_and_segments
         return extract_event_tags_and_segments(self.text_elements)
 
-    @classmethod
-    def from_dict(cls, data: dict[str, str], event_type: str = "Dialogue", line_number: int = 0, auto_fill: bool = True, diagnostics: list[Diagnostic] | None = None) -> AssEvent:
-        """Create AssEvent with Eager Conversion and Identity mapping."""
-        parsed_fields = {}
-        extra_fields = {}
-        
-        for k, v in data.items():
-            norm_k = normalize_key(k)
-            v_str = str(v).strip()
-            
-            if norm_k in EVENT_IDENTITY_SCHEMA:
-                schema = EVENT_IDENTITY_SCHEMA[norm_k]
-                parsed_fields[schema.normalized_key] = schema.convert(v_str, diagnostics=diagnostics, line_number=line_number)
-            else:
-                extra_fields[norm_k] = v_str
-        
-        if auto_fill:
-            for norm_key, schema in EVENT_IDENTITY_SCHEMA.items():
-                if norm_key == schema.normalized_key and norm_key not in parsed_fields:
-                    parsed_fields[norm_key] = schema.default
-                    
-        return cls(parsed_fields, type=event_type, line_number=line_number, extra_fields=extra_fields)
 
-    def render_row(self, format_fields: list[str], auto_fill: bool = False) -> str:
-        """Render AssEvent with standardized format support."""
-        descriptor = self._type
-        
-        parts = []
-        for raw_f in format_fields:
-            norm_f = normalize_key(raw_f)
-            
-            if norm_f in EVENT_IDENTITY_SCHEMA:
-                schema = EVENT_IDENTITY_SCHEMA[norm_f]
-                val = self._fields.get(schema.normalized_key)
-                if val is None and auto_fill:
-                    val = schema.default
-                parts.append(schema.format(val) if val is not None else "")
-            else:
-                # Custom/Extra field
-                val = self._extra.get(norm_f, "")
-                parts.append(str(val))
-                
-        return f"{descriptor}: {','.join(parts)}"
 
     @classmethod
     def create(cls, text: str | list[AssTextElement], start: str | AssTimestamp | int, end: str | AssTimestamp | int, **kwargs) -> AssEvent:
@@ -195,66 +153,6 @@ class AssEvents(AssFormatSection):
         super().__init__("events", original_name)
         self._data = data if data is not None else []
 
-    @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None, event_format: list[str] | None = [], auto_fill: bool = True) -> AssEvents:
-        """Layer 2: Semantic ingestion with Symmetric Slicing and Auto-Fill Control."""
-        from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-        events = cls(original_name=raw.original_name)
-        events.comments = list(raw.comments)
-        
-        # 1. Physical Reality
-        if event_format:
-            events.raw_format_fields = list(event_format)
-        else:
-            events.raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
-        
-        # 2. Ingest data based on Slicing Policy
-        file_format_fields = raw.format_fields
-        if not file_format_fields:
-            events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Events section", raw.line_number, "MISSING_FORMAT"))
-            return events
-
-        # Determine Ingestion Slice
-        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        if event_format:
-            ingest_keys = {normalize_key(f) for f in event_format}
-        elif event_format is None:
-            ingest_keys = set(file_format_fields)
-        else:
-            if is_v4:
-                ingest_keys = {'layer', 'start', 'end', 'style', 'name', 'marginl', 'marginr', 'marginv', 'effect', 'text', 'marked'}
-            else:
-                ingest_keys = {'layer', 'start', 'end', 'style', 'name', 'marginl', 'marginr', 'marginv', 'effect', 'text'}
-
-        # Ingest records
-        standard_descriptors = {normalize_key(t) for t in AssEventType.get_standard_types()}
-        for record in raw.records:
-            try:
-                parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
-                record_dict = {name: val for name, val in zip(file_format_fields, parts)}
-                
-                # Apply Slicing Filter
-                filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
-                
-                if record.descriptor in standard_descriptors:
-                    event = AssEvent.from_dict(filtered_dict, event_type=record.descriptor, line_number=record.line_number, auto_fill=auto_fill, diagnostics=events._diagnostics)
-                    events.append(event)
-                    
-                    # 3. Field count check
-                    actual_count = len(record.value.split(','))
-                    expected_count = len(file_format_fields)
-                    if actual_count < expected_count:
-                        events._diagnostics.append(Diagnostic(
-                            DiagnosticLevel.WARNING,
-                            f"Field count mismatch in event at line {record.line_number}: found {actual_count}, expected {expected_count}",
-                            record.line_number, "FIELD_COUNT_MISMATCH"
-                        ))
-                else:
-                    events._custom_records.append(record)
-            except Exception as e:
-                events._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse event: {e}", record.line_number, "EVENT_PARSE_ERROR"))
-
-        return events
 
     def __getitem__(self, index: int) -> AssEvent: return self._data[index]
     def __setitem__(self, index: int, event: AssEvent) -> None: self._data[index] = event
@@ -300,29 +198,3 @@ class AssEvents(AssFormatSection):
              
         return result
 
-    def render(self, script_type: str | None = None, auto_fill: bool = False) -> str:
-        """Polymorphic render for Events section."""
-        lines = self.render_header()
-        
-        # Format resolution logic
-        is_v4 = script_type and "v4" in script_type.lower() and "+" not in script_type
-        
-        if self.raw_format_fields:
-            # Normalize standard field names in the format header (Normalization over Fidelity)
-            out_format = [
-                EVENT_IDENTITY_SCHEMA[normalize_key(f)].canonical_name 
-                if normalize_key(f) in EVENT_IDENTITY_SCHEMA else f 
-                for f in self.raw_format_fields
-            ]
-        else:
-            out_format = self.get_explicit_format(script_type)
-            
-        lines.append(f"Format: {', '.join(out_format)}")
-        
-        for event in self:
-            lines.append(event.render_row(format_fields=out_format, auto_fill=auto_fill))
-            
-        for record in self._custom_records:
-            lines.append(f"{record.raw_descriptor}: {record.value}")
-            
-        return "\n".join(lines)

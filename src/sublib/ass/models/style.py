@@ -70,49 +70,7 @@ class AssStyle(AssStructuredRecord):
         """Custom/non-standard fields."""
         return self._extra
 
-    @classmethod
-    def from_dict(cls, data: dict[str, str], auto_fill: bool = True, diagnostics: list[Diagnostic] | None = None, line_number: int = 0) -> AssStyle:
-        """Create AssStyle with Eager Conversion and Identity mapping."""
-        parsed_fields = {}
-        extra_fields = {}
-        
-        for k, v in data.items():
-            norm_k = normalize_key(k)
-            v_str = str(v).strip()
-            
-            if norm_k in STYLE_IDENTITY_SCHEMA:
-                schema = STYLE_IDENTITY_SCHEMA[norm_k]
-                parsed_fields[schema.normalized_key] = schema.convert(v_str, diagnostics=diagnostics, line_number=line_number)
-            else:
-                extra_fields[norm_k] = v_str
-        
-        if auto_fill:
-            for norm_key, schema in STYLE_IDENTITY_SCHEMA.items():
-                if norm_key == schema.normalized_key and norm_key not in parsed_fields:
-                    parsed_fields[norm_key] = schema.default
-                    
-        return cls(parsed_fields, extra_fields=extra_fields)
 
-    def render_row(self, format_fields: list[str], auto_fill: bool = False) -> str:
-        """Render AssStyle with standardized format support."""
-        descriptor = get_canonical_name("Style", context="v4+ styles")
-        
-        parts = []
-        for raw_f in format_fields:
-            norm_f = normalize_key(raw_f)
-            
-            if norm_f in STYLE_IDENTITY_SCHEMA:
-                schema = STYLE_IDENTITY_SCHEMA[norm_f]
-                val = self._fields.get(schema.normalized_key)
-                if val is None and auto_fill:
-                    val = schema.default
-                parts.append(schema.format(val) if val is not None else "")
-            else:
-                # Custom/Extra field
-                val = self._extra.get(norm_f, "")
-                parts.append(str(val))
-                
-        return f"{descriptor}: {','.join(parts)}"
 
 
 class AssStyles(AssFormatSection):
@@ -122,68 +80,6 @@ class AssStyles(AssFormatSection):
         super().__init__(normalize_key(original_name), original_name)
         self._data = data if data is not None else {}
 
-    @classmethod
-    def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = [], auto_fill: bool = True) -> AssStyles:
-        """Layer 2: Semantic ingestion with Symmetric Slicing and Auto-Fill Control."""
-        from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-        styles = cls(original_name=raw.original_name)
-        styles.comments = list(raw.comments)
-        
-        # 1. Physical Reality
-        if style_format:
-            styles.raw_format_fields = list(style_format)
-        else:
-            styles.raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
-        
-        # 2. Ingest data based on Slicing Policy
-        file_format_fields = raw.format_fields # Normalized columns present in file
-        if not file_format_fields:
-            styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, "Missing Format line in Styles section", raw.line_number, "MISSING_FORMAT"))
-            return styles
-
-        # Determine Ingestion Slice
-        is_v4 = script_type and 'v4' in script_type.lower() and '+' not in script_type
-        if style_format:
-            ingest_keys = {normalize_key(f) for f in style_format}
-        elif style_format is None:
-            ingest_keys = set(file_format_fields) # No filter
-        else:
-            # Standard Slice
-            if is_v4:
-                std = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 'tertiarycolour', 'backcolour', 'bold', 'italic', 'borderstyle'}
-            else:
-                std = {'name', 'fontname', 'fontsize', 'primarycolour', 'secondarycolour', 'outlinecolour', 'backcolour', 'bold', 'italic', 'underline', 'strikeout', 'scalex', 'scaley', 'spacing', 'angle', 'borderstyle', 'outline', 'shadow', 'alignment', 'marginl', 'marginr', 'marginv', 'encoding'}
-            ingest_keys = std
-
-        for record in raw.records:
-            if record.descriptor == 'style':
-                try:
-                    parts = [p.strip() for p in record.value.split(',', len(file_format_fields)-1)]
-                    record_dict = {name: val for name, val in zip(file_format_fields, parts)}
-                    
-                    # Apply Slicing Filter
-                    filtered_dict = {k: v for k, v in record_dict.items() if k in ingest_keys}
-                    
-                    style = AssStyle.from_dict(filtered_dict, auto_fill=auto_fill, diagnostics=styles._diagnostics, line_number=record.line_number)
-                    if style.name in styles:
-                        styles._diagnostics.append(Diagnostic(DiagnosticLevel.WARNING, f"Duplicate style name '{style.name}'", record.line_number, "DUPLICATE_STYLE_NAME"))
-                    styles.set(style)
-                    
-                    # 3. Field count check
-                    actual_count = len(record.value.split(','))
-                    expected_count = len(file_format_fields)
-                    if actual_count != expected_count:
-                        styles._diagnostics.append(Diagnostic(
-                            DiagnosticLevel.WARNING,
-                            f"Field count mismatch in style '{style.name}': found {actual_count}, expected {expected_count}",
-                            record.line_number, "FIELD_COUNT_MISMATCH"
-                        ))
-                except Exception as e:
-                     styles._diagnostics.append(Diagnostic(DiagnosticLevel.ERROR, f"Failed to parse style: {e}", record.line_number, "STYLE_PARSE_ERROR"))
-            else:
-                styles._custom_records.append(record)
-
-        return styles
 
     @property
     def section_comments(self) -> list[str]: return self.comments
@@ -191,32 +87,6 @@ class AssStyles(AssFormatSection):
     @property
     def custom_records(self) -> list[RawRecord]: return self._custom_records
 
-    def render(self, script_type: str | None = None, auto_fill: bool = False) -> str:
-        """Polymorphic render for Styles section."""
-        lines = self.render_header()
-        
-        # Format resolution logic moved here
-        is_v4 = script_type and "v4" in script_type.lower() and "+" not in script_type
-        
-        if self.raw_format_fields:
-            # Normalize standard field names in the format header (Normalization over Fidelity)
-            out_format = [
-                STYLE_IDENTITY_SCHEMA[normalize_key(f)].canonical_name 
-                if normalize_key(f) in STYLE_IDENTITY_SCHEMA else f 
-                for f in self.raw_format_fields
-            ]
-        else:
-            out_format = self.get_explicit_format(script_type)
-            
-        lines.append(f"Format: {', '.join(out_format)}")
-        
-        for style in self:
-            lines.append(style.render_row(format_fields=out_format, auto_fill=auto_fill))
-            
-        for record in self._custom_records:
-            lines.append(f"{record.raw_descriptor}: {record.value}")
-            
-        return "\n".join(lines)
 
     def __getitem__(self, name: str) -> AssStyle:
         canonical = self._get_canonical_name(name)

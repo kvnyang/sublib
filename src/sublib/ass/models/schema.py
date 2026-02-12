@@ -140,3 +140,4 @@ class AssStructuredRecord:
             # In AssStructuredRecord, we default to fields for convenience.
             # But derived classes can use object.__setattr__ to bypass.
             self[name] = value
+
