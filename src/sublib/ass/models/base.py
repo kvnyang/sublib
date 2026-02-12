@@ -1,10 +1,10 @@
 """Base classes for ASS sections."""
 from __future__ import annotations
 from typing import Any, Optional, TYPE_CHECKING
-from sublib.ass.naming import normalize_key, get_canonical_name
+from sublib.ass.core.naming import normalize_key, get_canonical_name
 
 if TYPE_CHECKING:
-    from sublib.ass.diagnostics import Diagnostic
+    from sublib.ass.core.diagnostics import Diagnostic
 
 class AssSection:
     """Base class for all ASS sections."""

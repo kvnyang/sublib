@@ -11,7 +11,7 @@ from sublib.ass.models.text.elements import (
     AssTextElement,
 )
 from sublib.ass.models.text.segment import AssTextSegment
-from sublib.ass.tags import MUTUAL_EXCLUSIVES
+from sublib.ass.core.tags import MUTUAL_EXCLUSIVES
 
 
 
@@ -119,7 +119,7 @@ def build_text_elements(
         )
         text = AssTextRenderer().render(elements)
     """
-    from sublib.ass.tags import get_tag, format_tag
+    from sublib.ass.core.tags import get_tag, format_tag
     
     elements: list[AssTextElement] = []
     

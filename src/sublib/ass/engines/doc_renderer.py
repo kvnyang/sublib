@@ -2,7 +2,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
-from sublib.ass.naming import normalize_key, get_canonical_name
+from sublib.ass.core.naming import normalize_key, get_canonical_name
 
 if TYPE_CHECKING:
     from sublib.ass.models.file import AssFile

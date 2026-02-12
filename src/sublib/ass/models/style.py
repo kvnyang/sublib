@@ -1,12 +1,12 @@
 from __future__ import annotations
 from typing import Any, Iterable, TYPE_CHECKING
 from sublib.ass.types import AssColor
-from sublib.ass.naming import normalize_key, get_canonical_name
-from sublib.ass.tags.base import _format_float
+from sublib.ass.core.naming import normalize_key, get_canonical_name
+from sublib.ass.core.tags.base import _format_float
 
 if TYPE_CHECKING:
     from sublib.ass.models.raw import RawSection, RawRecord
-    from sublib.ass.diagnostics import Diagnostic
+    from sublib.ass.core.diagnostics import Diagnostic
 
 
 def _format_bool(v: bool) -> str:

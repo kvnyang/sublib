@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any, ClassVar, Literal
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.core.tags.base import TagCategory
 from sublib.ass.types import AssTransform, AssKaraoke
 
 
@@ -36,7 +36,7 @@ def parse_tags_string(tags_str: str) -> list[tuple[str, Any]]:
     Returns:
         List of (tag_name, parsed_value) tuples
     """
-    from sublib.ass.tags.registry import TAGS, parse_tag
+    from sublib.ass.core.tags.registry import TAGS, parse_tag
     
     result: list[tuple[str, Any]] = []
     tags_str = tags_str.strip()
@@ -192,7 +192,7 @@ class TTag:
     
     @staticmethod
     def format(val: AssTransform) -> str:
-        from sublib.ass.tags.base import _format_float
+        from sublib.ass.core.tags.base import _format_float
         raw_tags = val.to_raw_tags()
         if val.t1 is None and val.t2 is None and val.accel is None:
             return f"\\t({raw_tags})"

@@ -1,10 +1,10 @@
 """Unified schema and field management for ASS models."""
 from __future__ import annotations
 from typing import Any, Optional, TYPE_CHECKING, Callable
-from sublib.ass.naming import normalize_key
+from sublib.ass.core.naming import normalize_key
 
 if TYPE_CHECKING:
-    from sublib.ass.diagnostics import Diagnostic
+    from sublib.ass.core.diagnostics import Diagnostic
 
 class FieldSchema:
     """Definition for a single field in an ASS record."""
@@ -52,7 +52,7 @@ class FieldSchema:
             return self.converter(raw_str)
         except (ValueError, TypeError):
             if diagnostics is not None:
-                from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+                from sublib.ass.core.diagnostics import Diagnostic, DiagnosticLevel
                 diagnostics.append(Diagnostic(
                     DiagnosticLevel.WARNING,
                     f"Invalid value for {self.canonical_name or 'field'}: '{raw_str}' (expected {self.converter.__name__ if hasattr(self.converter, '__name__') else self.converter}). Falling back to default: {self.default}",

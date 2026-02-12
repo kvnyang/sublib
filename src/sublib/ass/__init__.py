@@ -1,8 +1,8 @@
 """ASS (Advanced SubStation Alpha v4+) subtitle format support."""
 
 from sublib.ass.models import AssFile, AssEvent, AssStyle, AssScriptInfo
-from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-from sublib.ass.text import AssTextParser, AssTextRenderer, build_text_elements
+from sublib.ass.core.diagnostics import Diagnostic, DiagnosticLevel
+from sublib.ass.engines.text import AssTextParser, AssTextRenderer, build_text_elements
 from sublib.ass.types import AssColor, AssTimestamp
 from pathlib import Path
 

@@ -8,7 +8,7 @@ from sublib.ass.models.text.elements import (
     SpecialCharType, AssSpecialChar, AssPlainText,
     AssTextElement, AssBlockElement
 )
-from sublib.ass.tags import (
+from sublib.ass.core.tags import (
     TAGS,
     MUTUAL_EXCLUSIVES,
     get_tag,

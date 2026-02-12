@@ -22,7 +22,7 @@ class AssTransform:
     
     def to_raw_tags(self) -> str:
         """Render parsed tags back to raw string for ASS output."""
-        from sublib.ass.tags.registry import format_tag
+        from sublib.ass.core.tags.registry import format_tag
         return "".join(format_tag(name, val) for name, val in self.tags)
 
 

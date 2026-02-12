@@ -5,7 +5,7 @@ from typing import Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from sublib.ass.models.raw import RawSection
 
-from sublib.ass.naming import normalize_key, get_canonical_name
+from sublib.ass.core.naming import normalize_key, get_canonical_name
 
 
 

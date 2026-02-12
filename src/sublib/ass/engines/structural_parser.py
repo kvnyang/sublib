@@ -2,12 +2,12 @@
 from __future__ import annotations
 from typing import Optional
 
-from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+from sublib.ass.core.diagnostics import Diagnostic, DiagnosticLevel
 from sublib.ass.models.raw import RawDocument, RawSection, RawRecord
-from sublib.ass.descriptors import (
+from sublib.ass.core.descriptors import (
     parse_descriptor_line, CORE_SECTIONS, STYLE_SECTIONS, SECTION_RANKS
 )
-from .naming import normalize_key, get_canonical_name
+from sublib.ass.core.naming import normalize_key, get_canonical_name
 
 
 class StructuralParser:

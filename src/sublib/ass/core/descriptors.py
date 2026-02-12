@@ -54,7 +54,7 @@ KNOWN_EVENT_FIELDS = frozenset({
     'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text'
 })
 
-from .naming import (
+from sublib.ass.core.naming import (
     normalize_key,
     get_canonical_name,
     STANDARD_SECTION_NAMES,

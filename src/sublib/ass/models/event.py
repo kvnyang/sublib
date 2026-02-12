@@ -1,13 +1,13 @@
 """ASS Event models using Eager Sparse Typed Storage."""
 from __future__ import annotations
 from typing import Any, Iterable, Optional, TYPE_CHECKING, Literal
-from sublib.ass.naming import normalize_key, get_canonical_name, AssEventType
+from sublib.ass.core.naming import normalize_key, get_canonical_name, AssEventType
 from sublib.ass.models.text.elements import AssTextElement
 from sublib.ass.types import AssTimestamp
 
 if TYPE_CHECKING:
     from sublib.ass.models.raw import RawSection, RawRecord
-    from sublib.ass.diagnostics import Diagnostic
+    from sublib.ass.core.diagnostics import Diagnostic
 
 
 
@@ -83,7 +83,7 @@ class AssEvent(AssStructuredRecord):
     def text(self) -> str:
         """The text content of the entry, synchronized with AST elements."""
         if self._ast_synced:
-            from sublib.ass.text import AssTextRenderer
+            from sublib.ass.engines.text import AssTextRenderer
             return AssTextRenderer().render(self._text_elements)
         # Access via base __getitem__ which looks at _fields
         return self.get('text', "")
@@ -105,7 +105,7 @@ class AssEvent(AssStructuredRecord):
 
     def _ensure_ast(self):
         if not self._ast_synced:
-            from sublib.ass.text import AssTextParser
+            from sublib.ass.engines.text import AssTextParser
             raw = self.get('text', "")
             self._text_elements = AssTextParser().parse(raw, line_number=self._line_number)
             self._ast_synced = True
@@ -116,7 +116,7 @@ class AssEvent(AssStructuredRecord):
 
     def extract_event_tags_and_segments(self) -> tuple[dict[str, Any], list[AssTextSegment]]:
         """Extract event-level tags and inline segments using a Differential Model."""
-        from sublib.ass.text.transform import extract_event_tags_and_segments
+        from sublib.ass.engines.text.text_transform import extract_event_tags_and_segments
         return extract_event_tags_and_segments(self.text_elements)
 
 

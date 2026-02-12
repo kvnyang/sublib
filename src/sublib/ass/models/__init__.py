@@ -1,14 +1,18 @@
-"""Public API for ASS models."""
 from .file import AssFile
-from .style import AssStyle
-from .info import AssScriptInfo
 from .event import AssEvent, AssEvents
-
+from .style import AssStyle, AssStyles
+from .info import AssScriptInfo
+from .base import AssSection, AssRawSection
+from .schema import AssStructuredRecord
 
 __all__ = [
-    'AssFile',
-    'AssStyle',
-    'AssScriptInfo',
-    'AssEvent',
-    'AssEvents',
+    "AssFile",
+    "AssEvent",
+    "AssEvents",
+    "AssStyle",
+    "AssStyles",
+    "AssScriptInfo",
+    "AssSection",
+    "AssRawSection",
+    "AssStructuredRecord",
 ]

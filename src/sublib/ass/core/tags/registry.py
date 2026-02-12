@@ -14,27 +14,27 @@ from __future__ import annotations
 from typing import Any, Type
 
 # Import base types (no circular dependency)
-from sublib.ass.tags.base import TagCategory, TagDefinition
+from sublib.ass.core.tags.base import TagCategory, TagDefinition
 
 # Import tag classes from their modules
-from sublib.ass.tags.position import PosTag, MoveTag, OrgTag
-from sublib.ass.tags.clip import ClipTag, IClipTag
-from sublib.ass.tags.fade import FadTag, FadeTag
-from sublib.ass.tags.layout import AnTag, ATag, QTag, RTag
-from sublib.ass.tags.drawing import PTag, PboTag
-from sublib.ass.tags.color import (
+from sublib.ass.core.tags.position import PosTag, MoveTag, OrgTag
+from sublib.ass.core.tags.clip import ClipTag, IClipTag
+from sublib.ass.core.tags.fade import FadTag, FadeTag
+from sublib.ass.core.tags.layout import AnTag, ATag, QTag, RTag
+from sublib.ass.core.tags.drawing import PTag, PboTag
+from sublib.ass.core.tags.color import (
     CTag, C1Tag, C2Tag, C3Tag, C4Tag,
     AlphaTag, A1Tag, A2Tag, A3Tag, A4Tag,
 )
-from sublib.ass.tags.border import (
+from sublib.ass.core.tags.border import (
     BordTag, XbordTag, YbordTag,
     ShadTag, XshadTag, YshadTag,
     BeTag, BlurTag,
 )
-from sublib.ass.tags.transform import (
+from sublib.ass.core.tags.transform import (
     TTag, KTag, KUpperTag, KfTag, KoTag, KtTag,
 )
-from sublib.ass.tags.font import (
+from sublib.ass.core.tags.font import (
     FnTag, FsTag, FscxTag, FscyTag, FspTag, FeTag,
     BTag, ITag, UTag, STag,
     FrTag, FrxTag, FryTag, FrzTag,

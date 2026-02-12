@@ -2,7 +2,7 @@
 from __future__ import annotations
 from typing import ClassVar
 
-from sublib.ass.tags.base import TagCategory
+from sublib.ass.core.tags.base import TagCategory
 from sublib.ass.types import AssRectClip, AssVectorClip, AssClipValue
 
 

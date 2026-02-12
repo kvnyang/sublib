@@ -2,8 +2,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
-from sublib.ass.naming import normalize_key, AssEventType
-from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
+from sublib.ass.core.naming import normalize_key, AssEventType
+from sublib.ass.core.diagnostics import Diagnostic, DiagnosticLevel
 
 if TYPE_CHECKING:
     from sublib.ass.models.raw import RawSection, RawRecord

@@ -6,7 +6,7 @@ from sublib.ass.models.text.elements import (
     AssComment, AssSpecialChar, AssPlainText,
     AssTextElement
 )
-from sublib.ass.tags import get_tag
+from sublib.ass.core.tags import get_tag
 
 
 class AssTextRenderer:
