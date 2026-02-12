@@ -162,12 +162,12 @@ class AssScriptInfo(AssStructuredRecord):
 
     def _render_line(self, norm_key: str) -> str:
         # Get canonical or raw display name
-        display_name = self._display_names.get(norm_key)
-        if not display_name:
-            if norm_key in self._schema:
-                display_name = self._schema[norm_key].canonical_name
-            else:
-                display_name = norm_key.title() # Guess
+        # Prioritize Schema's Canonical Name (Normalization)
+        if norm_key in self._schema:
+            display_name = self._schema[norm_key].canonical_name
+        # Fallback to captured display name (Fidelity for custom fields)
+        else:
+            display_name = self._display_names.get(norm_key, norm_key.title())
                 
         val = self.get(norm_key)
         if norm_key in self._schema:

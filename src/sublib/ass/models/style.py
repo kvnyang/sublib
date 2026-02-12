@@ -199,7 +199,12 @@ class AssStyles(AssFormatSection):
         is_v4 = script_type and "v4" in script_type.lower() and "+" not in script_type
         
         if self.raw_format_fields:
-            out_format = self.raw_format_fields
+            # Normalize standard field names in the format header (Normalization over Fidelity)
+            out_format = [
+                STYLE_IDENTITY_SCHEMA[normalize_key(f)].canonical_name 
+                if normalize_key(f) in STYLE_IDENTITY_SCHEMA else f 
+                for f in self.raw_format_fields
+            ]
         else:
             out_format = self.get_explicit_format(script_type)
             
