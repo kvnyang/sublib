@@ -58,8 +58,7 @@ from .naming import (
     normalize_key,
     get_canonical_name,
     STANDARD_SECTION_NAMES,
-    STANDARD_DESCRIPTOR_NAMES,
-    STANDARD_FIELD_NAMES
+    STANDARD_DESCRIPTOR_NAMES
 )
 
 

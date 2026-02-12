@@ -13,31 +13,57 @@ from sublib.ass.naming import normalize_key, get_canonical_name
 from .base import AssCoreSection
 
 
-class AssScriptInfo(AssCoreSection):
+from .schema import FieldSchema, AssStructuredRecord
+
+def _format_timer(v: float) -> str:
+    return f"{v:.4f}"
+
+def _format_bool_yes_no(v: bool) -> str:
+    return "yes" if v else "no"
+
+INFO_SCHEMA = {
+    'scripttype': FieldSchema("v4.00+", str, canonical_name='ScriptType', python_prop='script_type'),
+    'title': FieldSchema("", str, canonical_name='Title', python_prop='title'),
+    'playresx': FieldSchema(384, int, canonical_name='PlayResX', python_prop='play_res_x'),
+    'playresy': FieldSchema(288, int, canonical_name='PlayResY', python_prop='play_res_y'),
+    'wrapstyle': FieldSchema(0, int, canonical_name='WrapStyle', python_prop='wrap_style'),
+    'scaledborderandshadow': FieldSchema(True, bool, _format_bool_yes_no, canonical_name='ScaledBorderAndShadow', python_prop='scaled_border_and_shadow'),
+    'collisions': FieldSchema("Normal", str, canonical_name='Collisions', python_prop='collisions'),
+    'ycbcr_matrix': FieldSchema("None", str, canonical_name='YCbCr Matrix', python_prop='ycbcr_matrix'),
+    'timer': FieldSchema(100.0, float, _format_timer, canonical_name='Timer', python_prop='timer'),
+}
+
+INFO_IDENTITY_SCHEMA = {s.normalized_key: s for s in INFO_SCHEMA.values()}
+# Support aliases
+INFO_IDENTITY_SCHEMA[normalize_key('Original Script')] = FieldSchema("", str, canonical_name='Original Script', python_prop='original_script')
+INFO_IDENTITY_SCHEMA[normalize_key('Original Translation')] = FieldSchema("", str, canonical_name='Original Translation', python_prop='original_translation')
+INFO_IDENTITY_SCHEMA[normalize_key('Original Editing')] = FieldSchema("", str, canonical_name='Original Editing', python_prop='original_editing')
+INFO_IDENTITY_SCHEMA[normalize_key('Original Timing')] = FieldSchema("", str, canonical_name='Original Timing', python_prop='original_timing')
+INFO_IDENTITY_SCHEMA[normalize_key('Synch Point')] = FieldSchema("", str, canonical_name='Synch Point', python_prop='synch_point')
+INFO_IDENTITY_SCHEMA[normalize_key('Script Updated By')] = FieldSchema("", str, canonical_name='Script Updated By', python_prop='script_updated_by')
+INFO_IDENTITY_SCHEMA[normalize_key('Update Details')] = FieldSchema("", str, canonical_name='Update Details', python_prop='update_details')
+
+
+class AssScriptInfo(AssStructuredRecord):
     """Intelligent container for [Script Info] section with automatic type conversion and validation."""
-    
-    KNOWN_FIELDS = {
-        "ScriptType": "str",
-        "Title": "str",
-        "PlayResX": "int",
-        "PlayResY": "int",
-        "WrapStyle": "int",
-        "ScaledBorderAndShadow": "bool",
-        "Collisions": "str",
-        "YCbCr Matrix": "str",
-        "Timer": "float",
-    }
     
     # Version-specific fields (field name: min_version)
     VERSION_FIELDS = {
-        "WrapStyle": "v4.00+",
-        "ScaledBorderAndShadow": "v4.00+",
-        "YCbCr Matrix": "v4.00+",
+        "wrapstyle": "v4.00+",
+        "scaledborderandshadow": "v4.00+",
+        "ycbcr matrix": "v4.00+",
     }
 
     def __init__(self, data: dict[str, Any] | None = None, original_name: str = "Script Info"):
-        super().__init__("script info", original_name)
-        self._display_names: dict[str, str] = {}
+        # Use object.__setattr__ to bypass the base class __setattr__ which traps everything as fields
+        object.__setattr__(self, 'name', normalize_key("script info"))
+        object.__setattr__(self, 'original_name', original_name)
+        object.__setattr__(self, 'comments', [])
+        object.__setattr__(self, '_diagnostics', [])
+        object.__setattr__(self, '_display_names', {})
+        
+        super().__init__(INFO_IDENTITY_SCHEMA)
+        
         if data:
             self.set_all(data)
     
@@ -49,20 +75,19 @@ class AssScriptInfo(AssCoreSection):
         info.comments = list(raw.comments)
         
         # Pass 1: Aggregate records (Last-one-wins)
-        # record.descriptor is already standardized (or lowercase unknown) by Layer 1
         aggregated: dict[str, tuple[str, str, int]] = {}
         for record in raw.records:
-            if record.descriptor in aggregated:
+            norm_k = normalize_key(record.descriptor)
+            if norm_k in aggregated:
                 info._diagnostics.append(Diagnostic(
                     DiagnosticLevel.WARNING,
                     f"Duplicate key '{record.raw_descriptor}' in [Script Info]",
                     record.line_number, "DUPLICATE_KEY"
                 ))
-            # Store (raw_descriptor, value, line_number)
-            aggregated[record.descriptor] = (record.raw_descriptor, record.value, record.line_number)
+            aggregated[norm_k] = (record.raw_descriptor, record.value, record.line_number)
 
-        # Pass 2: Detect Version (scripttype)
-        script_type = 'v4.00+'  # Default
+        # Pass 2: Detect Version
+        script_type = 'v4.00+'
         if 'scripttype' in aggregated:
             raw_st, val, ln = aggregated['scripttype']
             if val in ('v4.00', 'v4.00+'):
@@ -73,7 +98,6 @@ class AssScriptInfo(AssCoreSection):
                     f"Invalid ScriptType '{val}', defaulting to 'v4.00+'",
                     ln, "INVALID_SCRIPTTYPE"
                 ))
-            # Update values
             aggregated['scripttype'] = (raw_st, script_type, ln)
         else:
             info._diagnostics.append(Diagnostic(
@@ -81,91 +105,24 @@ class AssScriptInfo(AssCoreSection):
                 "Missing 'ScriptType' in [Script Info], defaulting to 'v4.00+'",
                 raw.line_number, "MISSING_SCRIPTTYPE"
             ))
-            info.set('scripttype', script_type)
+            info['scripttype'] = script_type
         
-        # Pass 3: Semantic Validation and Type Conversion
-        for std_key, (raw_key, value, line_number) in aggregated.items():
-            # Pass raw_key for display/diagnostic fidelity
-            info.set(std_key, value, raw_key=raw_key, line_number=line_number, script_type=script_type)
+        # Pass 3: Ingest
+        for norm_k, (raw_key, value, line_number) in aggregated.items():
+            info.set(norm_k, value, raw_key=raw_key, line_number=line_number, script_type=script_type)
             
         return info
 
-
-    @property
-    def header_comments(self) -> list[str]:
-        """Comments from [Script Info] section (without leading semicolon)."""
-        return self.comments
-    
-    @header_comments.setter
-    def header_comments(self, value: list[str]) -> None:
-        self.comments = list(value)
-
-    def add_comment(self, comment: str) -> None:
-        """Add a comment line (without leading semicolon)."""
-        self.comments.append(comment)
-    
-    def set_comments(self, comments: list[str]) -> None:
-        """Replace all comments."""
-        self.comments = list(comments)
-
-    def get_comments(self) -> list[str]:
-        """Get all comments."""
-        return list(self.comments)
-
-    def _normalize_key(self, key: str) -> str:
-        return normalize_key(key)
-
-    def render_line(self, key: str, value: Any) -> str:
-        """Render a single Script Info line."""
-        display_key = self._display_names.get(normalize_key(key), get_canonical_name(key, context='script info'))
-        if isinstance(value, bool):
-            formatted = "yes" if value else "no"
-        elif isinstance(value, float) and display_key == "Timer":
-            formatted = f"{value:.4f}"
-        else:
-            formatted = str(value)
-        return f"{display_key}: {formatted}"
-
-    def render(self) -> str:
-        """Render the complete section."""
-        lines = self.render_header()
-        
-        standard_keys = [
-            'scripttype', 'title', 'original script', 'original translation', 
-            'original editing', 'original timing', 'synch point', 'script updated by', 
-            'update details', 'playresx', 'playresy', 'playdepth', 'timer', 
-            'wrapstyle'
-        ]
-        
-        written_keys = set()
-        for key in standard_keys:
-            if key in self:
-                lines.append(self.render_line(key, self[key]))
-                written_keys.add(key)
-        
-        for key in sorted(self._data.keys()):
-            if key not in written_keys:
-                lines.append(self.render_line(key, self[key]))
-                
-        return "\n".join(lines)
-
-    def __getitem__(self, key: str) -> Any:
-        return self._data[self._normalize_key(key)]
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        self.set(key, value)
-
     def set(self, key: str, value: Any, raw_key: str | None = None, line_number: int = 0, script_type: str | None = None) -> None:
         """Set a property with optional diagnostic reporting."""
-        canonical_key = self._normalize_key(key)
+        norm_key = normalize_key(key)
         
-        # Update display name
-        display_name = get_canonical_name(raw_key or key, context='script info')
-        self._display_names[canonical_key] = display_name
+        if raw_key:
+            self._display_names[norm_key] = raw_key
 
         # 1. Version Check
-        if script_type and canonical_key in self.VERSION_FIELDS:
-            min_ver = self.VERSION_FIELDS[canonical_key]
+        if script_type and norm_key in self.VERSION_FIELDS:
+            min_ver = self.VERSION_FIELDS[norm_key]
             if min_ver == "v4.00+" and "v4" in script_type.lower() and "+" not in script_type:
                 from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
                 self._diagnostics.append(Diagnostic(
@@ -174,73 +131,60 @@ class AssScriptInfo(AssCoreSection):
                     line_number, "VERSION_MISMATCH"
                 ))
 
-        # 2. Type Conversion
-        if isinstance(value, str):
-            field_type = self.KNOWN_FIELDS.get(canonical_key)
-            if field_type:
-                value = self._parse_typed_value(raw_key or key, value, field_type, line_number)
+        # 2. Assign via __setitem__ (handles conversion via schema)
+        self[norm_key] = value
+
+    def render(self) -> str:
+        """Render the complete section."""
+        lines = [f"[{self.original_name}]"]
+        for comment in self.comments:
+            lines.append(f"; {comment}")
+            
+        standard_order = [
+            'scripttype', 'title', 'original script', 'original translation', 
+            'original editing', 'original timing', 'synch point', 'script updated by', 
+            'update details', 'playresx', 'playresy', 'playdepth', 'timer', 
+            'wrapstyle', 'scaledborderandshadow'
+        ]
         
-        self._data[canonical_key] = value
+        written_keys = set()
+        for k in standard_order:
+            norm_k = normalize_key(k)
+            if norm_k in self._fields or norm_k in self._extra:
+                lines.append(self._render_line(norm_k))
+                written_keys.add(norm_k)
+        
+        for norm_k in sorted(set(self._fields.keys()) | set(self._extra.keys())):
+            if norm_k not in written_keys:
+                lines.append(self._render_line(norm_k))
+                
+        return "\n".join(lines)
 
-    def _parse_typed_value(self, key: str, value: str, field_type: str, line_number: int = 0) -> Any:
-        try:
-            if field_type == "int":
-                return int(value)
-            elif field_type == "float":
-                return float(value)
-            elif field_type == "bool":
-                return value.lower() in ("yes", "1", "true")
-        except ValueError:
-            from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-            self._diagnostics.append(Diagnostic(
-                DiagnosticLevel.WARNING,
-                f"Invalid value for {key}: {value} (expected {field_type})",
-                line_number, "INVALID_VALUE_TYPE"
-            ))
-        return value
+    def _render_line(self, norm_key: str) -> str:
+        # Get canonical or raw display name
+        display_name = self._display_names.get(norm_key)
+        if not display_name:
+            if norm_key in self._schema:
+                display_name = self._schema[norm_key].canonical_name
+            else:
+                display_name = norm_key.title() # Guess
+                
+        val = self.get(norm_key)
+        if norm_key in self._schema:
+            formatted = self._schema[norm_key].format(val)
+        else:
+            formatted = str(val)
+            
+        return f"{display_name}: {formatted}"
 
-    def __getattr__(self, name: str) -> Any:
-        if name.startswith('_'):
-            raise AttributeError(name)
-        canonical = self._normalize_key(name)
-        if canonical in self._data:
-            return self._data[canonical]
-        raise AttributeError(f"'AssScriptInfo' object has no attribute '{name}'")
-
-    def __delitem__(self, key: str) -> None:
-        del self._data[self._normalize_key(key)]
-
-    def __contains__(self, key: str) -> bool:
-        return self._normalize_key(key) in self._data
-
-    def __iter__(self):
-        return iter(self.keys())
-
-    def __len__(self) -> int:
-        return len(self._data)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        return self._data.get(self._normalize_key(key), default)
-
-    def set_all(self, info_dict: dict[str, Any]) -> None:
-        self._data.clear()
-        for k, v in info_dict.items():
+    def set_all(self, data: dict[str, Any]) -> None:
+        for k, v in data.items():
             self.set(k, v)
-
-    def add_all(self, info_dict: dict[str, Any]) -> None:
-        for k, v in info_dict.items():
-            self.set(k, v)
-
-    def keys(self):
-        return [self._display_names.get(k, k) for k in self._data.keys()]
-
-    def values(self):
-        return self._data.values()
-
-    def items(self):
-        for k, v in self._data.items():
-            yield self._display_names.get(k, get_canonical_name(k, context='script info')), v
 
     def to_dict(self) -> dict[str, Any]:
-        return dict(self._data)
+        return {**self._fields, **self._extra}
+
+    @property
+    def diagnostics(self) -> list:
+        return self._diagnostics
 

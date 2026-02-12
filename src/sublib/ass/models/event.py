@@ -10,130 +10,57 @@ if TYPE_CHECKING:
     from sublib.ass.diagnostics import Diagnostic
 
 
-from sublib.ass.naming import EVENT_PROP_TO_KEY as PROPERTY_TO_KEY, EVENT_KEY_TO_PROP as KEY_TO_PROPERTY
+
 from .base import AssFormatSection
-
-
-class FieldSchema:
-    def __init__(self, default: Any, converter: Any, field_name: str = ""):
-        self.default = default
-        self.converter = converter
-        self.field_name = field_name
-
-    def convert(self, value: Any, diagnostics: list[Diagnostic] | None = None, line_number: int = 0) -> Any:
-        if isinstance(value, self.converter):
-            return value
-        raw_str = str(value).strip()
-        if not raw_str:
-            return self.default
-        try:
-            if self.converter == AssTimestamp:
-                if isinstance(value, int):
-                    return AssTimestamp.from_ms(value)
-                return AssTimestamp.from_ass_str(raw_str)
-            if self.converter == int:
-                return int(raw_str)
-            if self.converter == str:
-                return raw_str
-            return self.converter(raw_str)
-        except (ValueError, TypeError):
-            if diagnostics is not None:
-                from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-                diagnostics.append(Diagnostic(
-                    DiagnosticLevel.WARNING,
-                    f"Invalid value for {self.field_name or 'field'}: '{raw_str}' (expected {self.converter.__name__ if hasattr(self.converter, '__name__') else self.converter}). Falling back to default: {self.default}",
-                    line_number, "INVALID_VALUE_TYPE"
-                ))
-            return self.default
-
-    def format(self, value: Any) -> str:
-        if value is None:
-            return ""
-        if hasattr(value, 'to_ass_str'):
-            return value.to_ass_str()
-        return str(value)
-
+from .schema import FieldSchema, AssStructuredRecord
 
 EVENT_SCHEMA = {
-    'layer': FieldSchema(0, int, field_name='Layer'),
-    'start': FieldSchema(AssTimestamp(), AssTimestamp, field_name='Start'),
-    'end': FieldSchema(AssTimestamp(), AssTimestamp, field_name='End'),
-    'style': FieldSchema("Default", str, field_name='Style'),
-    'name': FieldSchema("", str, field_name='Name'),
-    'margin_l': FieldSchema(0, int, field_name='MarginL'),
-    'margin_r': FieldSchema(0, int, field_name='MarginR'),
-    'margin_v': FieldSchema(0, int, field_name='MarginV'),
-    'effect': FieldSchema("", str, field_name='Effect'),
-    'text': FieldSchema("", str, field_name='Text'),
+    'layer': FieldSchema(0, int, canonical_name='Layer', python_prop='layer'),
+    'start': FieldSchema(AssTimestamp(), AssTimestamp, canonical_name='Start', python_prop='start'),
+    'end': FieldSchema(AssTimestamp(), AssTimestamp, canonical_name='End', python_prop='end'),
+    'style': FieldSchema("Default", str, canonical_name='Style', python_prop='style'),
+    'name': FieldSchema("", str, canonical_name='Name', python_prop='name'),
+    'margin_l': FieldSchema(0, int, canonical_name='MarginL', python_prop='margin_l'),
+    'margin_r': FieldSchema(0, int, canonical_name='MarginR', python_prop='margin_r'),
+    'margin_v': FieldSchema(0, int, canonical_name='MarginV', python_prop='margin_v'),
+    'effect': FieldSchema("", str, canonical_name='Effect', python_prop='effect'),
+    'text': FieldSchema("", str, canonical_name='Text', python_prop='text'),
 }
 
+# Identity mapping for Events (normalized_key -> FieldSchema)
+EVENT_IDENTITY_SCHEMA = {s.normalized_key: s for s in EVENT_SCHEMA.values()}
+# Support aliases
+EVENT_IDENTITY_SCHEMA[normalize_key('MarginLeft')] = EVENT_SCHEMA['margin_l']
+EVENT_IDENTITY_SCHEMA[normalize_key('MarginRight')] = EVENT_SCHEMA['margin_r']
+EVENT_IDENTITY_SCHEMA[normalize_key('MarginVertical')] = EVENT_SCHEMA['margin_v']
 
-class AssEvent:
-    """ASS dialogue event using Eager Sparse Typed Storage."""
+
+class AssEvent(AssStructuredRecord):
+    """ASS dialogue event using Schema-Driven Typed Storage."""
     
     def __init__(self, fields: dict[str, Any] | None = None, type: str = AssEventType.DIALOGUE, line_number: int = 0, extra_fields: dict[str, Any] | None = None, **kwargs):
-        """Initialize AssEvent.
+        # Use object.__setattr__ for internal housekeeping to avoid trapping in _extra
+        object.__setattr__(self, '_type', get_canonical_name(type, context='events'))
+        object.__setattr__(self, '_line_number', line_number)
+        object.__setattr__(self, '_text_elements', [])
+        object.__setattr__(self, '_ast_synced', False)
         
-        Args:
-            fields: Optional dictionary of snake_case field names -> typed values (Internal use).
-            type: The type of event (e.g. Dialogue, Comment, Picture). 
-                  Accepts raw strings or AssEventType constants.
-            line_number: Physical line number in file.
-            extra_fields: Optional dictionary of custom/non-standard fields.
-            **kwargs: Standard fields using snake_case (e.g., start=1000).
-        """
-        # Internal fields using snake_case keys for standard fields
-        self._fields = fields if fields is not None else {}
-        # Separate storage for custom/non-standard fields
-        self._extra = extra_fields if extra_fields is not None else {}
+        super().__init__(EVENT_IDENTITY_SCHEMA, fields, extra_fields)
         
-        self._type = get_canonical_name(type, context='events')
-        self._line_number = line_number
-        # AST Sync
-        self._text_elements: list[AssTextElement] = []
-        self._ast_synced = False
-        
-        # Apply standard properties via kwargs
+        # Apply standard properties via kwargs (uses base __setattr__ -> __setitem__ -> schema.convert)
         for name, value in kwargs.items():
-            if name in PROPERTY_TO_KEY:
-                self[name] = value
-            else:
-                self._extra[normalize_key(name)] = value
+            self[name] = value
 
     @property
     def extra_fields(self) -> dict[str, Any]:
         """Custom/non-standard fields."""
         return self._extra
 
-    def __getattr__(self, name: str) -> Any:
-        if name.startswith('_'):
-            return super().__getattribute__(name)
-            
-        if name in PROPERTY_TO_KEY:
-            return self[name]
-            
-        norm_name = normalize_key(name)
-        if norm_name in self._extra:
-            return self._extra[norm_name]
-            
-        return super().__getattribute__(name)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        if name.startswith('_') or name in ('_type',):
-            super().__setattr__(name, value)
-            return
-            
-        if name in PROPERTY_TO_KEY:
-            # Standard property - use __setitem__ for conversion
-            self[name] = value
-        else:
-            self._extra[normalize_key(name)] = value
-
     @property
     def type(self) -> str:
         """The canonical type of the event (e.g. 'Dialogue', 'Comment')."""
         return self._type
-    
+
     @type.setter
     def type(self, value: str):
         self._type = get_canonical_name(value, context='events')
@@ -148,59 +75,22 @@ class AssEvent:
         """True if the event is a Comment entry."""
         return normalize_key(self._type) == 'comment'
 
-    def __getitem__(self, key: str) -> Any:
-        # Enforce Pythonic-only keys for standard fields
-        if key in PROPERTY_TO_KEY:
-            # Text is special (requires AST sync)
-            if key == 'text':
-                 return self.text
-                 
-            # Check sparse storage
-            if key in self._fields:
-                return self._fields[key]
-            
-            # Schema default fallback
-            schema = EVENT_SCHEMA.get(key)
-            return schema.default if schema else None
-        
-        # Fallback to extra fields
-        if key in self._extra:
-            return self._extra[key]
-            
-        raise KeyError(key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        # Enforce Pythonic-only keys for standard fields
-        if key in PROPERTY_TO_KEY:
-            if key == 'text':
-                self.text = value
-            else:
-                schema = EVENT_SCHEMA[key]
-                self._fields[key] = schema.convert(value)
-        else:
-            self._extra[normalize_key(key)] = value
-
-    def __delitem__(self, key: str) -> None:
-        if key in self._fields:
-            del self._fields[key]
-        elif key in self._extra:
-            del self._extra[key]
-        else:
-            raise KeyError(key)
-
-    def __contains__(self, key: str) -> bool:
-        return key in self._fields or key in self._extra
+    @property
+    def line_number(self) -> int:
+        return self._line_number
 
     @property
     def text(self) -> str:
+        """The text content of the entry, synchronized with AST elements."""
         if self._ast_synced:
             from sublib.ass.text import AssTextRenderer
             return AssTextRenderer().render(self._text_elements)
-        return self._fields.get('text', "")
+        # Access via base __getitem__ which looks at _fields
+        return self.get('text', "")
 
     @text.setter
     def text(self, value: str) -> None:
-        self._fields['text'] = value
+        self['text'] = value  # This will store in _fields via __setitem__
         self._ast_synced = False
 
     @property
@@ -216,7 +106,7 @@ class AssEvent:
     def _ensure_ast(self):
         if not self._ast_synced:
             from sublib.ass.text import AssTextParser
-            raw = self._fields.get('text', "")
+            raw = self.get('text', "")
             self._text_elements = AssTextParser().parse(raw, line_number=self._line_number)
             self._ast_synced = True
 
@@ -231,50 +121,45 @@ class AssEvent:
 
     @classmethod
     def from_dict(cls, data: dict[str, str], event_type: str = "Dialogue", line_number: int = 0, auto_fill: bool = True, diagnostics: list[Diagnostic] | None = None) -> AssEvent:
-        """Create AssEvent with Eager Conversion and Pythonic storage."""
-        from sublib.ass.naming import EVENT_KEY_TO_PROP as KEY_TO_PROPERTY
+        """Create AssEvent with Eager Conversion and Identity mapping."""
         parsed_fields = {}
         extra_fields = {}
         
         for k, v in data.items():
             norm_k = normalize_key(k)
-            prop = KEY_TO_PROPERTY.get(norm_k)
             v_str = str(v).strip()
             
-            if prop:
-                parsed_fields[prop] = EVENT_SCHEMA[prop].convert(v_str, diagnostics=diagnostics, line_number=line_number)
+            if norm_k in EVENT_IDENTITY_SCHEMA:
+                schema = EVENT_IDENTITY_SCHEMA[norm_k]
+                parsed_fields[schema.normalized_key] = schema.convert(v_str, diagnostics=diagnostics, line_number=line_number)
             else:
                 extra_fields[norm_k] = v_str
         
-        # Handle Gaps
         if auto_fill:
-            for prop, schema in EVENT_SCHEMA.items():
-                if prop not in parsed_fields:
-                    parsed_fields[prop] = schema.default
+            for norm_key, schema in EVENT_IDENTITY_SCHEMA.items():
+                if norm_key == schema.normalized_key and norm_key not in parsed_fields:
+                    parsed_fields[norm_key] = schema.default
                     
         return cls(parsed_fields, type=event_type, line_number=line_number, extra_fields=extra_fields)
 
     def render_row(self, format_fields: list[str], auto_fill: bool = False) -> str:
-        """Render AssEvent with Pythonic-to-Canonical mapping."""
-        from sublib.ass.naming import EVENT_KEY_TO_PROP as KEY_TO_PROPERTY
+        """Render AssEvent with standardized format support."""
         descriptor = self._type
         
-        out_keys = [normalize_key(f) for f in format_fields]
         parts = []
-        for key in out_keys:
-            prop = KEY_TO_PROPERTY.get(key)
+        for raw_f in format_fields:
+            norm_f = normalize_key(raw_f)
             
-            val = None
-            if prop:
-                val = self[prop]
+            if norm_f in EVENT_IDENTITY_SCHEMA:
+                schema = EVENT_IDENTITY_SCHEMA[norm_f]
+                val = self._fields.get(schema.normalized_key)
                 if val is None and auto_fill:
-                    val = EVENT_SCHEMA[prop].default
-                
-                parts.append(EVENT_SCHEMA[prop].format(val) if val is not None else "")
+                    val = schema.default
+                parts.append(schema.format(val) if val is not None else "")
             else:
-                # Custom field
-                val = self[key]
-                parts.append(str(val) if val is not None else "")
+                # Custom/Extra field
+                val = self._extra.get(norm_f, "")
+                parts.append(str(val))
                 
         return f"{descriptor}: {','.join(parts)}"
 
@@ -397,8 +282,12 @@ class AssEvents(AssFormatSection):
             
         all_physical_keys = set()
         for event in self._data:
-            all_physical_keys.update(event._fields.keys())
-        all_physical_keys.add('text')
+            for prop_key in event._fields:
+                if prop_key in EVENT_IDENTITY_SCHEMA:
+                    all_physical_keys.add(EVENT_IDENTITY_SCHEMA[prop_key].canonical_name)
+                else:
+                    all_physical_keys.add(prop_key)
+        all_physical_keys.add('Text')
         
         result = []
         for f in standard:
