@@ -10,7 +10,10 @@ from sublib.ass.naming import normalize_key, get_canonical_name
 
 
 
-class AssScriptInfo:
+from .base import AssCoreSection
+
+
+class AssScriptInfo(AssCoreSection):
     """Intelligent container for [Script Info] section with automatic type conversion and validation."""
     
     KNOWN_FIELDS = {
@@ -32,11 +35,9 @@ class AssScriptInfo:
         "YCbCr Matrix": "v4.00+",
     }
 
-    def __init__(self, data: dict[str, Any] | None = None):
-        self._data: dict[str, Any] = {}
+    def __init__(self, data: dict[str, Any] | None = None, original_name: str = "Script Info"):
+        super().__init__("script info", original_name)
         self._display_names: dict[str, str] = {}
-        self._header_comments: list[str] = []
-        self._diagnostics: list[Diagnostic] = []
         if data:
             self.set_all(data)
     
@@ -44,8 +45,8 @@ class AssScriptInfo:
     def from_raw(cls, raw: RawSection) -> AssScriptInfo:
         """Layer 2: Semantic ingestion from a RawSection."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-        info = cls()
-        info.set_comments(raw.comments)
+        info = cls(original_name=raw.original_name)
+        info.comments = list(raw.comments)
         
         # Pass 1: Aggregate records (Last-one-wins)
         # record.descriptor is already standardized (or lowercase unknown) by Layer 1
@@ -93,38 +94,60 @@ class AssScriptInfo:
     @property
     def header_comments(self) -> list[str]:
         """Comments from [Script Info] section (without leading semicolon)."""
-        return self._header_comments
+        return self.comments
     
-    @property
-    def diagnostics(self) -> list[Diagnostic]:
-        """Diagnostic messages collected during semantic parsing."""
-        return self._diagnostics
+    @header_comments.setter
+    def header_comments(self, value: list[str]) -> None:
+        self.comments = list(value)
 
     def add_comment(self, comment: str) -> None:
         """Add a comment line (without leading semicolon)."""
-        self._header_comments.append(comment)
+        self.comments.append(comment)
     
     def set_comments(self, comments: list[str]) -> None:
         """Replace all comments."""
-        self._header_comments = list(comments)
+        self.comments = list(comments)
 
     def get_comments(self) -> list[str]:
         """Get all comments."""
-        return list(self._header_comments)
+        return list(self.comments)
 
     def _normalize_key(self, key: str) -> str:
         return normalize_key(key)
 
     def render_line(self, key: str, value: Any) -> str:
         """Render a single Script Info line."""
-        canonical_key = get_canonical_name(key, context='script info')
+        display_key = self._display_names.get(normalize_key(key), get_canonical_name(key, context='script info'))
         if isinstance(value, bool):
             formatted = "yes" if value else "no"
-        elif isinstance(value, float) and canonical_key == "Timer":
+        elif isinstance(value, float) and display_key == "Timer":
             formatted = f"{value:.4f}"
         else:
             formatted = str(value)
-        return f"{canonical_key}: {formatted}"
+        return f"{display_key}: {formatted}"
+
+    def render(self) -> str:
+        """Render the complete section."""
+        lines = self.render_header()
+        
+        standard_keys = [
+            'scripttype', 'title', 'original script', 'original translation', 
+            'original editing', 'original timing', 'synch point', 'script updated by', 
+            'update details', 'playresx', 'playresy', 'playdepth', 'timer', 
+            'wrapstyle'
+        ]
+        
+        written_keys = set()
+        for key in standard_keys:
+            if key in self:
+                lines.append(self.render_line(key, self[key]))
+                written_keys.add(key)
+        
+        for key in sorted(self._data.keys()):
+            if key not in written_keys:
+                lines.append(self.render_line(key, self[key]))
+                
+        return "\n".join(lines)
 
     def __getitem__(self, key: str) -> Any:
         return self._data[self._normalize_key(key)]

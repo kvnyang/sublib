@@ -8,38 +8,53 @@ from sublib.ass.parser_layer1 import StructuralParser
 from .info import AssScriptInfo
 from .style import AssStyles
 from .event import AssEvents
+from .base import AssSection, AssRawSection
 from sublib.ass.naming import normalize_key, get_canonical_name
-
-
-
 
 
 @dataclass
 class AssFile:
-    """ASS subtitle file.
-    
-    Represents a complete .ass file with styles and events.
-    The script_info, styles, and events fields are intelligent containers.
-    
-    Attributes:
-        script_info: Script metadata and comments
-        styles: Style definitions
-        events: Dialogue and other events
-        diagnostics: Structured diagnostics (Error, Warning)
-    """
-    script_info: AssScriptInfo = field(default_factory=AssScriptInfo)
-    styles: AssStyles = field(default_factory=AssStyles)
-    events: AssEvents = field(default_factory=AssEvents)
-    extra_sections: list[RawSection] = field(default_factory=list)
+    """ASS subtitle file."""
+    sections: list[AssSection] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
 
+    @property
+    def script_info(self) -> AssScriptInfo:
+        for s in self.sections:
+            if isinstance(s, AssScriptInfo): return s
+        # Fallback to empty if not found
+        info = AssScriptInfo()
+        self.sections.insert(0, info)
+        return info
+
+    @property
+    def styles(self) -> AssStyles:
+        for s in self.sections:
+            if isinstance(s, AssStyles): return s
+        # Fallback to empty if not found
+        styles = AssStyles()
+        # Find index to insert (after script info if possible)
+        idx = 0
+        for i, s in enumerate(self.sections):
+            if isinstance(s, AssScriptInfo): idx = i + 1
+        self.sections.insert(idx, styles)
+        return styles
+
+    @property
+    def events(self) -> AssEvents:
+        for s in self.sections:
+            if isinstance(s, AssEvents): return s
+        # Fallback to empty if not found
+        events = AssEvents()
+        self.sections.append(events)
+        return events
+
+    @property
+    def extra_sections(self) -> list[AssRawSection]:
+        return [s for s in self.sections if isinstance(s, AssRawSection)]
+
     def __post_init__(self):
-        if isinstance(self.script_info, dict):
-            self.script_info = AssScriptInfo(self.script_info)
-        if isinstance(self.styles, dict):
-            self.styles = AssStyles(self.styles)
-        if isinstance(self.events, list):
-            self.events = AssEvents(self.events)
+        pass
     
     @property
     def has_warnings(self) -> bool:
@@ -64,10 +79,6 @@ class AssFile:
             content: The ASS string to parse.
             style_format: Optional format override (filters ingested fields).
             event_format: Optional format override (filters ingested fields).
-            
-        Layer 1: Structural Parser (Structure/Sections)
-        Layer 2: Semantic Parser (Typing/Logic)
-        Layer 3: Content Parser (AST/Tags)
         """
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
         # --- Layer 1: Structural Parsing ---
@@ -83,172 +94,75 @@ class AssFile:
         ass_file = cls()
         ass_file.diagnostics.extend(struct_parser.diagnostics)
         
-        # --- Layer 2: Semantic Parsing (Dispatch to models) ---
+        # --- Layer 2: Semantic Parsing (Declarative Dispatch) ---
+        script_type = "v4.00+" 
+        info_model: AssScriptInfo | None = None
         
-        # 1. [Script Info]
-        raw_info = raw_doc.get_section('script info')
-        if raw_info:
-            ass_file.script_info = AssScriptInfo.from_raw(raw_info)
-        else:
-            # Create default Script Info if missing.
-            ass_file.script_info = AssScriptInfo()
-            ass_file.script_info.set('scripttype', 'v4.00+')
+        # Pre-pass: We need script_type for some sections context
+        raw_info_sec = raw_doc.get_section('script info')
+        if raw_info_sec:
+            info_model = AssScriptInfo.from_raw(raw_info_sec)
+            script_type = info_model.get('scripttype', 'v4.00+')
+        
+        # Dispatch Mapping
+        processed_sections: list[AssSection] = []
+        for raw_section in raw_doc.sections:
+            section_name = raw_section.name.lower()
             
-            ass_file.script_info.diagnostics.append(Diagnostic(
-                DiagnosticLevel.WARNING,
-                "Missing [Script Info] section, assuming ScriptType: v4.00+",
-                0, "MISSING_SCRIPTTYPE"
+            if section_name == 'script info':
+                section = info_model or AssScriptInfo.from_raw(raw_section)
+                info_model = section # ensure reference
+            elif section_name in ('v4 styles', 'v4+ styles'):
+                # Version Consistency Check
+                actual_is_v4plus = section_name == 'v4+ styles'
+                defined_is_v4plus = str(script_type) == 'v4.00+'
+                if actual_is_v4plus != defined_is_v4plus:
+                    expected_h = "[V4+ Styles]" if defined_is_v4plus else "[V4 Styles]"
+                    ass_file.diagnostics.append(Diagnostic(
+                        DiagnosticLevel.WARNING, 
+                        f"ScriptType '{script_type}' mismatch with section header [{raw_section.original_name}] (expected {expected_h})",
+                        raw_section.line_number, "VERSION_SECTION_MISMATCH"
+                    ))
+                section = AssStyles.from_raw(raw_section, script_type=script_type, style_format=style_format, auto_fill=auto_fill)
+            elif section_name == 'events':
+                section = AssEvents.from_raw(raw_section, script_type=script_type, event_format=event_format, auto_fill=auto_fill)
+            else:
+                section = AssRawSection(name=section_name, raw_lines=raw_section.raw_lines, original_name=raw_section.original_name)
+            
+            processed_sections.append(section)
+            ass_file.diagnostics.extend(section.diagnostics)
+
+        # Post-pass: Ensure Script Info exists
+        if info_model is None:
+            info_model = AssScriptInfo()
+            info_model.set('scripttype', 'v4.00+')
+            processed_sections.insert(0, info_model)
+            ass_file.diagnostics.append(Diagnostic(
+                DiagnosticLevel.WARNING, "Missing [Script Info] section, assuming ScriptType: v4.00+", 0, "MISSING_SCRIPTTYPE"
             ))
-        
-        ass_file.diagnostics.extend(ass_file.script_info.diagnostics)
 
-        script_type = ass_file.script_info.get('scripttype')
-
-        # 2. [Styles]
-        raw_styles_v4plus = raw_doc.get_section('v4+ styles')
-        raw_styles_v4 = raw_doc.get_section('v4 styles')
-        raw_styles = raw_styles_v4plus or raw_styles_v4
-        
-        if raw_styles:
-            from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-            # Version Consistency Check
-            actual_is_v4plus = raw_styles.name == 'v4+ styles'
-            defined_is_v4plus = script_type == 'v4.00+'
-            
-            if actual_is_v4plus != defined_is_v4plus:
-                expected_header = "[V4+ Styles]" if defined_is_v4plus else "[V4 Styles]"
-                actual_header = f"[{raw_styles.original_name}]"
-                ass_file.diagnostics.append(Diagnostic(
-                    DiagnosticLevel.WARNING,
-                    f"ScriptType '{script_type}' mismatch with section header {actual_header} (expected {expected_header})",
-                    raw_styles.line_number, "VERSION_SECTION_MISMATCH"
-                ))
-
-            ass_file.styles = AssStyles.from_raw(raw_styles, script_type=script_type, style_format=style_format, auto_fill=auto_fill)
-            ass_file.diagnostics.extend(ass_file.styles.diagnostics)
-        else:
-            # StructuralParser already warned if Styles are missing
-            ass_file.styles = AssStyles()
-
-        # 3. [Events]
-        raw_events = raw_doc.get_section('events')
-        if raw_events:
-            ass_file.events = AssEvents.from_raw(raw_events, script_type=script_type, event_format=event_format, auto_fill=auto_fill)
-        else:
-            # StructuralParser already warned if Events are missing
-            ass_file.events = AssEvents()
-            
-        ass_file.diagnostics.extend(ass_file.events.diagnostics)
-
-        # 4. Custom/Other Sections (Fonts, Graphics, etc.)
-        core_sections = {'script info', 'v4 styles', 'v4+ styles', 'events'}
-        for section in raw_doc.sections:
-            if section.name.lower() not in core_sections:
-                ass_file.extra_sections.append(section)
-
+        ass_file.sections = processed_sections
         return ass_file
 
     def dumps(self, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False) -> str:
-        """Serialize the model back to an ASS string.
-        
-        Args:
-            style_format: Optional format override for Styles section.
-            event_format: Optional format override for Events section.
-            auto_fill: If True, fills missing fields with defaults.
-        """
-        lines = []
+        """Serialize the model back to an ASS string using polymorphic rendering."""
         script_type = self.script_info.get('scripttype', 'v4.00+')
         
-        # 1. Script Info
-        lines.append(f'[{get_canonical_name("script info", context="SECTION")}]')
-        for comment in self.script_info.header_comments:
-            lines.append(f'; {comment}')
-        
-        standard_keys = [
-            'scripttype', 'title', 'original script', 'original translation', 
-            'original editing', 'original timing', 'synch point', 'script updated by', 
-            'update details', 'playresx', 'playresy', 'playdepth', 'timer', 
-            'wrapstyle'
-        ]
-        written_keys = set()
-        for key in standard_keys:
-            if key in self.script_info:
-                lines.append(self.script_info.render_line(key, self.script_info[key]))
-                written_keys.add(key)
-        for key in self.script_info.keys():
-            if normalize_key(key) not in written_keys:
-                lines.append(self.script_info.render_line(key, self.script_info[key]))
-        lines.append('')
-        
-        # 2. Styles
-        is_v4 = "v4" in script_type.lower() and "+" not in script_type
-        style_section_key = normalize_key("v4 styles") if is_v4 else normalize_key("v4+ styles")
-        lines.append(f'[{get_canonical_name(style_section_key, context="SECTION")}]')
-        for comment in self.styles.section_comments:
-            lines.append(f'; {comment}')
-            
-        # Format Priority (Phase 33 - Stateless):
-        # 1. Parameter List (Non-empty): Specific Intent
-        # 2. Parameter None: Fidelity/Minimalist
-        # 3. Parameter Empty List []: Standard View
-        if style_format:
-            out_style_format = style_format
-        elif style_format is None:
-            out_style_format = self.styles._raw_format_fields or self.styles.get_explicit_format(script_type)
-        else:
-            # Default ([]) -> Standard Mode
-            if is_v4:
-                out_style_format = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'TertiaryColour', 'BackColour', 'Bold', 'Italic', 'BorderStyle']
+        section_texts = []
+        for section in self.sections:
+            if isinstance(section, AssStyles):
+                text = section.render(script_type=script_type, auto_fill=auto_fill)
+            elif isinstance(section, AssEvents):
+                text = section.render(script_type=script_type, auto_fill=auto_fill)
+            elif isinstance(section, AssScriptInfo):
+                text = section.render()
             else:
-                out_style_format = ['Name', 'Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'BackColour', 'Bold', 'Italic', 'Underline', 'StrikeOut', 'ScaleX', 'ScaleY', 'Spacing', 'Angle', 'BorderStyle', 'Outline', 'Shadow', 'Alignment', 'MarginL', 'MarginR', 'MarginV', 'Encoding']
+                text = section.render()
             
-        lines.append(f"Format: {', '.join(out_style_format)}")
-
-        for style in self.styles:
-            lines.append(style.render(format_fields=out_style_format, auto_fill=auto_fill))
-        for record in self.styles.custom_records:
-            lines.append(f"{record.raw_descriptor}: {record.value}")
-        lines.append('')
+            if text:
+                section_texts.append(text)
         
-        # 3. Events
-        lines.append(f'[{get_canonical_name("events", context="SECTION")}]')
-        for comment in self.events.get_comments():
-            lines.append(f'; {comment}')
-            
-        # Format Priority (Phase 33 - Stateless):
-        # 1. Parameter List (Non-empty): Specific Intent
-        # 2. Parameter None: Fidelity/Minimalist
-        # 3. Parameter Empty List []: Standard View
-        if event_format:
-            out_event_format = event_format
-        elif event_format is None:
-            out_event_format = self.events._raw_format_fields or self.events.get_explicit_format(script_type)
-        else:
-            # Default ([]) -> Standard Mode
-            if is_v4:
-                out_event_format = ['Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
-            else:
-                out_event_format = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text']
-            
-        lines.append(f"Format: {', '.join(out_event_format)}")
-        for event in self.events:
-            lines.append(event.render(format_fields=out_event_format, auto_fill=auto_fill))
-        for record in self.events.custom_records:
-            lines.append(f"{record.raw_descriptor}: {record.value}")
-
-        
-        # 4. Extra Sections (Fonts, Graphics, etc.)
-        # Sort to ensure standard order: Fonts -> Graphics -> Others (stable sort)
-        sorted_extras = sorted(
-            self.extra_sections,
-            key=lambda s: 0 if s.name == 'fonts' else 1 if s.name == 'graphics' else 2
-        )
-        for section in sorted_extras:
-            lines.append('')
-            lines.append(f'[{section.original_name}]')
-            lines.extend(section.raw_lines)
-        
-        return '\n'.join(lines)
+        return "\n\n".join(section_texts)
 
     def script_info_keys(self) -> list[str]:
         """Get list of defined script info keys."""
@@ -264,28 +178,13 @@ class AssFile:
     
     @classmethod
     def load(cls, path: Path | str, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = True) -> "AssFile":
-        """Load ASS file from path.
-        
-        Args:
-            path: Target file path.
-            style_format: Optional format override for Styles section.
-            event_format: Optional format override for Events section.
-            auto_fill: Whether to fill missing standard fields with defaults.
-        """
+        """Load ASS file from path."""
         from sublib.io import read_text_file
         content = read_text_file(path, encoding='utf-8-sig')
         return cls.loads(content, style_format=style_format, event_format=event_format, auto_fill=auto_fill)
     
     def dump(self, path: Path | str, style_format: list[str] | None = [], event_format: list[str] | None = [], auto_fill: bool = False) -> None:
-        """Save subtitle model to file.
-        
-        Args:
-            path: Output file path.
-            style_format: Optional format override for Styles section.
-            event_format: Optional format override for Events section.
-            auto_fill: Whether to fill missing fields with defaults.
-        """
+        """Save subtitle model to file."""
         from sublib.io import write_text_file
         content = self.dumps(style_format=style_format, event_format=event_format, auto_fill=auto_fill)
         write_text_file(path, content, encoding='utf-8-sig')
-    

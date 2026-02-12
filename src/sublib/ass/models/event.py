@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 
 from sublib.ass.naming import EVENT_PROP_TO_KEY as PROPERTY_TO_KEY, EVENT_KEY_TO_PROP as KEY_TO_PROPERTY
+from .base import AssFormatSection
 
 
 class FieldSchema:
@@ -253,17 +254,12 @@ class AssEvent:
                     
         return cls(parsed_fields, type=event_type, line_number=line_number, extra_fields=extra_fields)
 
-    def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
+    def render_row(self, format_fields: list[str], auto_fill: bool = False) -> str:
         """Render AssEvent with Pythonic-to-Canonical mapping."""
         from sublib.ass.naming import EVENT_KEY_TO_PROP as KEY_TO_PROPERTY
         descriptor = self._type
         
-        if format_fields:
-            out_keys = [normalize_key(f) for f in format_fields]
-        else:
-            # Default V4+ sequence
-            out_keys = ['layer', 'start', 'end', 'style', 'name', 'marginl', 'marginr', 'marginv', 'effect', 'text']
-
+        out_keys = [normalize_key(f) for f in format_fields]
         parts = []
         for key in out_keys:
             prop = KEY_TO_PROPERTY.get(key)
@@ -308,27 +304,24 @@ class AssEvent:
         return event
 
 
-class AssEvents:
+class AssEvents(AssFormatSection):
     """Intelligent container for [Events] section."""
-    def __init__(self, data: list[AssEvent] | None = None):
+    def __init__(self, data: list[AssEvent] | None = None, original_name: str = "Events"):
+        super().__init__("events", original_name)
         self._data = data if data is not None else []
-        self._custom_records: list[RawRecord] = []
-        self._diagnostics: list[Diagnostic] = []
-        self._section_comments: list[str] = []
-        self._raw_format_fields: list[str] | None = None
 
     @classmethod
     def from_raw(cls, raw: RawSection, script_type: str | None = None, event_format: list[str] | None = [], auto_fill: bool = True) -> AssEvents:
         """Layer 2: Semantic ingestion with Symmetric Slicing and Auto-Fill Control."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-        events = cls()
-        events._section_comments = list(raw.comments)
+        events = cls(original_name=raw.original_name)
+        events.comments = list(raw.comments)
         
         # 1. Physical Reality
         if event_format:
-            events._raw_format_fields = list(event_format)
+            events.raw_format_fields = list(event_format)
         else:
-            events._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
+            events.raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
         
         # 2. Ingest data based on Slicing Policy
         file_format_fields = raw.format_fields
@@ -418,10 +411,24 @@ class AssEvents:
              
         return result
 
-    @property
-    def diagnostics(self) -> list[Diagnostic]: return self._diagnostics
-    @property
-    def section_comments(self) -> list[str]: return self._section_comments
-    def get_comments(self) -> list[str]: return list(self._section_comments)
-    @property
-    def custom_records(self) -> list[RawRecord]: return self._custom_records
+    def render(self, script_type: str | None = None, auto_fill: bool = False) -> str:
+        """Polymorphic render for Events section."""
+        lines = self.render_header()
+        
+        # Format resolution logic
+        is_v4 = script_type and "v4" in script_type.lower() and "+" not in script_type
+        
+        if self.raw_format_fields:
+            out_format = self.raw_format_fields
+        else:
+            out_format = self.get_explicit_format(script_type)
+            
+        lines.append(f"Format: {', '.join(out_format)}")
+        
+        for event in self:
+            lines.append(event.render_row(format_fields=out_format, auto_fill=auto_fill))
+            
+        for record in self._custom_records:
+            lines.append(f"{record.raw_descriptor}: {record.value}")
+            
+        return "\n".join(lines)

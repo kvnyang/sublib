@@ -14,6 +14,7 @@ def _format_bool(v: bool) -> str:
 
 
 from sublib.ass.naming import STYLE_PROP_TO_KEY as PROPERTY_TO_KEY, STYLE_KEY_TO_PROP as KEY_TO_PROPERTY
+from .base import AssFormatSection
 
 
 class FieldSchema:
@@ -197,17 +198,12 @@ class AssStyle:
                     
         return cls(parsed_fields, extra_fields=extra_fields)
 
-    def render(self, format_fields: list[str] | None = None, auto_fill: bool = False) -> str:
+    def render_row(self, format_fields: list[str], auto_fill: bool = False) -> str:
         """Render AssStyle with Pythonic-to-Canonical mapping."""
         from sublib.ass.naming import STYLE_KEY_TO_PROP as KEY_TO_PROPERTY
         descriptor = get_canonical_name("Style", context="v4+ styles")
         
-        if format_fields:
-            out_keys = [normalize_key(f) for f in format_fields]
-        else:
-            # Default V4+ sequence
-            out_keys = [PROPERTY_TO_KEY[p] for p in ('name', 'font_name', 'font_size', 'primary_color', 'secondary_color', 'outline_color', 'back_color', 'bold', 'italic', 'underline', 'strikeout', 'scale_x', 'scale_y', 'spacing', 'angle', 'border_style', 'outline', 'shadow', 'alignment', 'margin_l', 'margin_r', 'margin_v', 'encoding')]
-
+        out_keys = [normalize_key(f) for f in format_fields]
         parts = []
         for key in out_keys:
             prop = KEY_TO_PROPERTY.get(key)
@@ -227,27 +223,25 @@ class AssStyle:
         return f"{descriptor}: {','.join(parts)}"
 
 
-class AssStyles:
+class AssStyles(AssFormatSection):
     """Container for [Styles] section."""
-    def __init__(self, data: dict[str, AssStyle] | None = None):
+    def __init__(self, data: dict[str, AssStyle] | None = None, original_name: str = "V4+ Styles"):
+        # Default name is V4+ Styles for modern files
+        super().__init__(normalize_key(original_name), original_name)
         self._data = data if data is not None else {}
-        self._custom_records: list[RawRecord] = []
-        self._diagnostics: list[Diagnostic] = []
-        self._section_comments: list[str] = []
-        self._raw_format_fields: list[str] | None = None
 
     @classmethod
     def from_raw(cls, raw: RawSection, script_type: str | None = None, style_format: list[str] | None = [], auto_fill: bool = True) -> AssStyles:
         """Layer 2: Semantic ingestion with Symmetric Slicing and Auto-Fill Control."""
         from sublib.ass.diagnostics import Diagnostic, DiagnosticLevel
-        styles = cls()
-        styles._section_comments = list(raw.comments)
+        styles = cls(original_name=raw.original_name)
+        styles.comments = list(raw.comments)
         
         # 1. Physical Reality
         if style_format:
-            styles._raw_format_fields = list(style_format)
+            styles.raw_format_fields = list(style_format)
         else:
-            styles._raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
+            styles.raw_format_fields = list(raw.raw_format_fields) if raw.raw_format_fields else None
         
         # 2. Ingest data based on Slicing Policy
         file_format_fields = raw.format_fields # Normalized columns present in file
@@ -300,20 +294,32 @@ class AssStyles:
         return styles
 
     @property
-    def diagnostics(self) -> list[Diagnostic]: return self._diagnostics
-
-    @property
-    def section_comments(self) -> list[str]: return self._section_comments
+    def section_comments(self) -> list[str]: return self.comments
 
     @property
     def custom_records(self) -> list[RawRecord]: return self._custom_records
 
-    def _get_canonical_name(self, name: str) -> str:
-        if name in self._data: return name
-        lower_name = name.lower()
-        for k in self._data:
-            if k.lower() == lower_name: return k
-        return name
+    def render(self, script_type: str | None = None, auto_fill: bool = False) -> str:
+        """Polymorphic render for Styles section."""
+        lines = self.render_header()
+        
+        # Format resolution logic moved here
+        is_v4 = script_type and "v4" in script_type.lower() and "+" not in script_type
+        
+        if self.raw_format_fields:
+            out_format = self.raw_format_fields
+        else:
+            out_format = self.get_explicit_format(script_type)
+            
+        lines.append(f"Format: {', '.join(out_format)}")
+        
+        for style in self:
+            lines.append(style.render_row(format_fields=out_format, auto_fill=auto_fill))
+            
+        for record in self._custom_records:
+            lines.append(f"{record.raw_descriptor}: {record.value}")
+            
+        return "\n".join(lines)
 
     def __getitem__(self, name: str) -> AssStyle:
         canonical = self._get_canonical_name(name)
