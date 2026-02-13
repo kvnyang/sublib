@@ -41,8 +41,8 @@ class AssTimestamp:
     
     @classmethod
     def from_ms(cls, ms: int) -> "AssTimestamp":
-        """Create from milliseconds."""
-        return cls(cs=ms // 10)
+        """Create from milliseconds using rounding for better precision."""
+        return cls(cs=int((ms + 5) // 10))
     
     def to_ms(self) -> int:
         """Convert to milliseconds."""
